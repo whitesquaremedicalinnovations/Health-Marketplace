@@ -1,0 +1,29 @@
+import { Router } from "express";
+import { getOverview, getAllUsers, getAllDoctors, getAllClinics, getAllPitches, getAllRequirements, getAllPayments, setOnboardingFee, getUsersToVerify, verifyDoctor, verifyClinic, getAllNews, createNews, updateNews, deleteNews, getAllOnboardingFees, totalNewsLikes, totalNewsComments } from "../controller/admin.controller.ts";
+
+const router = Router();
+
+router.get("/get-overview", getOverview);
+router.get("/get-all-users", getAllUsers);
+router.get("/get-all-doctors", getAllDoctors);
+router.get("/get-all-clinics", getAllClinics);
+router.get("/get-all-pitches", getAllPitches);
+router.get("/get-all-requirements", getAllRequirements);
+router.get("/get-all-payments", getAllPayments);
+router.get("/get-all-onboarding-fees", getAllOnboardingFees);
+router.post("/set-onboarding-fee", setOnboardingFee);
+router.get("/get-users-to-verify", getUsersToVerify);
+router.post("/verify-doctor/:doctorId", verifyDoctor);
+router.post("/verify-clinic/:clinicId", verifyClinic);
+router.get("/get-all-news", getAllNews);
+router.post("/create-news", createNews);
+router.post("/update-news/:newsId", updateNews);
+router.post("/delete-news/:newsId", deleteNews);
+router.get("/total-news-likes/:newsId", totalNewsLikes);
+router.get("/total-news-comments/:newsId", totalNewsComments);
+
+
+
+
+
+export default router;

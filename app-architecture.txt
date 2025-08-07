@@ -1,0 +1,90 @@
+APPs: DOCTORS-WEB || CLINICS-WEB || ADMIN-WEB || CLINICS-APP || DOCTORS-APP
+
+DOCTORS-WEB || DOCTORS-APP
+    -> User Authentication
+    -> User Onboarding
+    -> User Onboarding fee payment(razorpay)
+    -> User can Manage There Profile
+    -> User can see there payments
+    -> Doctor Verification by ADMIN
+    -> Doctor can see News Updates by admin
+    -> Doctors can see all the clinics near to them or any placed searched in a map interface
+    -> Doctors can see all the requirments and jobs posted by the clinics and on click they can see the full profile of the clinics
+    -> Doctors can pitch themselves to work with the clinic either in the one time requiremnt or jobs
+    -> Once the Doctors Pitch is accepted, both the doctor and clinic can connect with each other via in-app chat
+
+CLINICS-WEB || CLINICS-APP
+    -> User Authentication
+    -> User Onboarding
+    -> User Onboarding fee payment(razorpay)
+    -> Clinic Verification by ADMIN
+    -> User Can Manage There profile
+    -> User can see there paymemnts
+    -> Clinic can see News Updates by admin
+    -> Clinics can see all the doctors available near to them of any place searched in a map interface
+    -> Clinic can post requiremnts/job and edit them or even remove them and can also except the doctors pitches by clicking the on teh doctor and seeing there full profile and can chat with them
+
+ADMIN-WEB
+    -> Admin can Get an overview of the application
+    -> Admin can see all the users and sort them on basic of different differnt things
+    -> Admin can grant verifictaion status
+    -> Admin can Set the onboarding fee and also can See all the payments done in the product along with it and search and sort on different different parameters
+    -> Admin can perform CRUD in NEWS Section
+
+BACKEND | Routes Needed
+    -> User Routes
+        -> Authentication
+            -> /user/register
+            -> /user/login
+            -> /user/login/google
+            -> /user/login/facebook
+            -> /user/forgot-password
+            -> /auth/refresh-token
+        -> Onboarding
+            -> /user/onboarding
+            -> /user/onboarding/payment
+        -> Profile
+            -> /user/get-profile
+            -> /user/update-profile
+            -> /user/upload-documents
+            -> /user/get-verification-status
+        -> News
+            -> /news/get-all
+            -> /news/get-by-id/:id
+    -> Doctors Routes
+        -> /doctor/get-doctors
+        -> /doctor/get-details
+        -> /doctor/get-details-by-id
+        -> /doctor/get-clinics
+        -> /doctor/get-requirements
+        -> /doctor/pitch-requirement
+        -> /doctor/reject-requirement
+        -> /doctor/get-my-pitches
+        -> /doctor/withdraw-pitch
+    -> Clinics Routes
+        -> /clinic/get-details
+        -> /clinic/get-doctors
+        -> /clinic/post-requirement
+        -> /clinic/update-requirement
+        -> /clinic/delete-requirement
+        -> /clinic/get-my-requirements
+        -> /clinic/get-my-chats
+        -> /clinic/get-pitches-by-requirement
+        -> /clinic/accept-pitch
+        -> /clinic/reject-pitch
+    -> Chat
+        ->
+        ->
+    -> Admin Routes
+        -> /admin/get-users
+        -> /admin/get-doctors
+        -> /admin/get-clinics
+        -> /admin/get-verifictaion
+        -> /admin/set-verifictaion-by-user-id
+        -> /admin/get-onboarding-fee
+        -> /admin/set-onboarding-fee
+        -> /admin/get-all-payments
+        -> /admin/news/create
+        -> /admin/news/update/:id
+        -> /admin/news/delete/:id
+        -> /admin/news/get-all

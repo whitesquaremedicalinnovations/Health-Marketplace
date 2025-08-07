@@ -1,0 +1,34 @@
+import { Router } from "express";   
+import { 
+    getClinics, 
+    getClinicById, 
+    getDoctorsByLocation, 
+    getRequirementsByClinic, 
+    postRequirement, 
+    updateRequirement, 
+    deleteRequirement, 
+    getPitchesByRequirement, 
+    acceptPitch, 
+    rejectPitch,
+    getRequirementById,
+    getDashboardOverview,
+    getConnections
+} from "../controller/clinic.controller.ts";
+
+const router = Router();
+
+router.get("/get-clinics", getClinics);
+router.get("/get-clinic/:clinicId", getClinicById);
+router.get("/get-doctors-by-location", getDoctorsByLocation);
+router.get("/get-requirements-by-clinic/:clinicId", getRequirementsByClinic);
+router.get("/get-requirement/:requirementId", getRequirementById);
+router.post("/post-requirement", postRequirement);
+router.patch("/update-requirement/:requirementId", updateRequirement);
+router.delete("/delete-requirement/:requirementId", deleteRequirement);
+router.get("/get-pitches/:requirementId", getPitchesByRequirement);
+router.patch("/accept-pitch/:pitchId", acceptPitch);
+router.patch("/reject-pitch/:pitchId", rejectPitch);
+router.get("/get-dashboard-overview/:clinicId", getDashboardOverview);
+router.get("/get-connections/:clinicId", getConnections);
+
+export default router;
