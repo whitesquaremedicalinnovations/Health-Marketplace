@@ -146,7 +146,7 @@ model Patient {
 
   status PatientStatus @default(ACTIVE)
   feedbacks Feedback[]
-
+  changeStatusRequests ChangeStatusRequest[]
   assignedDoctors   Doctor[]
   chats Chat[]
   createdAt DateTime @default(now())
@@ -170,6 +170,21 @@ model Feedback {
 enum PatientStatus {
   ACTIVE
   COMPLETED
+}
+
+model ChangeStatusRequest {
+  id String @id @default(uuid())
+  patientId String
+  patient Patient @relation(fields: [patientId], references: [id])
+  status PatientStatus
+  hasDoctorAccepted Boolean @default(false)
+  hasClinicAccepted Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([patientId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model Admin {

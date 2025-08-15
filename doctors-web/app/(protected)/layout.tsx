@@ -3,6 +3,7 @@ import { Header } from "@/components/ui/header"
 import { useUserContext }  from "@/provider/user-provider";
 import { Loader2, Shield, Clock } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Toaster } from "sonner";
 
 export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
     const { userData, loading, error } = useUserContext();
@@ -110,6 +111,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
                     )
                 }
             </main>
+            <Toaster />
         </div>
     )
 }

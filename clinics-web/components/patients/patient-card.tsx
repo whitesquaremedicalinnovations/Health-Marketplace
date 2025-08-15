@@ -21,8 +21,13 @@ import {
   UserPlus,
   Edit,
   Trash2,
-  UserX
+  UserX,
+  Check,
+  X
 } from "lucide-react";
+import FeedbackModal from "./feedbackModal";
+import { axiosInstance } from "@/lib/axios";
+import { useState } from "react";
 
 interface Patient {
   id: string;
@@ -51,6 +56,12 @@ interface Patient {
     feedbacks: number;
     assignedDoctors: number;
   };
+  changeStatusRequests: {
+    id: string;
+    status: "ACTIVE" | "COMPLETED";
+    hasDoctorAccepted: boolean;
+    hasClinicAccepted: boolean;
+  }[] | [];
   createdAt: string;
   updatedAt: string;
 }
@@ -63,6 +74,7 @@ interface PatientCardProps {
   onEditPatient: (patient: Patient) => void;
   onDeletePatient: (patient: Patient) => void;
   onDeassignDoctor: (patientId: string, doctorId: string) => void;
+  changeStatus: (patientId: string, status: "ACTIVE"|"COMPLETED") => void;
 }
 
 export default function PatientCard({
@@ -72,8 +84,12 @@ export default function PatientCard({
   onAddFeedback,
   onEditPatient,
   onDeletePatient,
-  onDeassignDoctor
+  onDeassignDoctor,
+  changeStatus
 }: PatientCardProps) {
+  const [feedbacks, setFeedbacks] = useState<{id: string, feedback: string, createdAt: string}[]>([]);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
   };
@@ -87,6 +103,18 @@ export default function PatientCard({
       age--;
     }
     return age;
+  };
+
+  const viewFeedbacks = async (patient: Patient) => {
+    try{
+      const response = await axiosInstance.get(`/api/patient/get-patient-feedbacks/${patient.id}`);
+      const feedbacks = response.data?.success ? response.data.data : response.data;
+      setFeedbacks(feedbacks);
+      setShowFeedbackModal(true);
+    }
+    catch(error){
+      console.error("Error fetching feedbacks:", error);
+    }
   };
 
   return (
@@ -201,6 +229,24 @@ export default function PatientCard({
                 <MessageSquare className="h-4 w-4 mr-2" />
                 Add Feedback
               </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => viewFeedbacks(patient)}
+                className="dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                <MessageSquare className="h-4 w-4 mr-2" />
+                View Feedbacks
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => changeStatus(patient.id, patient.status === "ACTIVE" ? "COMPLETED" : "ACTIVE")}
+                className={`${patient.status === "ACTIVE" ? "text-green-600 dark:text-green-400 dark:hover:bg-gray-700" : "text-red-600 dark:text-red-400 dark:hover:bg-gray-700"}`}
+              >
+                {patient.changeStatusRequests.length > 0 && patient.changeStatusRequests[0].hasClinicAccepted ? "Requested" : 
+                <>
+                  {patient.status === "ACTIVE" ? <Check className="h-4 w-4 mr-2" /> : <X className="h-4 w-4 mr-2" />}
+                  {patient.status === "ACTIVE" ? "Mark as Completed" : "Mark as Active"}
+                </>
+                }
+              </DropdownMenuItem>
               <DropdownMenuSeparator className="dark:bg-gray-600" />
               <DropdownMenuItem
                 onClick={() => onEditPatient(patient)}
@@ -220,6 +266,7 @@ export default function PatientCard({
           </DropdownMenu>
         </div>
       </CardContent>
+      <FeedbackModal feedbacks={feedbacks} onClose={() => setShowFeedbackModal(false)} open={showFeedbackModal} />
     </Card>
   );
 } 

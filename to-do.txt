@@ -1,10 +1,7 @@
 1) Onboarding workflow check for clinic and doctor webs
 2) Adding razorpay payments in the onboarding
 3) Clinic Patients Workflow: 
-    a) Clinic has a separate patients page to perform crud on patients
-    b) Clinic can assign a connected doctor to a patient
-    c) When clinic clicked on the chat page first it will show all the doctors connected -> selecting a doctor will lead to select a patient -> selecting the patient will lead to open the chat of that particular patient assigned to the doctor with the clinic 
     d) The the clinic can mark the patient completed, post which the clinic needs to add a feedback regarding the patiest well, if any thing is not okay then the patient will be marked in progress with a note again
 4) Doctor Patients Workflow:
-    a) There will Patients tab, clicking on which the doctors will be able to see there assigned patients bifercated by the clicnic(simple design) there on clicking the patient the chat related to that will be opened
     b) There will be a chat tab, where the doctors will see the list of there connected clinics on click, they will see the patients assigned to them by the clinic and on clicking the patient the the chat will open up
+5) Dashboard upgrade with the patients chat and all

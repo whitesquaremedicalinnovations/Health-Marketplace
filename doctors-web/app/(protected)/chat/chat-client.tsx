@@ -135,6 +135,10 @@ export default function ChatClient() {
   // View states - for mobile navigation
   const [currentView, setCurrentView] = useState<'clinics' | 'patients' | 'chat'>('clinics');
 
+  useEffect(() => {
+    console.log("currentView", currentView);
+  }, [currentView]);
+
   // Initialize Socket.IO connection
   useEffect(() => {
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
@@ -255,7 +259,8 @@ export default function ChatClient() {
     try {
       setPatientsLoading(true);
       const response = await axiosInstance.get(`/api/patient/get-clinic-patients/${clinicId}`);
-      const allPatients = response.data.patients || [];
+      console.log("patients response", response);
+      const allPatients = response.data.data || [];
       
       const filteredPatients = (allPatients || []).filter((patient: Patient) =>
         patient.clinic.id === clinicId
@@ -382,12 +387,6 @@ export default function ChatClient() {
   }, [userId, fetchConnectedClinics]);
 
   useEffect(() => {
-    if (connectedClinics.length > 0 && !selectedClinic) {
-      handleClinicSelect(connectedClinics[0]);
-    }
-  }, [connectedClinics, selectedClinic, handleClinicSelect]);
-
-  useEffect(() => {
     const patientId = searchParams.get('patient');
     const clinicId = searchParams.get('clinic');
     
@@ -398,6 +397,15 @@ export default function ChatClient() {
       }
     }
   }, [searchParams, connectedClinics, handleClinicSelect]);
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      const chatInterfaceRef = document.getElementById('chat-interface-container');
+      if (chatInterfaceRef) {
+        chatInterfaceRef.scrollTop = chatInterfaceRef.scrollHeight;
+      }
+    }
+  }, [messages]);
 
   if (loading) {
     return <Loading variant="page" text="Loading chat..." />;

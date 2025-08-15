@@ -36,6 +36,14 @@ export const getPatientsByClinicId = asyncHandler(async (req, res) => {
                     feedbacks: true,
                     assignedDoctors: true
                 }
+            },
+            changeStatusRequests: {
+                select: {
+                    id: true,
+                    status: true,
+                    hasDoctorAccepted: true,
+                    hasClinicAccepted: true
+                }
             }
         },
         orderBy: { createdAt: 'desc' }
@@ -78,6 +86,14 @@ export const getPatientsByDoctorId = asyncHandler(async (req, res) => {
                 select: {
                     feedbacks: true,
                     assignedDoctors: true
+                }
+            },
+            changeStatusRequests: {
+                select: {
+                    id: true,
+                    status: true,
+                    hasDoctorAccepted: true,
+                    hasClinicAccepted: true
                 }
             }
         },
@@ -316,8 +332,12 @@ export const deAssignDoctorFromPatient = asyncHandler(async (req, res) => {
 });
 export const updatePatientStatus = asyncHandler(async (req, res) => {
     const { patientId } = req.params;
-    const { status } = req.body;
-    // Check if patient exists
+    const { status, userType } = req.body;
+    // Validate status early
+    if (!Object.values(PatientStatus).includes(status)) {
+        throw AppError.badRequest(ErrorCode.VALIDATION_ERROR, `Invalid patient status, ${status}`);
+    }
+    // Ensure patient exists
     const patient = await prisma.patient.findUnique({
         where: { id: patientId },
         select: { id: true }
@@ -325,20 +345,52 @@ export const updatePatientStatus = asyncHandler(async (req, res) => {
     if (!patient) {
         throw AppError.notFound("Patient");
     }
-    // Validate status
-    if (!Object.values(PatientStatus).includes(status)) {
-        throw AppError.badRequest(ErrorCode.VALIDATION_ERROR, "Invalid patient status");
+    // Special handling for COMPLETED
+    if (status === PatientStatus.COMPLETED) {
+        const existingRequest = await prisma.changeStatusRequest.findFirst({
+            where: { patientId, status }
+        });
+        const acceptanceField = userType === "DOCTOR" ? "hasDoctorAccepted" : "hasClinicAccepted";
+        if (existingRequest) {
+            // If this user type has already accepted
+            if (existingRequest[acceptanceField]) {
+                throw AppError.badRequest(ErrorCode.VALIDATION_ERROR, "You have already placed status change request");
+            }
+            // Update acceptance
+            const updatedRequest = await prisma.changeStatusRequest.update({
+                where: { id: existingRequest.id },
+                data: { [acceptanceField]: true }
+            });
+            // If both accepted now → update patient status
+            if (updatedRequest.hasDoctorAccepted && updatedRequest.hasClinicAccepted) {
+                const finalPatient = await prisma.patient.update({
+                    where: { id: patientId },
+                    data: { status },
+                    include: {
+                        clinic: { select: { id: true, clinicName: true } }
+                    }
+                });
+                await prisma.changeStatusRequest.delete({ where: { id: updatedRequest.id } });
+                return ResponseHelper.success(res, finalPatient, "Patient status updated successfully");
+            }
+            return ResponseHelper.success(res, updatedRequest, "Patient status change request placed successfully");
+        }
+        // No request exists → create one with current user's acceptance
+        const newRequest = await prisma.changeStatusRequest.create({
+            data: {
+                patientId,
+                status,
+                [acceptanceField]: true
+            }
+        });
+        return ResponseHelper.success(res, newRequest, "Patient status change request placed successfully");
     }
+    // Directly update for non-COMPLETED statuses
     const updatedPatient = await prisma.patient.update({
         where: { id: patientId },
         data: { status },
         include: {
-            clinic: {
-                select: {
-                    id: true,
-                    clinicName: true
-                }
-            }
+            clinic: { select: { id: true, clinicName: true } }
         }
     });
     ResponseHelper.success(res, updatedPatient, "Patient status updated successfully");
@@ -349,7 +401,7 @@ export const addFeedback = asyncHandler(async (req, res) => {
     // Check if patient exists
     const patient = await prisma.patient.findUnique({
         where: { id: patientId },
-        select: { id: true }
+        select: { id: true, status: true }
     });
     if (!patient) {
         throw AppError.notFound("Patient");
@@ -357,6 +409,9 @@ export const addFeedback = asyncHandler(async (req, res) => {
     // Validate feedback
     if (!feedback || feedback.trim().length === 0) {
         throw AppError.badRequest(ErrorCode.VALIDATION_ERROR, "Feedback content is required");
+    }
+    if (patient.status === PatientStatus.ACTIVE) {
+        throw AppError.badRequest(ErrorCode.VALIDATION_ERROR, "Patient is active");
     }
     const newFeedback = await prisma.feedback.create({
         data: {

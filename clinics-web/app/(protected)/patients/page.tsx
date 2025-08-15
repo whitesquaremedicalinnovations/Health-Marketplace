@@ -43,6 +43,12 @@ interface Patient {
     feedbacks: number;
     assignedDoctors: number;
   };
+  changeStatusRequests: {
+    id: string;
+    status: "ACTIVE" | "COMPLETED";
+    hasDoctorAccepted: boolean;
+    hasClinicAccepted: boolean;
+  }[] | [];
   createdAt: string;
   updatedAt: string;
 }
@@ -355,6 +361,17 @@ export default function PatientsPage() {
     setShowDeleteDialog(true);
   };
 
+  const handleChangeStatus = async (patientId: string, status: "ACTIVE"|"COMPLETED") => {
+    try{
+      await axiosInstance.patch(`/api/patient/update-patient-status/${patientId}`, {status, userType: "CLINIC"});
+      fetchPatients();
+    }
+    catch(error){
+      console.error("Error changing status:", error);
+      alert("Failed to change status");
+    }
+  }
+
   if (loading) {
     return <Loading variant="page" text="Loading patients..." />;
   }
@@ -433,6 +450,7 @@ export default function PatientsPage() {
                 onEditPatient={openEditDialog}
                 onDeletePatient={openDeleteDialog}
                 onDeassignDoctor={handleDeassignDoctor}
+                changeStatus={handleChangeStatus}
               />
             ))
           )}

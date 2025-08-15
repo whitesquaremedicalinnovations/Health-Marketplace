@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,9 +21,11 @@ import {
   Image as ImageIcon,
   Video,
   Music,
-  File
+  File,
+  ExternalLink
 } from "lucide-react";
 import AttachmentModal from "./attachment-modal";
+import { toast } from "sonner";
 
 interface ConnectedClinic {
   id: string;
@@ -100,6 +102,15 @@ export default function ChatInterface({
 }: ChatInterfaceProps) {
   const [newMessage, setNewMessage] = useState("");
   const [showAttachmentModal, setShowAttachmentModal] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const getAge = (dateOfBirth: string) => {
     const today = new Date();
@@ -136,6 +147,10 @@ export default function ChatInterface({
   };
 
   const handleSendMessage = () => {
+    if(patient.status === 'COMPLETED'){
+      toast.error("Patient is completed");
+      return;
+    }
     if (newMessage.trim()) {
       onSendMessage(newMessage.trim());
       setNewMessage("");
@@ -143,6 +158,10 @@ export default function ChatInterface({
   };
 
   const handleSendWithAttachments = (files: File[], urls: string[]) => {
+    if(patient.status === 'COMPLETED'){
+      toast.error("Patient is completed");
+      return;
+    }
     const attachments = files.map((file, index) => ({
       url: urls[index],
       filename: file.name,
@@ -172,42 +191,83 @@ export default function ChatInterface({
     }
   };
 
-  const renderAttachment = (attachment: { url: string; filename: string; type: 'image' | 'video' | 'audio' | 'document' | 'other' }, isMine: boolean) => {
+  const renderAttachment = (attachment: { url: string; filename: string; type: string }, isMine: boolean) => {
     const IconComponent = getFileIcon(attachment.type);
 
-    return (
-      <div className={`mt-2 ${isMine ? 'text-right' : 'text-left'}`}>
-        {attachment.type === 'image' ? (
-          <div className="max-w-64 relative">
-            <Image 
-              src={attachment.url} 
-              alt={attachment.filename}
-              className="rounded-lg cursor-pointer"
-              onClick={() => window.open(attachment.url, '_blank')}
-              width={256}
-              height={256}
-              style={{ maxWidth: '100%', height: 'auto' }}
-            />
-            <p className="text-xs mt-1 opacity-75">{attachment.filename}</p>
-          </div>
-        ) : (
-          <div 
-            className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${
-              isMine 
-                ? 'bg-green-600 hover:bg-green-700' 
-                : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'
-            }`}
+    if (attachment.type === 'image') {
+      return (
+        <div className="mt-2">
+          <Image
+            src={attachment.url}
+            alt={attachment.filename}
+            width={320}
+            height={320}
+            className="max-w-xs rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
             onClick={() => window.open(attachment.url, '_blank')}
-          >
-            <IconComponent className={`h-4 w-4 ${isMine ? 'text-white' : 'text-gray-600 dark:text-gray-300'}`} />
-            <div className="flex-1 min-w-0">
-              <p className={`text-xs truncate ${isMine ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
-                {attachment.filename}
-              </p>
-            </div>
-            <Download className={`h-3 w-3 ${isMine ? 'text-green-200' : 'text-gray-400 dark:text-gray-500'}`} />
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div className={`mt-2 p-3 rounded-lg border ${
+        isMine 
+          ? 'bg-green-400/20 border-green-300/30' 
+          : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600'
+      }`}>
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded flex items-center justify-center ${
+            isMine 
+              ? 'bg-green-300/30' 
+              : 'bg-gray-100 dark:bg-gray-700'
+          }`}>
+            <IconComponent className={`h-5 w-5 ${
+              isMine 
+                ? 'text-green-200' 
+                : 'text-gray-600 dark:text-gray-300'
+            }`} />
           </div>
-        )}
+          <div className="flex-1 min-w-0">
+            <p className={`text-sm font-medium truncate ${
+              isMine 
+                ? 'text-green-100' 
+                : 'text-gray-900 dark:text-white'
+            }`}>
+              {attachment.filename}
+            </p>
+          </div>
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => window.open(attachment.url, '_blank')}
+              className={`p-1 h-auto ${
+                isMine 
+                  ? 'text-green-200 hover:text-green-100 hover:bg-green-400/20' 
+                  : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+              }`}
+            >
+              <ExternalLink className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                const link = document.createElement('a');
+                link.href = attachment.url;
+                link.download = attachment.filename;
+                link.click();
+              }}
+              className={`p-1 h-auto ${
+                isMine 
+                  ? 'text-green-200 hover:text-green-100 hover:bg-green-400/20' 
+                  : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+              }`}
+            >
+              <Download className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
       </div>
     );
   };
@@ -297,7 +357,7 @@ export default function ChatInterface({
               {/* Messages for this date */}
               {dateMessages.map((message) => (
                 <div key={message.id} className={`flex ${isMyMessage(message) ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-xs sm:max-w-md lg:max-w-lg px-4 py-2 rounded-2xl ${
+                  <div className={`max-w-xs sm:max-w-md lg:max-w-lg px-4 py-2 rounded-2xl my-1 ${
                     isMyMessage(message)
                       ? 'bg-blue-500 text-white rounded-br-md'
                       : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-bl-md shadow-sm'
@@ -328,11 +388,13 @@ export default function ChatInterface({
             </div>
           ))
         )}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Message Input */}
       <div className="bg-white dark:bg-gray-800 border-t dark:border-gray-700 p-4">
         <div className="flex items-end gap-2">
+          {patient.status!=="COMPLETED" && (
           <Button 
             variant="ghost" 
             size="sm"
@@ -341,7 +403,7 @@ export default function ChatInterface({
           >
             <Paperclip className="h-5 w-5" />
           </Button>
-          
+          )}
           <div className="flex-1 relative">
             <Input
               value={newMessage}
@@ -359,7 +421,7 @@ export default function ChatInterface({
           
           <Button 
             onClick={handleSendMessage}
-            disabled={!newMessage.trim()}
+            disabled={!newMessage.trim() || patient.status==="COMPLETED"}
             className={`p-3 rounded-full ${
               newMessage.trim() 
                 ? 'bg-blue-500 hover:bg-blue-600 text-white' 

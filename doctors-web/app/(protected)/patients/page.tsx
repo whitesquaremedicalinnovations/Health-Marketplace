@@ -16,8 +16,14 @@ import {
   MapPin,
   Clock,
   Hospital,
-  Stethoscope
+  Stethoscope,
+  Check,
+  X
 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { MoreVertical } from "lucide-react";
+import FeedbackModal from "@/components/chat/feedbackModal";
 
 interface Patient {
   id: string;
@@ -43,6 +49,14 @@ interface Patient {
     feedbacks: number;
     assignedDoctors: number;
   };
+  changeStatusRequests: {
+    id: string;
+    status: "ACTIVE" | "COMPLETED";
+    hasDoctorAccepted: boolean;
+    hasClinicAccepted: boolean;
+    createdAt: string;
+    updatedAt: string;
+  }[] | [];
   createdAt: string;
   updatedAt: string;
 }
@@ -74,7 +88,8 @@ export default function PatientsPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [connectedClinics, setConnectedClinics] = useState<ConnectedClinic[]>([]);
   const [loading, setLoading] = useState(true);
-
+  const [feedbacks, setFeedbacks] = useState<{id: string, feedback: string, createdAt: string}[]>([]);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   // Fetch data
   const fetchPatients = useCallback(async () => {
@@ -143,6 +158,29 @@ export default function PatientsPage() {
     const chatUrl = `/chat?patient=${patient.id}&clinic=${patient.clinic.id}`;
     window.location.href = chatUrl;
   };
+
+  const viewFeedbacks = async (patient: Patient) => {
+    try{
+      const response = await axiosInstance.get(`/api/patient/get-patient-feedbacks/${patient.id}`);
+      const feedbacks = response.data?.success ? response.data.data : response.data;
+      setFeedbacks(feedbacks);
+      setShowFeedbackModal(true);
+    }
+    catch(error){
+      console.error("Error fetching feedbacks:", error);
+    }
+  };
+
+  const handleChangeStatus = async (patientId: string, status: "ACTIVE"|"COMPLETED") => {
+    try{
+      await axiosInstance.patch(`/api/patient/update-patient-status/${patientId}`, {status, userType: "DOCTOR"});
+      fetchPatients();
+    }
+    catch(error){
+      console.error("Error changing status:", error);
+      alert("Failed to change status");
+    }
+  }
 
   if (loading) {
     return <Loading variant="page" text="Loading your patients..." />;
@@ -249,58 +287,91 @@ export default function PatientsPage() {
                       <Card 
                         key={patient.id} 
                         className="border border-gray-200 dark:border-gray-600 hover:shadow-lg transition-all duration-300 cursor-pointer hover:border-blue-300 dark:hover:border-blue-500"
-                        onClick={() => handlePatientChat(patient)}
                       >
-                        <CardContent className="p-4">
-                          <div className="flex items-start gap-3 mb-3">
-                            <ProfileAvatar
-                              src={undefined}
-                              fallback={patient.name[0]}
-                              className="h-10 w-10 border-2 border-gray-200 dark:border-gray-600"
-                            />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <h4 className="font-semibold text-gray-900 dark:text-white truncate">
-                                  {patient.name}
-                                </h4>
-                                <Badge 
-                                  variant={patient.status === 'ACTIVE' ? 'default' : 'secondary'}
-                                  className={patient.status === 'ACTIVE' 
-                                    ? 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700' 
-                                    : 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700'
-                                  }
-                                >
-                                  {patient.status}
-                                </Badge>
+                        <CardContent className="flex items-start justify-between p-4">
+                          <div className=""
+                            onClick={() => handlePatientChat(patient)}
+                          >
+                            <div className="flex items-start gap-3 mb-3">
+                              <ProfileAvatar
+                                src={undefined}
+                                fallback={patient.name[0]}
+                                className="h-10 w-10 border-2 border-gray-200 dark:border-gray-600"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h4 className="font-semibold text-gray-900 dark:text-white truncate">
+                                    {patient.name}
+                                  </h4>
+                                  <Badge 
+                                    variant={patient.status === 'ACTIVE' ? 'default' : 'secondary'}
+                                    className={patient.status === 'ACTIVE' 
+                                      ? 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700' 
+                                      : 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700'
+                                    }
+                                  >
+                                    {patient.status}
+                                  </Badge>
+                                </div>
+                                
+                                <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                                  <div className="flex items-center gap-1">
+                                    <Calendar className="h-3 w-3" />
+                                    <span>{formatDate(patient.dateOfBirth)} ({getAge(patient.dateOfBirth)} years)</span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Phone className="h-3 w-3" />
+                                    <span>{patient.phoneNumber}</span>
+                                  </div>
+                                </div>
                               </div>
-                              
-                              <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                            </div>
+
+                            <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-100 dark:border-gray-700">
+                              <div className="flex items-center gap-3">
                                 <div className="flex items-center gap-1">
-                                  <Calendar className="h-3 w-3" />
-                                  <span>{formatDate(patient.dateOfBirth)} ({getAge(patient.dateOfBirth)} years)</span>
+                                  <MessageSquare className="h-3 w-3" />
+                                  <span>{patient._count.feedbacks} feedbacks</span>
                                 </div>
                                 <div className="flex items-center gap-1">
-                                  <Phone className="h-3 w-3" />
-                                  <span>{patient.phoneNumber}</span>
+                                  <Clock className="h-3 w-3" />
+                                  <span>Added {formatDate(patient.createdAt)}</span>
                                 </div>
                               </div>
+                              <MessageSquare className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                             </div>
                           </div>
 
-                          <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-100 dark:border-gray-700">
-                            <div className="flex items-center gap-3">
-                              <div className="flex items-center gap-1">
-                                <MessageSquare className="h-3 w-3" />
-                                <span>{patient._count.feedbacks} feedbacks</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                <span>Added {formatDate(patient.createdAt)}</span>
-                              </div>
-                            </div>
-                            <MessageSquare className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                          </div>
-                        </CardContent>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="dark:bg-gray-800 dark:border-gray-700">
+                              <DropdownMenuItem
+                                onClick={() => viewFeedbacks(patient)}
+                                className="dark:text-gray-300 dark:hover:bg-gray-700"
+                              >
+                                <MessageSquare className="h-4 w-4 mr-2" />
+                                View Feedbacks
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className={`${patient.status === "ACTIVE" ? "text-green-600 dark:text-green-400 dark:hover:bg-gray-700" : "text-red-600 dark:text-red-400 dark:hover:bg-gray-700"}`}
+                              >
+                                <Button variant="ghost" size="sm" className="" onClick={() => handleChangeStatus(patient.id, patient.status === "ACTIVE" ? "COMPLETED" : "ACTIVE")} disabled={patient.changeStatusRequests.length > 0 && patient.changeStatusRequests[0].hasDoctorAccepted}>
+                                  {patient.changeStatusRequests.length > 0 && patient.changeStatusRequests[0].hasDoctorAccepted ? "Requested" : 
+                                  <>
+                                    {patient.status === "ACTIVE" ? <Check className="h-4 w-4 mr-2" /> : <X className="h-4 w-4 mr-2" />}
+                                    {patient.status === "ACTIVE" ? "Mark as Completed" : "Mark as Active"}
+                                  </>
+                                }
+                                </Button>
+                              </DropdownMenuItem>
+
+                            </DropdownMenuContent>
+                          </DropdownMenu>  
+                        </CardContent>   
                       </Card>
                     ))}
                   </div>
@@ -309,6 +380,10 @@ export default function PatientsPage() {
             ))
           )}
         </div>
+
+        {showFeedbackModal && (
+          <FeedbackModal feedbacks={feedbacks} onClose={() => setShowFeedbackModal(false)} open={showFeedbackModal} />
+        )}
       </div>
     </div>
   );

@@ -178,7 +178,8 @@ export const getChatMessages = asyncHandler(async (req: Request, res: Response) 
           id: true,
           clinicName: true
         }
-      }
+      },
+      attachments: true
     },
     orderBy: { createdAt: 'desc' },
     skip,
@@ -205,7 +206,7 @@ export const getChatMessages = asyncHandler(async (req: Request, res: Response) 
 });
 
 export const sendMessage = asyncHandler(async (req: Request, res: Response) => {
-  const { chatId, content, senderId, senderType } = req.body;
+  const { chatId, content, senderId, senderType, attachments } = req.body;
 
   if (!chatId || !content || !senderId || !senderType) {
     throw new AppError(ErrorCode.VALIDATION_ERROR, "Chat ID, content, sender ID, and sender type are required", 400);
@@ -232,14 +233,22 @@ export const sendMessage = asyncHandler(async (req: Request, res: Response) => {
   }
 
   // Create message
-  const message = await prisma.message.create({
-    data: {
+  try{
+    const message = await prisma.message.create({
+      data: {
       content,
       chatId,
       ...(senderType === 'doctor' 
         ? { senderDoctorId: senderId }
         : { senderClinicId: senderId }
-      )
+      ),
+      attachments: {
+        create: attachments.map((attachment:{filename:string, url:string, type:string}) => ({
+          filename: attachment.filename,
+          url: attachment.url,
+          type: attachment.type
+        }))
+      }
     },
     include: {
       senderDoctor: {
@@ -254,25 +263,30 @@ export const sendMessage = asyncHandler(async (req: Request, res: Response) => {
           id: true,
           clinicName: true
         }
-      }
+      },
+      attachments: true
     }
-  });
+    });
+ 
+    // Update chat's last message timestamp
+    await prisma.chat.update({
+      where: { id: chatId },
+      data: { lastMessageAt: new Date() }
+    });
 
-  // Update chat's last message timestamp
-  await prisma.chat.update({
-    where: { id: chatId },
-    data: { lastMessageAt: new Date() }
-  });
+    // Emit Socket.IO event for real-time messaging
+    if (ioInstance) {
+      console.log(`📡 Emitting Socket.IO event for chat ${chatId}`);
+      ioInstance.to(chatId).emit("receive_message", message);
+    } else {
+      console.warn("⚠️ Socket.IO instance not available for real-time messaging");
+    }
 
-  // Emit Socket.IO event for real-time messaging
-  if (ioInstance) {
-    console.log(`📡 Emitting Socket.IO event for chat ${chatId}`);
-    ioInstance.to(chatId).emit("receive_message", message);
-  } else {
-    console.warn("⚠️ Socket.IO instance not available for real-time messaging");
+    ResponseHelper.success(res, message, "Message sent successfully", 201);
+  }catch(error){
+    console.log("error", error);
+    throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, "Failed to send message", 500);
   }
-
-  ResponseHelper.success(res, message, "Message sent successfully", 201);
 });
 
 export const markMessageAsRead = asyncHandler(async (req: Request, res: Response) => {

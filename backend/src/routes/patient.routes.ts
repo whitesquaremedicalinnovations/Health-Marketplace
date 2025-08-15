@@ -17,6 +17,7 @@ router.patch("/update-patient-status/:patientId", updatePatientStatus)
 
 router.post("/add-feedback/:patientId", addFeedback)
 
+
 // Additional useful endpoints
 router.get("/search-patients/:clinicId", searchPatients)
 router.get("/get-patient-feedbacks/:patientId", getPatientFeedbacks)

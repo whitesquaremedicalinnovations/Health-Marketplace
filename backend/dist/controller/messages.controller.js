@@ -35,7 +35,8 @@ export const getMessages = asyncHandler(async (req, res) => {
                     id: true,
                     clinicName: true
                 }
-            }
+            },
+            attachments: true
         },
         orderBy: { createdAt: 'asc' },
         skip,

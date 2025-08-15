@@ -160,7 +160,8 @@ export const getChatMessages = asyncHandler(async (req, res) => {
                     id: true,
                     clinicName: true
                 }
-            }
+            },
+            attachments: true
         },
         orderBy: { createdAt: 'desc' },
         skip,
@@ -183,7 +184,7 @@ export const getChatMessages = asyncHandler(async (req, res) => {
     ResponseHelper.success(res, response, "Messages retrieved successfully");
 });
 export const sendMessage = asyncHandler(async (req, res) => {
-    const { chatId, content, senderId, senderType } = req.body;
+    const { chatId, content, senderId, senderType, attachments } = req.body;
     if (!chatId || !content || !senderId || !senderType) {
         throw new AppError(ErrorCode.VALIDATION_ERROR, "Chat ID, content, sender ID, and sender type are required", 400);
     }
@@ -205,44 +206,58 @@ export const sendMessage = asyncHandler(async (req, res) => {
         throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, "Chat not found or sender is not a participant", 404);
     }
     // Create message
-    const message = await prisma.message.create({
-        data: {
-            content,
-            chatId,
-            ...(senderType === 'doctor'
-                ? { senderDoctorId: senderId }
-                : { senderClinicId: senderId })
-        },
-        include: {
-            senderDoctor: {
-                select: {
-                    id: true,
-                    fullName: true,
-                    specialization: true
+    try {
+        const message = await prisma.message.create({
+            data: {
+                content,
+                chatId,
+                ...(senderType === 'doctor'
+                    ? { senderDoctorId: senderId }
+                    : { senderClinicId: senderId }),
+                attachments: {
+                    create: attachments.map((attachment) => ({
+                        filename: attachment.filename,
+                        url: attachment.url,
+                        type: attachment.type
+                    }))
                 }
             },
-            senderClinic: {
-                select: {
-                    id: true,
-                    clinicName: true
-                }
+            include: {
+                senderDoctor: {
+                    select: {
+                        id: true,
+                        fullName: true,
+                        specialization: true
+                    }
+                },
+                senderClinic: {
+                    select: {
+                        id: true,
+                        clinicName: true
+                    }
+                },
+                attachments: true
             }
+        });
+        // Update chat's last message timestamp
+        await prisma.chat.update({
+            where: { id: chatId },
+            data: { lastMessageAt: new Date() }
+        });
+        // Emit Socket.IO event for real-time messaging
+        if (ioInstance) {
+            console.log(`📡 Emitting Socket.IO event for chat ${chatId}`);
+            ioInstance.to(chatId).emit("receive_message", message);
         }
-    });
-    // Update chat's last message timestamp
-    await prisma.chat.update({
-        where: { id: chatId },
-        data: { lastMessageAt: new Date() }
-    });
-    // Emit Socket.IO event for real-time messaging
-    if (ioInstance) {
-        console.log(`📡 Emitting Socket.IO event for chat ${chatId}`);
-        ioInstance.to(chatId).emit("receive_message", message);
+        else {
+            console.warn("⚠️ Socket.IO instance not available for real-time messaging");
+        }
+        ResponseHelper.success(res, message, "Message sent successfully", 201);
     }
-    else {
-        console.warn("⚠️ Socket.IO instance not available for real-time messaging");
+    catch (error) {
+        console.log("error", error);
+        throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, "Failed to send message", 500);
     }
-    ResponseHelper.success(res, message, "Message sent successfully", 201);
 });
 export const markMessageAsRead = asyncHandler(async (req, res) => {
     const { messageId } = req.params;
