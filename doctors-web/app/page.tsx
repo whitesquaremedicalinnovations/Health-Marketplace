@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import { 
-  Hospital, 
   Users, 
   Shield, 
   Clock, 
@@ -14,8 +13,6 @@ import {
   ArrowRight,
   Stethoscope,
   HeartHandshake,
-  Building,
-  Award,
   MapPin,
   Calendar,
   TrendingUp

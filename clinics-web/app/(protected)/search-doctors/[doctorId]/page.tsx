@@ -1,29 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
-import { useAuth } from "@clerk/nextjs";
+import { useParams, useRouter } from "next/navigation";
 import { axiosInstance } from "@/lib/axios";
 import { ProfileAvatar } from "@/components/ui/profile-avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import {
+    ArrowLeft,
+    Heart,
+    Mail,
+    MapPin,
+    Phone,
+    Share2,
+    FileText,
+} from "lucide-react";
+import { Loading } from "@/components/ui/loading";
+import { APIProvider } from "@vis.gl/react-google-maps";
+import ReusableMap from "@/components/ui/reusable-map";
+
+interface Document {
+    id: string;
+    name: string;
+    docUrl: string;
+    type: string;
+}
 
 interface Doctor {
   id: string;
@@ -32,194 +34,168 @@ interface Doctor {
   experience: number;
   profileImage: string | null;
   about: string;
+  address: string;
   certifications: string[];
-}
-
-interface Requirement {
-    id: string;
-    title: string;
-    requirementStatus: string;
-}
-
-interface AcceptedPitch {
-    id: string;
-    jobRequirement: {
-        id: string;
-        title: string;
-        type: string;
-        createdAt: string;
-    };
-    createdAt: string;
-}
-
-interface Connection {
-    doctor: {
-        id: string;
-    }
-    acceptedPitches: AcceptedPitch[];
+  phoneNumber: string;
+  email: string;
+  latitude: number;
+  longitude: number;
+  documents: Document[];
 }
 
 export default function DoctorProfile() {
   const { doctorId } = useParams();
-  const searchParams = useSearchParams();
-  const { userId } = useAuth();
+  const router = useRouter();
   const [doctor, setDoctor] = useState<Doctor | null>(null);
-  const [requirements, setRequirements] = useState<Requirement[]>([]);
-  const [acceptedPitches, setAcceptedPitches] = useState<AcceptedPitch[]>([]);
-  const [selectedRequirement, setSelectedRequirement] = useState<string>("");
-  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
-
-  const isFromConnections = searchParams.get('from') === 'connections';
 
   useEffect(() => {
     const fetchDoctor = async () => {
-      const response = await axiosInstance.get(`/api/doctor/get-doctor/${doctorId}`);
-      setDoctor(response.data.doctor);
-      setLoading(false);
+      try {
+        const response = await axiosInstance.get(`/api/doctor/get-doctor/${doctorId}`);
+        setDoctor(response.data.doctor);
+      } catch (error) {
+        console.error("Error fetching doctor:", error);
+      } finally {
+        setLoading(false);
+      }
     };
-
-    const fetchRequirements = async () => {
-        if(userId){
-            const response = await axiosInstance.get(`/api/clinic/get-requirements-by-clinic/${userId}`);
-            setRequirements(response.data.requirements.filter((req: Requirement) => req.requirementStatus === 'POSTED'));
-            console.log(response.data.requirements)
-        }
-    }
-
-    const fetchAcceptedPitches = async () => {
-        if(userId && isFromConnections) {
-            const response = await axiosInstance.get(`/api/clinic/get-connections/${userId}`);
-            const connections = response.data.connections;
-            const connection = connections.find((conn: Connection) => conn.doctor.id === doctorId);
-            if(connection) {
-                setAcceptedPitches(connection.acceptedPitches);
-            }
-        }
-    }
 
     if (doctorId) {
       fetchDoctor();
-      fetchRequirements();
-      fetchAcceptedPitches();
     }
-  }, [doctorId, userId, isFromConnections]);
-
-  const handlePitch = async () => {
-    await axiosInstance.post(`/api/doctor/pitch-requirement/${selectedRequirement}`, {
-        message,
-        doctorId,
-    })
-  }
+  }, [doctorId]);
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <Loader2 className="animate-spin" />
-      </div>
-    );
+    return <Loading variant="page" text="Loading doctor's profile..." />;
   }
 
   if (!doctor) {
-    return <div>Doctor not found</div>;
+    return <div className="text-center py-10">Doctor not found</div>;
   }
 
   return (
-    <div className="p-8">
-      <Card>
-        <CardContent className="p-8 flex flex-col lg:flex-row items-center gap-8">
-          <ProfileAvatar
-            src={doctor.profileImage}
-            fallback={doctor.fullName[0]}
-            size="xl"
-            profileId={doctor.id}
-            profileType="doctor"
-            className="h-40 w-40"
-          />
-          <div className="flex-1 text-center lg:text-left">
-            <h1 className="text-4xl font-bold">{doctor.fullName}</h1>
-            <p className="text-xl text-muted-foreground mt-2">
-              {doctor.specialization}
-            </p>
-            <p className="text-lg text-muted-foreground mt-1">
-              {doctor.experience} years of experience
-            </p>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button className="mt-4">Pitch Requirement</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Pitch a Requirement</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                    <Select onValueChange={setSelectedRequirement}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select a requirement" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {requirements.map(req => (
-                                <SelectItem key={req.id} value={req.id}>{req.title}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Textarea placeholder="Add a message (optional)" value={message} onChange={e => setMessage(e.target.value)} />
-                    <Button onClick={handlePitch}>Send Pitch</Button>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+        <div className="container mx-auto p-4 md:p-8">
+            <Button
+              variant="ghost"
+              onClick={() => router.back()}
+              className="mb-6"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Search
+            </Button>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Main Content */}
+                <div className="lg:col-span-2 space-y-8">
+                    {/* Header Card */}
+                    <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+                        <CardContent className="p-6 md:p-8 flex flex-col md:flex-row items-center gap-8">
+                          <ProfileAvatar
+                            src={doctor.profileImage}
+                            fallback={doctor.fullName[0]}
+                            size="xl"
+                            profileId={doctor.id}
+                            profileType="doctor"
+                            className="h-32 w-32 md:h-40 md:w-40 border-4 border-white shadow-lg"
+                          />
+                          <div className="flex-1 text-center md:text-left">
+                            <h1 className="text-3xl md:text-4xl font-bold text-gray-900">{doctor.fullName}</h1>
+                            <p className="text-lg md:text-xl text-blue-600 font-semibold mt-2">
+                              {doctor.specialization.replace(/_/g, " ")}
+                            </p>
+                            <p className="text-md text-muted-foreground mt-1">
+                              {doctor.experience} years of experience
+                            </p>
+                            <div className="flex justify-center md:justify-start gap-2 mt-4">
+                                <Button variant="outline">
+                                    <Heart className="h-4 w-4 mr-2"/>
+                                    Save Doctor
+                                </Button>
+                                <Button variant="ghost" size="icon">
+                                    <Share2 className="h-4 w-4"/>
+                                </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* About Card */}
+                    <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+                        <CardHeader>
+                            <CardTitle className="text-xl text-gray-900">About Dr. {doctor.fullName.split(" ").pop()}</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{doctor.about}</p>
+                        </CardContent>
+                    </Card>
+                    
+                    {/* Documents Section */}
+                    <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+                        <CardHeader>
+                            <CardTitle>Documents</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {doctor.documents.length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {doctor.documents.map(doc => (
+                                        <a href={doc.docUrl} key={doc.id} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 p-3 border rounded-lg hover:bg-gray-50">
+                                            <FileText className="h-8 w-8 text-blue-600" />
+                                            <div>
+                                                <p className="font-semibold">{doc.name}</p>
+                                                <p className="text-sm text-muted-foreground">{doc.type}</p>
+                                            </div>
+                                        </a>
+                                    ))}
+                                </div>
+                            ) : <p className="text-muted-foreground">No documents available.</p>}
+                        </CardContent>
+                    </Card>
                 </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </CardContent>
-      </Card>
-      <div className="grid lg:grid-cols-2 gap-8 mt-8">
-        <Card>
-            <CardHeader>
-                <CardTitle>About</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <p>{doctor.about}</p>
-            </CardContent>
-        </Card>
-        <Card>
-            <CardHeader>
-                <CardTitle>Certifications</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <ul className="list-disc list-inside">
-                    {doctor.certifications.map(cert => (
-                        <li key={cert}>{cert}</li>
-                    ))}
-                </ul>
-            </CardContent>
-        </Card>
-      </div>
-      {isFromConnections && acceptedPitches.length > 0 && (
-        <div className="mt-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Accepted Pitches</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {acceptedPitches.map((pitch) => (
-                  <div key={pitch.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <p className="font-bold">{pitch.jobRequirement.title}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Type: {pitch.jobRequirement.type}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Accepted on: {new Date(pitch.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <Badge variant="secondary">Accepted</Badge>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                
+                {/* Sidebar */}
+                <div className="space-y-6">
+                    <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+                        <CardHeader><CardTitle>Contact Information</CardTitle></CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="flex items-center gap-3"><Mail className="h-4 w-4 text-muted-foreground"/><span>{doctor.email}</span></div>
+                            <div className="flex items-center gap-3"><Phone className="h-4 w-4 text-muted-foreground"/><span>{doctor.phoneNumber}</span></div>
+                            <div className="flex items-center gap-3"><MapPin className="h-4 w-4 text-muted-foreground"/><span>{doctor.address}</span></div>
+                        </CardContent>
+                    </Card>
+                    <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+                        <CardHeader><CardTitle>Certifications & Skills</CardTitle></CardHeader>
+                        <CardContent className="flex flex-wrap gap-2">
+                            {doctor.certifications.map(cert => (
+                                <Badge key={cert} variant="secondary">{cert}</Badge>
+                            ))}
+                        </CardContent>
+                    </Card>
+                    <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm h-64">
+                        <CardHeader><CardTitle>Location</CardTitle></CardHeader>
+                        <CardContent className="h-full p-0">
+                            {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && doctor.latitude && doctor.longitude ? (
+                                <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}>
+                                    <ReusableMap
+                                        places={[{
+                                            lat: doctor.latitude,
+                                            lng: doctor.longitude,
+                                            name: doctor.fullName,
+                                        }]}
+                                        center={{ lat: doctor.latitude, lng: doctor.longitude }}
+                                        updateLocation={() => {}}
+                                        zoom={14}
+                                    />
+                                </APIProvider>
+                            ) : (
+                                <div className="h-full flex items-center justify-center text-muted-foreground">Map data not available.</div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
         </div>
-      )}
     </div>
   );
 }

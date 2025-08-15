@@ -15,6 +15,7 @@ import {
   Users,
   LogOut,
   UserCog,
+  User,
 } from 'lucide-react';
 
 import { Button } from './button';
@@ -29,12 +30,14 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ModeToggle } from './theme-toggle';
+import { useUserContext } from '@/provider/user-provider';
 
 const navLinks = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/requirements', label: 'Requirements', icon: Hospital },
   { href: '/search-doctors', label: 'Search Doctors', icon: Stethoscope },
   { href: '/connections', label: 'Connections', icon: Users },
+  { href: '/patients', label: 'Patients', icon: User },
   { href: '/chat', label: 'Chat', icon: MessageCircle },
   { href: '/news', label: 'News', icon: Newspaper },
 ];
@@ -42,6 +45,7 @@ const navLinks = [
 export const Header = () => {
   const pathname = usePathname();
   const { user, isSignedIn } = useUser();
+  const {userData} = useUserContext()
   const { signOut } = useClerk();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -117,7 +121,7 @@ export const Header = () => {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="relative h-10 w-10 rounded-full ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                     <Avatar className="h-9 w-9">
-                      <AvatarImage src={user?.imageUrl} alt={user?.fullName || 'User'} />
+                      <AvatarImage src={userData?.data?.profileImage?.docUrl} alt={user?.fullName || 'User'} />
                       <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
                         {user?.firstName?.[0] ?? user?.emailAddresses[0]?.emailAddress[0]?.toUpperCase() ?? 'U'}
                       </AvatarFallback>

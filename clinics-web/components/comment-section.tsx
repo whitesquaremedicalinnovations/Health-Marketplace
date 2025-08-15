@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { axiosInstance } from "@/lib/axios";
 import { useAuth } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
@@ -41,7 +41,7 @@ export default function CommentSection({ newsId }: CommentSectionProps) {
   const [collapsedReplies, setCollapsedReplies] = useState<Set<string>>(new Set());
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const fetchComments = async () => {
+  const fetchComments = useCallback(async () => {
     try {
       const response = await axiosInstance.get(`/api/user/news/${newsId}/comments`);
       const fetchedComments = response.data.comments;
@@ -62,11 +62,11 @@ export default function CommentSection({ newsId }: CommentSectionProps) {
     } catch (error) {
       console.error("Error fetching comments:", error);
     }
-  };
+  }, [newsId]);
 
   useEffect(() => {
     fetchComments();
-  }, [newsId]);
+  }, [fetchComments]);
 
   const handleCommentSubmit = async () => {
     if (!newComment.trim()) return;

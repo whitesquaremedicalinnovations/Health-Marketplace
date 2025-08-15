@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { axiosInstance } from "@/lib/axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,11 +22,11 @@ import {
   AlertCircle,
   Send,
   Filter,
-  ArrowRight,
-  TrendingUp
+  ArrowRight
 } from "lucide-react";
 import { Loading } from "@/components/ui/loading";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AxiosError } from "axios";
 
 interface Application {
   id: string;
@@ -60,23 +60,23 @@ export default function MyApplications() {
   const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  useEffect(() => {
-    fetchApplications();
-  }, [userId]);
-
-  const fetchApplications = async () => {
+  const fetchApplications = useCallback(async () => {
     if (!userId) return;
     
     setLoading(true);
     try {
       const response = await axiosInstance.get(`/api/doctor/get-my-pitches?doctorId=${userId}`);
       setApplications(response.data.pitches);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error fetching applications:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
+
+  useEffect(() => {
+    fetchApplications();
+  }, [fetchApplications]);
 
   const handleWithdraw = async (applicationId: string) => {
     setWithdrawingId(applicationId);
@@ -95,9 +95,12 @@ export default function MyApplications() {
       );
       
       alert("Application withdrawn successfully");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error withdrawing application:", error);
-      alert(error.response?.data?.message || "Failed to withdraw application");
+      const errorMessage = error instanceof Error && 'response' in error ? 
+        (error as AxiosError).response?.data || "Failed to withdraw application" :
+        "Failed to withdraw application";
+      alert(errorMessage);
     } finally {
       setWithdrawingId(null);
     }

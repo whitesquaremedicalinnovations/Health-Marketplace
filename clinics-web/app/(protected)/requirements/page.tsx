@@ -2,7 +2,15 @@
 import { useAuth } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Eye, Edit3, Trash2, Briefcase, Calendar, MapPin } from "lucide-react";
+import {
+  PlusCircle,
+  Eye,
+  Edit3,
+  Briefcase,
+  Calendar,
+  MapPin,
+  CheckCircle,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   AlertDialog,
@@ -34,10 +42,10 @@ export default function Requirements() {
   const router = useRouter();
   const [requirements, setRequirements] = useState<Requirement[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [requirementToDelete, setRequirementToDelete] = useState<string | null>(
-    null
-  );
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false);
+  const [requirementToComplete, setRequirementToComplete] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     const fetchRequirements = async () => {
@@ -66,28 +74,41 @@ export default function Requirements() {
     router.push(`/requirements/edit/${id}`);
   };
 
-  const handleDelete = async () => {
-    if (!requirementToDelete) return;
+  const handleComplete = async () => {
+    if (!requirementToComplete) return;
 
-    const response = await axiosInstance.delete(`/api/clinic/delete-requirement/${requirementToDelete}`, {
-      data: { clinicId: userId },
-    })
-    if(response.status === 204){
-      setRequirements(requirements.filter((req) => req.id !== requirementToDelete))
-    }else{
-      alert("Failed to delete requirement")
+    try {
+      const response = await axiosInstance.patch(
+        `/api/clinic/update-requirement/${requirementToComplete}`,
+        {
+          requirementStatus: "COMPLETED",
+          clinicId: userId,
+        }
+      );
+
+      if (response.status === 200) {
+        setRequirements(
+          requirements.map((req) =>
+            req.id === requirementToComplete
+              ? { ...req, requirementStatus: "COMPLETED" }
+              : req
+          )
+        );
+      } else {
+        alert("Failed to mark requirement as completed");
+      }
+    } catch (error) {
+      console.error("Error completing requirement:", error);
+      alert("Failed to mark requirement as completed");
     }
 
-    setRequirements(
-      requirements.filter((req) => req.id !== requirementToDelete)
-    );
-    setShowDeleteDialog(false);
-    setRequirementToDelete(null);
+    setShowCompleteDialog(false);
+    setRequirementToComplete(null);
   };
 
-  const openDeleteDialog = (id: string) => {
-    setRequirementToDelete(id);
-    setShowDeleteDialog(true);
+  const openCompleteDialog = (id: string) => {
+    setRequirementToComplete(id);
+    setShowCompleteDialog(true);
   };
 
   const handleView = (id: string) => {
@@ -239,11 +260,14 @@ export default function Requirements() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => openDeleteDialog(req.id)}
-                        className="border-red-200 text-red-600 hover:bg-red-50 w-full justify-start"
+                        onClick={() => openCompleteDialog(req.id)}
+                        className="border-green-200 text-green-600 hover:bg-green-50 w-full justify-start"
+                        disabled={req.requirementStatus === 'COMPLETED'}
                       >
-                        <Trash2 className="h-4 w-4 mr-1" />
-                        Delete
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        {
+                        req.requirementStatus==="COMPLETED" ? "Completed" : "Mark Completed"
+                        }
                       </Button>
                     </div>
                   </div>
@@ -254,21 +278,27 @@ export default function Requirements() {
         )}
       </div>
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      <AlertDialog
+        open={showCompleteDialog}
+        onOpenChange={setShowCompleteDialog}
+      >
         <AlertDialogContent className="border-0 shadow-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-xl">Are you sure?</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-600">
-              This action cannot be undone. This will permanently delete the requirement and all associated data.
+              This action cannot be undone. This will permanently mark the
+              requirement as completed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-gray-200">Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDelete}
-              className="bg-red-600 hover:bg-red-700"
+            <AlertDialogCancel className="border-gray-200">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleComplete}
+              className="bg-green-600 hover:bg-green-700"
             >
-              Delete
+              Complete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -125,7 +125,9 @@ export const getProfile = async (req: Request, res: Response) => {
 }
 
 export const updateProfile = async (req: Request, res: Response) => {
-    const { doctorId, clinicId } = req.params
+    const { userId } = req.params
+    const doctorId = userId;
+    const clinicId = userId;
     const {
       role, // 'DOCTOR' or 'CLINIC'
       email,
@@ -134,6 +136,8 @@ export const updateProfile = async (req: Request, res: Response) => {
       dateOfBirth,
       phoneNumber,
       address,
+      latitude,
+      longitude,
       specialization,
       additionalInformation,
       experience,
@@ -144,25 +148,25 @@ export const updateProfile = async (req: Request, res: Response) => {
       clinicAddress,
       clinicPhoneNumber,
       clinicAdditionalDetails,
-      profileImageUrl, // optional, uploaded image URL
+      profileImage, // optional, uploaded image URL
     } = req.body;
   
     try {
-      // Update user email if present
-      if (email) {
+      // Update user email if present (only for doctors, clinics handle email differently)
+      if (email && role === "DOCTOR") {
         await prisma.doctor.update({
           where: { id: doctorId },
           data: { email },
         });
       }
   
-      if (role === "DOCTOR") {
+            if (role === "DOCTOR") {
         // Upload profile image as Document and connect
         let profileImageId: string | undefined;
-        if (profileImageUrl) {
+        if (profileImage) {
           const doc = await prisma.document.create({
             data: {
-              docUrl: profileImageUrl,
+              docUrl: profileImage,
               name: `doctor-profile-${doctorId}`,
               type: "image",
               doctor: {
@@ -172,26 +176,30 @@ export const updateProfile = async (req: Request, res: Response) => {
           });
           profileImageId = doc.id;
         }
-  
+
+        // Build update data object only with provided fields
+        const updateData: any = {};
+        
+        if (fullName !== undefined) updateData.fullName = fullName;
+        if (gender !== undefined) updateData.gender = gender;
+        if (dateOfBirth !== undefined) updateData.dateOfBirth = new Date(dateOfBirth);
+        if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
+        if (address !== undefined) updateData.address = address;
+        if (specialization !== undefined) updateData.specialization = specialization;
+        if (additionalInformation !== undefined) updateData.additionalInformation = additionalInformation;
+        if (experience !== undefined) updateData.experience = Number(experience);
+        if (about !== undefined) updateData.about = about;
+        if (certifications !== undefined) updateData.certifications = certifications;
+        
+        if (profileImageId) {
+          updateData.profileImage = {
+            connect: { id: profileImageId },
+          };
+        }
+
         const updatedDoctor = await prisma.doctor.update({
           where: { id: doctorId },
-          data: {
-            fullName,
-            gender,
-            dateOfBirth: new Date(dateOfBirth),
-            phoneNumber,
-            address,
-            specialization,
-            additionalInformation,
-            experience: Number(experience),
-            about,
-            certifications,
-            ...(profileImageId && {
-              profileImage: {
-                connect: { id: profileImageId },
-              },
-            }),
-          },
+          data: updateData,
           include: {
             profileImage: true,
           },
@@ -205,10 +213,10 @@ export const updateProfile = async (req: Request, res: Response) => {
       } else if (role === "CLINIC") {
         // Upload profile image as Document and connect
         let clinicProfileImageId: string | undefined;
-        if (profileImageUrl) {
+        if (profileImage) {
           const doc = await prisma.document.create({
             data: {
-              docUrl: profileImageUrl,
+              docUrl: profileImage,
               name: `clinic-profile-${clinicId}`,
               type: "image",
               clinic: {
@@ -225,6 +233,8 @@ export const updateProfile = async (req: Request, res: Response) => {
             ownerName,
             clinicName,
             clinicAddress,
+            ...(latitude !== undefined && { latitude: Number(latitude) }),
+            ...(longitude !== undefined && { longitude: Number(longitude) }),
             clinicPhoneNumber,
             clinicAdditionalDetails,
             ownerPhoneNumber: phoneNumber,
@@ -253,6 +263,73 @@ export const updateProfile = async (req: Request, res: Response) => {
         message: "Something went wrong",
         error: error.message,
       });
+    }
+};
+
+export const updateDocuments = async (req: Request, res: Response) => {
+    const { userId } = req.params;
+    const { documents } = req.body; // Array of document URLs
+
+    try {
+        // Create documents and link to doctor
+        const createdDocuments = await Promise.all(
+            documents.map((docUrl: string, index: number) =>
+                prisma.document.create({
+                    data: {
+                        docUrl,
+                        name: `doctor-document-${userId}-${index}`,
+                        type: "document",
+                        doctor: {
+                            connect: { id: userId },
+                        },
+                    },
+                })
+            )
+        );
+
+        return res.status(200).json({
+            message: "Documents uploaded successfully",
+            documents: createdDocuments,
+        });
+    } catch (error: any) {
+        console.error("Update Documents Error:", error);
+        return res.status(500).json({
+            message: "Something went wrong",
+            error: error.message,
+        });
+    }
+};
+
+export const deleteDocument = async (req: Request, res: Response) => {
+    const { userId, documentId } = req.params;
+
+    try {
+        // Verify document belongs to user
+        const document = await prisma.document.findFirst({
+            where: {
+                id: documentId,
+                doctorId: userId,
+            },
+        });
+
+        if (!document) {
+            return res.status(404).json({ message: "Document not found" });
+        }
+
+        // Delete document
+        await prisma.document.delete({
+            where: { id: documentId },
+        });
+
+        return res.status(200).json({
+            message: "Document deleted successfully",
+        });
+    } catch (error: any) {
+        console.error("Delete Document Error:", error);
+        return res.status(500).json({
+            message: "Something went wrong",
+            error: error.message,
+        });
     }
 };
 

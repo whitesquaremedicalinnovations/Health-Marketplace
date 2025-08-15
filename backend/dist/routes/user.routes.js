@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { onboardingDoctor, onboardingClinic, getProfile, updateProfile, getNewsById, getNews, likeNews, commentOnNews, getNewsComments } from "../controller/user.controller.js";
+import { onboardingDoctor, onboardingClinic, getProfile, updateProfile, updateDocuments, deleteDocument, getNewsById, getNews, likeNews, commentOnNews, getNewsComments } from "../controller/user.controller.js";
 const router = Router();
 //Onboarding Routes
 router.post("/onboarding/doctor", onboardingDoctor);
@@ -7,6 +7,8 @@ router.post("/onboarding/clinic", onboardingClinic);
 // Profile Routes
 router.get("/profile", getProfile);
 router.post("/profile/update/:userId", updateProfile);
+router.post("/profile/update-documents/:userId", updateDocuments);
+router.delete("/profile/delete-document/:userId/:documentId", deleteDocument);
 //News Routes
 router.get("/news", getNews);
 router.get("/news/:newsId", getNewsById);

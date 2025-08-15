@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { axiosInstance } from "@/lib/axios";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useRouter } from "next/navigation";
 import { 
@@ -25,6 +24,7 @@ import {
   ArrowRight
 } from "lucide-react";
 import { Loading } from "@/components/ui/loading";
+import { ProfileAvatar } from "@/components/ui/profile-avatar";
 
 interface Connection {
   id: string;
@@ -55,23 +55,24 @@ export default function Connections() {
   const [loading, setLoading] = useState(true);
   const [selectedConnection, setSelectedConnection] = useState<Connection | null>(null);
 
-  useEffect(() => {
-    fetchConnections();
-  }, [userId]);
-
-    const fetchConnections = async () => {
+  const fetchConnections = useCallback(async () => {
     if (!userId) return;
     
-    setLoading(true);
-        try {
+    try {
+      setLoading(true);
       const response = await axiosInstance.get(`/api/doctor/get-my-accepted-pitches?doctorId=${userId}`);
-          setConnections(response.data.connections);
-        } catch (error) {
-          console.error("Error fetching connections:", error);
-        } finally {
-          setLoading(false);
-        }
-  };
+      const connectionsData = response.data?.success ? response.data.data.connections : response.data?.connections || [];
+      setConnections(connectionsData);
+    } catch (error) {
+      console.error("Error fetching connections:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    fetchConnections();
+  }, [fetchConnections]);
 
   const formatJobType = (type: string) => {
     switch (type) {
@@ -163,7 +164,7 @@ export default function Connections() {
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-3">No Active Positions</h3>
               <p className="text-gray-600 mb-6">
-                You don't have any active job positions yet. Start applying to build your professional network.
+                You don&apos;t have any active job positions yet. Start applying to build your professional network.
               </p>
               <div className="flex gap-4 justify-center">
                 <Button 
@@ -188,12 +189,13 @@ export default function Connections() {
                 <CardHeader className="pb-4">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-4">
-                      <Avatar className="h-16 w-16 border-2 border-emerald-200">
-                        <AvatarImage src={connection.clinic.profileImage || ""} />
-                        <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-blue-600 text-white font-bold text-lg">
-                          {connection.clinic.clinicName[0]}
-                        </AvatarFallback>
-                      </Avatar>
+                      <ProfileAvatar 
+                        src={connection.clinic.profileImage || ""}
+                        fallback={connection.clinic.clinicName[0]}
+                        size="lg"
+                        profileId={connection.clinic.id}
+                        profileType="clinic"
+                      />
                       <div>
                         <h3 className="text-xl font-bold text-gray-900">{connection.job.title}</h3>
                         <div className="flex items-center gap-2 text-gray-600 mb-1">
@@ -281,14 +283,6 @@ export default function Connections() {
                         <Eye className="h-4 w-4 mr-2" />
                         View Details
                       </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => router.push(`/clinics/${connection.clinic.id}`)}
-                        className="bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700"
-                      >
-                        <Building className="h-4 w-4 mr-2" />
-                        View Clinic
-                      </Button>
                     </div>
                   </div>
                 </CardContent>
@@ -311,12 +305,13 @@ export default function Connections() {
                 {/* Header */}
                 <div className="p-4 bg-emerald-50 rounded-lg">
                   <div className="flex items-start gap-4">
-                    <Avatar className="h-16 w-16">
-                      <AvatarImage src={selectedConnection.clinic.profileImage || ""} />
-                      <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-blue-600 text-white font-bold text-lg">
-                        {selectedConnection.clinic.clinicName[0]}
-                              </AvatarFallback>
-                            </Avatar>
+                    <ProfileAvatar 
+                      src={selectedConnection.clinic.profileImage || ""}
+                      fallback={selectedConnection.clinic.clinicName[0]}
+                      size="lg"
+                      profileId={selectedConnection.clinic.id}
+                      profileType="clinic"
+                    />
                     <div>
                       <h3 className="text-xl font-bold text-emerald-900">{selectedConnection.job.title}</h3>
                       <p className="text-emerald-700 font-medium">{selectedConnection.clinic.clinicName}</p>
@@ -425,7 +420,7 @@ export default function Connections() {
             <CardContent className="text-center py-8">
               <h3 className="text-2xl font-bold mb-3">Keep Growing Your Network</h3>
               <p className="text-emerald-100 mb-6">
-                You're doing great! Continue building professional relationships by exploring new opportunities.
+                You&apos;re doing great! Continue building professional relationships by exploring new opportunities.
                     </p>
               <div className="flex gap-4 justify-center">
                       <Button 

@@ -52,3 +52,13 @@ export const onboardingDoctor = async (data: {
     return {status: 500, data: null}
   }
 }
+
+export const checkUserExists = async (id: string) => {
+  try {
+    const user = await axiosInstance.get(`/api/user/check-user-exists/${id}`)
+    return {status: user.status, data: user.data}
+  } catch (error) {
+    console.error("Error checking user exists:", error)
+    return {status: 500, data: null}
+  }
+}

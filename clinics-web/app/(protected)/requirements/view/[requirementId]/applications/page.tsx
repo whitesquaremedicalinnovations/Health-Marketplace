@@ -289,7 +289,7 @@ export default function ViewApplications() {
                     <div className="flex-1">
                       <div className="flex items-start gap-6">
                         {/* Doctor Avatar */}
-                        <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl flex items-center justify-center flex-shrink-0">
+                        <div className="w-16 h-16 p-2 bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl flex items-center justify-center flex-shrink-0 hover:cursor-pointer hover:border-2 hover:border-blue-600" onClick={()=>router.push(`/search-doctors/${pitch.doctor.id}`)}>
                           {pitch.doctor.profileImage ? (
                             <Image
                               src={pitch.doctor.profileImage.docUrl} 

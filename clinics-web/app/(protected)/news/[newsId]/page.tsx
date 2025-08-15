@@ -63,7 +63,7 @@ export default function NewsDetail() {
     if (newsId) {
       fetchNews();
     }
-  }, [newsId]);
+  }, [newsId, userId]);
 
   const handleLike = async () => {
     try {

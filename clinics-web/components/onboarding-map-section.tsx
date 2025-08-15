@@ -1,7 +1,7 @@
 'use client';
 
 import { useMapsLibrary } from '@vis.gl/react-google-maps';
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import ReusableMap from './ui/reusable-map';
 import { Button } from './ui/button';
 import AddressAutocomplete from './ui/address-autocomplete';
@@ -25,7 +25,7 @@ const OnboardingMapSection: React.FC<OnboardingMapSectionProps> = ({
 }) => {
     const geocodingLibrary = useMapsLibrary('geocoding');
 
-    const handleSetCurrentLocation = () => {
+    const handleSetCurrentLocation = useCallback(() => {
         navigator.geolocation.getCurrentPosition(
             (position) => {
                 const { latitude, longitude } = position.coords;
@@ -37,7 +37,7 @@ const OnboardingMapSection: React.FC<OnboardingMapSectionProps> = ({
                 alert('Unable to retrieve your location. Please ensure location services are enabled.');
             }
         );
-    };
+    }, [setClinicLocation, setMapCenter]);
 
     const updateLocation = (index: number, location: { lat: number, lng: number }) => {
         setClinicLocation(location);
@@ -46,7 +46,7 @@ const OnboardingMapSection: React.FC<OnboardingMapSectionProps> = ({
 
     useEffect(() => {
         handleSetCurrentLocation();
-    }, []);
+    }, [handleSetCurrentLocation]);
 
     useEffect(() => {
         if (!geocodingLibrary || !clinicLocation) return;
@@ -63,7 +63,7 @@ const OnboardingMapSection: React.FC<OnboardingMapSectionProps> = ({
         if (clinicLocation) {
             setMapCenter(clinicLocation);
         }
-    }, [clinicLocation]);
+    }, [clinicLocation, setMapCenter]);
 
 
     return (

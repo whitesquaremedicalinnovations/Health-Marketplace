@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useRouter } from "next/navigation"
 import { getUser, onboardingClinic } from "@/lib/utils"
 import { setAuthCookie } from "@/lib/set-auth-cookie"
-import { Loader2, Trash2, Upload, Camera, MapPin, Phone, User, Building, FileText, CheckCircle2, Circle } from "lucide-react"
+import { Loader2, Trash2, Upload, Camera, MapPin, Phone, User, Building, FileText, CheckCircle2 } from "lucide-react"
 import { APIProvider } from "@vis.gl/react-google-maps"
 import OnboardingMapSection from "@/components/onboarding-map-section"
 import { Slider } from "@/components/ui/slider"
@@ -71,7 +71,7 @@ export default function Onboarding() {
     if (user?.id) {
       fetchUserData()
     }
-  }, [user])
+  }, [user, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

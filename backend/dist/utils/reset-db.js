@@ -1,0 +1,20 @@
+import { prisma } from "./prisma";
+const resetDb = async () => {
+    await prisma.clinic.deleteMany({});
+    await prisma.doctor.deleteMany({});
+    await prisma.jobRequirement.deleteMany({});
+    await prisma.pitch.deleteMany({});
+    await prisma.acceptedWork.deleteMany({});
+    await prisma.clinicGalleryImage.deleteMany({});
+    await prisma.document.deleteMany({});
+    await prisma.news.deleteMany({});
+    await prisma.newsComment.deleteMany({});
+    await prisma.newsLike.deleteMany({});
+    await prisma.onboardingFee.deleteMany({});
+    await prisma.payment.deleteMany({});
+    await prisma.chat.deleteMany({});
+    await prisma.chatParticipant.deleteMany({});
+    await prisma.message.deleteMany({});
+    await prisma.admin.deleteMany({});
+};
+resetDb();

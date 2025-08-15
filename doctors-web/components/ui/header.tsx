@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ModeToggle } from './theme-toggle';
+import { useUserContext } from '@/provider/user-provider';
 
 const navLinks = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -37,6 +38,8 @@ const navLinks = [
   { href: '/applications', label: 'My Applications', icon: FileText },
   { href: '/search-clinics', label: 'Search Clinics', icon: Stethoscope },
   { href: '/connections', label: 'Active Positions', icon: Users },
+  { href: '/patients', label: 'Patients', icon: Users },
+  { href: '/chat', label: 'Chat', icon: MessageCircle },
   { href: '/news', label: 'News', icon: Newspaper },
 ];
 
@@ -46,7 +49,8 @@ export const Header = () => {
   const { signOut } = useClerk();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-
+  const {userData} = useUserContext()
+  console.log("userData", userData)
   // Handle scroll effect
   useEffect(() => {
     const handleScroll = () => {
@@ -118,7 +122,7 @@ export const Header = () => {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="relative h-10 w-10 rounded-full ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                     <Avatar className="h-9 w-9">
-                      <AvatarImage src={user?.imageUrl} alt={user?.fullName || 'User'} />
+                      <AvatarImage src={userData?.doctor?.profileImage} alt={user?.fullName || 'User'} />
                       <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
                         {user?.firstName?.[0] ?? user?.emailAddresses[0]?.emailAddress[0]?.toUpperCase() ?? 'U'}
                       </AvatarFallback>

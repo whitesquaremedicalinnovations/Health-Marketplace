@@ -1,22 +1,34 @@
 import { prisma } from "../utils/prisma.js";
 import getDistance from "../utils/distance.js";
-export const getClinics = async (req, res) => {
-    const clinics = await prisma.clinic.findMany();
-    res.status(200).json({ clinics });
-};
-export const getClinicById = async (req, res) => {
+import { AppError } from "../utils/app-error.js";
+import { ErrorCode } from "../types/errors.js";
+import { ResponseHelper, asyncHandler } from "../utils/response.js";
+import { QueryBuilder } from "../utils/query-builder.js";
+export const getClinics = asyncHandler(async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    if (limit > 100) {
+        throw AppError.badRequest(ErrorCode.INVALID_INPUT, "Limit cannot exceed 100");
+    }
+    const result = await QueryBuilder.getPaginatedClinics({ page, limit });
+    ResponseHelper.paginated(res, result.data, result.meta.total, result.meta.page, result.meta.limit, "Clinics retrieved successfully");
+});
+export const getClinicById = asyncHandler(async (req, res) => {
     const { clinicId } = req.params;
-    const clinic = await prisma.clinic.findUnique({ where: { id: clinicId }, include: { clinicProfileImage: true, documents: true } });
+    if (!clinicId) {
+        throw AppError.badRequest(ErrorCode.MISSING_REQUIRED_FIELD, "Clinic ID is required");
+    }
+    const clinic = await QueryBuilder.getClinicById(clinicId);
     if (!clinic) {
-        return res.status(404).json({ message: "Clinic not found" });
+        throw AppError.notFound("Clinic");
     }
     const clinicData = {
         ...clinic,
-        clinicProfileImage: clinic.clinicProfileImage ? clinic.clinicProfileImage.docUrl : null,
-        documents: clinic.documents.map((doc) => doc.url),
+        profileImage: clinic.clinicProfileImage,
+        documents: clinic.documents
     };
-    res.status(200).json({ clinic: clinicData });
-};
+    ResponseHelper.success(res, clinicData, "Clinic retrieved successfully");
+});
 export const getDoctorsByLocation = async (req, res) => {
     try {
         const { lat, lng, radius } = req.query;
@@ -214,83 +226,110 @@ export const rejectPitch = async (req, res) => {
         res.status(500).json({ message: "Something went wrong" });
     }
 };
-export const getDashboardOverview = async (req, res) => {
+export const getDashboardOverview = asyncHandler(async (req, res) => {
+    const { clinicId } = req.params;
+    if (!clinicId) {
+        throw AppError.badRequest(ErrorCode.MISSING_REQUIRED_FIELD, "Clinic ID is required");
+    }
+    // Verify clinic exists
+    const clinic = await prisma.clinic.findUnique({
+        where: { id: clinicId },
+        select: { id: true }
+    });
+    if (!clinic) {
+        throw AppError.notFound("Clinic");
+    }
+    const overview = await QueryBuilder.getClinicDashboardOverview(clinicId);
+    // Get latest news (this is global data)
+    const latestNews = await prisma.news.findMany({
+        take: 3,
+        orderBy: {
+            createdAt: 'desc'
+        },
+        select: {
+            id: true,
+            title: true,
+            content: true,
+            imageUrl: true,
+            createdAt: true
+        }
+    });
+    ResponseHelper.success(res, {
+        ...overview,
+        latestNews
+    }, "Dashboard overview retrieved successfully");
+});
+// Document Management
+export const uploadDocument = async (req, res) => {
     try {
-        const { clinicId } = req.params;
-        const totalRequirements = await prisma.jobRequirement.count({
-            where: { clinicId },
-        });
-        const requirementsByStatus = await prisma.jobRequirement.groupBy({
-            by: ['requirementStatus'],
-            where: { clinicId },
-            _count: {
-                requirementStatus: true,
+        const { clinicId, docUrl, name, type } = req.body;
+        const document = await prisma.document.create({
+            data: {
+                docUrl,
+                name,
+                type,
+                clinicId
             }
         });
-        const totalPitches = await prisma.pitch.count({
-            where: {
-                jobRequirement: {
-                    clinicId,
-                }
+        res.status(201).json({ document });
+    }
+    catch (error) {
+        res.status(500).json({ message: "Something went wrong" });
+    }
+};
+export const deleteDocument = async (req, res) => {
+    try {
+        const { documentId } = req.params;
+        await prisma.document.delete({
+            where: { id: documentId }
+        });
+        res.status(200).json({ message: "Document deleted successfully" });
+    }
+    catch (error) {
+        res.status(500).json({ message: "Something went wrong" });
+    }
+};
+// Gallery Management
+export const addGalleryImage = async (req, res) => {
+    try {
+        const { clinicId, imageUrl, caption } = req.body;
+        const galleryImage = await prisma.clinicGalleryImage.create({
+            data: {
+                imageUrl,
+                caption,
+                clinicId
             }
         });
-        const pitchesByStatus = await prisma.pitch.groupBy({
-            by: ['status'],
-            where: {
-                jobRequirement: {
-                    clinicId,
-                }
-            },
-            _count: {
-                status: true,
+        res.status(201).json({ galleryImage });
+    }
+    catch (error) {
+        res.status(500).json({ message: "Something went wrong" });
+    }
+};
+export const updateGalleryImage = async (req, res) => {
+    try {
+        const { imageId } = req.params;
+        const { caption, isActive } = req.body;
+        const galleryImage = await prisma.clinicGalleryImage.update({
+            where: { id: imageId },
+            data: {
+                ...(caption !== undefined && { caption }),
+                ...(isActive !== undefined && { isActive })
             }
         });
-        const recentPitches = await prisma.pitch.findMany({
-            where: {
-                jobRequirement: {
-                    clinicId,
-                }
-            },
-            take: 5,
-            orderBy: {
-                createdAt: 'desc'
-            },
-            include: {
-                doctor: {
-                    select: {
-                        fullName: true,
-                        profileImage: {
-                            select: {
-                                docUrl: true,
-                            }
-                        }
-                    }
-                },
-                jobRequirement: {
-                    select: {
-                        title: true,
-                    }
-                }
-            }
+        res.status(200).json({ galleryImage });
+    }
+    catch (error) {
+        res.status(500).json({ message: "Something went wrong" });
+    }
+};
+export const deleteGalleryImage = async (req, res) => {
+    try {
+        const { imageId } = req.params;
+        await prisma.clinicGalleryImage.delete({
+            where: { id: imageId }
         });
-        const totalAccepted = await prisma.acceptedWork.count({
-            where: { clinicId },
-        });
-        const latestNews = await prisma.news.findMany({
-            take: 3,
-            orderBy: {
-                createdAt: 'desc'
-            }
-        });
-        res.status(200).json({
-            totalRequirements,
-            requirementsByStatus,
-            totalPitches,
-            pitchesByStatus,
-            recentPitches,
-            totalAccepted,
-            latestNews,
-        });
+        res.status(200).json({ message: "Gallery image deleted successfully" });
     }
     catch (error) {
         res.status(500).json({ message: "Something went wrong" });
@@ -359,3 +398,34 @@ export const getConnections = async (req, res) => {
         res.status(500).json({ message: "Something went wrong" });
     }
 };
+export const getConnectedDoctors = asyncHandler(async (req, res) => {
+    const { clinicId } = req.params;
+    // Get doctors who have accepted pitches from this clinic
+    const connectedDoctors = await prisma.doctor.findMany({
+        where: {
+            pitches: {
+                some: {
+                    status: "ACCEPTED",
+                    jobRequirement: {
+                        clinicId: clinicId
+                    }
+                }
+            }
+        },
+        select: {
+            id: true,
+            fullName: true,
+            specialization: true,
+            phoneNumber: true,
+            profileImage: {
+                select: {
+                    docUrl: true
+                }
+            }
+        },
+        orderBy: {
+            fullName: 'asc'
+        }
+    });
+    ResponseHelper.success(res, connectedDoctors, "Connected doctors fetched successfully");
+});

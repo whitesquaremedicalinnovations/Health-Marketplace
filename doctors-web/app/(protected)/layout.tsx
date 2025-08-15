@@ -9,7 +9,9 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
     const [isVerified, setIsVerified] = useState(false);
 
     useEffect(() => {
+
         if(userData?.doctor?.isVerified){
+            localStorage.setItem("isVerified", "true");
             setIsVerified(true);
         }
         console.log("userData3", userData)

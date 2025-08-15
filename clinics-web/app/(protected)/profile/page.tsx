@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { axiosInstance } from "@/lib/axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,8 @@ import { ProfileAvatar } from "@/components/ui/profile-avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { 
   Building, 
   User, 
@@ -22,10 +24,22 @@ import {
   Briefcase,
   Users,
   Star,
-  Calendar,
-  TrendingUp
+  TrendingUp,
+  FileText,
+  Upload,
+  Trash2,
+  Eye,
+  Download,
+  Plus,
+  Image as ImageIcon,
+  FileIcon,
+  Loader2
 } from "lucide-react";
 import { Loading } from "@/components/ui/loading";
+import LocationSearch from "@/components/ui/location-search";
+import { APIProvider } from "@vis.gl/react-google-maps";
+import axios from "axios";
+import Image from "next/image";
 
 interface Clinic {
   id: string;
@@ -34,13 +48,50 @@ interface Clinic {
   ownerPhoneNumber: string;
   clinicName: string;
   clinicAddress: string;
+  latitude?: number;
+  longitude?: number;
   clinicPhoneNumber: string;
   clinicAdditionalDetails: string | null;
   profileImage: {
     docUrl: string;
   } | null;
-  jobRequirements: JobRequirement[];
-  connections: Connection[];
+  clinicProfileImage?: string | null;
+  jobRequirements?: JobRequirement[];
+  connections?: Connection[];
+  documents?: Document[];
+  reviews?: Review[];
+  galleryImages?: GalleryImage[];
+  averageRating?: number;
+  totalReviews?: number;
+}
+
+interface Document {
+  id: string;
+  docUrl: string;
+  name: string;
+  type: string;
+}
+
+interface Review {
+  id: string;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+  doctor: {
+    id: string;
+    fullName: string;
+    specialization: string;
+    profileImage: {
+      docUrl: string;
+    } | null;
+  };
+}
+
+interface GalleryImage {
+  id: string;
+  imageUrl: string;
+  caption: string | null;
+  createdAt: string;
 }
 
 interface JobRequirement {
@@ -74,41 +125,114 @@ export default function Profile() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editData, setEditData] = useState<Partial<Clinic>>({});
+  const [uploadingDocument, setUploadingDocument] = useState(false);
+  const [uploadingGallery, setUploadingGallery] = useState(false);
+  const [newGalleryCaption, setNewGalleryCaption] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  const [documentModalOpen, setDocumentModalOpen] = useState(false);
+  const [galleryModalOpen, setGalleryModalOpen] = useState(false);
 
-  useEffect(() => {
-    fetchProfile();
-  }, [userId]);
-
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     if (!userId) return;
     
     try {
       const response = await axiosInstance.get(`/api/clinic/get-clinic/${userId}`);
-      setProfile(response.data.clinic);
-      setEditData(response.data.clinic);
+      const clinic = response.data?.success ? response.data.data : response.data.clinic;
+      
+      // Initialize empty arrays if not present
+      const clinicWithDefaults = {
+        ...clinic,
+        jobRequirements: clinic.jobRequirements || [],
+        connections: clinic.connections || [],
+        documents: clinic.documents || [],
+        reviews: clinic.reviews || [],
+        galleryImages: clinic.galleryImages || []
+      };
+      
+      setProfile(clinicWithDefaults);
+      setEditData(clinicWithDefaults);
     } catch (error) {
       console.error("Error fetching profile:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
+
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
 
   const handleSave = async () => {
     if (!userId || !editData) return;
     
     setSaving(true);
     try {
-      await axiosInstance.post(`/api/user/profile/update/${userId}`, {
-        ...editData,
+      // Create a new object for updateData to avoid direct mutation issues
+      const updateData: Partial<Clinic> = { ...editData };
+      
+      // Remove fields that should not be sent in the update payload
+      delete updateData.email;
+      delete updateData.jobRequirements;
+      delete updateData.connections;
+      delete updateData.documents;
+      delete updateData.reviews;
+      delete updateData.galleryImages;
+      delete updateData.id;
+      delete updateData.profileImage;
+      delete updateData.averageRating;
+      delete updateData.totalReviews;
+      
+      console.log("Sending update data:", updateData);
+      
+      const response = await axiosInstance.post(`/api/user/profile/update/${userId}`, {
+        ...updateData,
         role: "CLINIC"
       });
       
-      setProfile(prev => prev ? { ...prev, ...editData } : null);
+      console.log("Update response:", response.data);
+      
+      // Handle the API response properly
+      if (response.status === 200 && response.data) {
+        let updatedClinic;
+        
+        // Handle different response formats
+        if (response.data.success && response.data.data) {
+          updatedClinic = response.data.data;
+        } else if (response.data.clinic) {
+          updatedClinic = response.data.clinic;
+        } else {
+          // Fallback - try to get clinic from current profile + editData
+          updatedClinic = { ...profile, ...editData };
+        }
+        
+        // Ensure arrays exist with fallbacks
+        const clinicWithDefaults = {
+          ...updatedClinic,
+          jobRequirements: updatedClinic?.jobRequirements || profile?.jobRequirements || [],
+          connections: updatedClinic?.connections || profile?.connections || [],
+          documents: updatedClinic?.documents || profile?.documents || [],
+          reviews: updatedClinic?.reviews || profile?.reviews || [],
+          galleryImages: updatedClinic?.galleryImages || profile?.galleryImages || []
+        };
+        
+        console.log("Updated profile data:", clinicWithDefaults);
+        
+        setProfile(clinicWithDefaults);
+        setEditData(clinicWithDefaults);
       setEditing(false);
       alert("Profile updated successfully!");
-    } catch (error) {
+        
+        // Refresh the profile from server to ensure sync
+        setTimeout(() => {
+          fetchProfile();
+        }, 500);
+      } else {
+        throw new Error(`Invalid response: ${JSON.stringify(response.data)}`);
+      }
+    } catch (error: unknown) {
       console.error("Error updating profile:", error);
-      alert("Failed to update profile");
+      const errorMessage = error instanceof Error ? error.message : "Failed to update profile";
+      alert(`Update failed: ${errorMessage}`);
     } finally {
       setSaving(false);
     }
@@ -121,6 +245,122 @@ export default function Profile() {
       case 'ONETIME': return 'One-time';
       default: return type;
     }
+  };
+
+  const handleDocumentUpload = async (files: File[]) => {
+    if (!userId || !profile) return;
+    
+    setUploadingDocument(true);
+    try {
+      const formData = new FormData();
+      for (let i = 0; i < files.length; i++) {
+        formData.append('files', files[i]);
+      }
+      
+      const uploadResponse = await axios.post('/api/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      interface UploadedFile {
+        url: string;
+      }
+
+      const documentsToCreate = uploadResponse.data.uploaded.map((uploadedFile: UploadedFile, index: number) => ({
+        clinicId: profile.id,
+        docUrl: uploadedFile.url,
+        name: files[index].name,
+        type: files[index].type,
+      }));
+
+      for (const doc of documentsToCreate) {
+        await axiosInstance.post('/api/clinic/upload-document', doc);
+      }      
+      await fetchProfile(); // Refresh data
+      alert("Documents uploaded successfully!");
+      setFiles([]);
+      setDocumentModalOpen(false);
+    } catch (error) {
+      console.error("Error uploading documents:", error);
+      alert("Failed to upload documents");
+    } finally {
+      setUploadingDocument(false);
+    }
+  };
+
+  const handleDeleteDocument = async (documentId: string) => {
+    try {
+      await axiosInstance.delete(`/api/clinic/delete-document/${documentId}`);
+      await fetchProfile(); // Refresh data
+      alert("Document deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting document:", error);
+      alert("Failed to delete document");
+    }
+  };
+
+  const handleGalleryUpload = async (files: File[]) => {
+    if (!userId || !profile) return;
+    
+    setUploadingGallery(true);
+    try {
+      const formData = new FormData();
+      for (let i = 0; i < files.length; i++) {
+        formData.append('files', files[i]);
+      }
+      
+      const uploadResponse = await axios.post('/api/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      interface UploadedFile {
+        url: string;
+      }
+
+      const imagesToCreate = uploadResponse.data.uploaded.map((uploadedFile: UploadedFile) => ({
+        clinicId: profile.id,
+        imageUrl: uploadedFile.url,
+        caption: newGalleryCaption, 
+      }));
+
+      for (const image of imagesToCreate) {
+        await axiosInstance.post('/api/clinic/add-gallery-image', image);
+      }
+      
+      setNewGalleryCaption("");
+      await fetchProfile(); // Refresh data
+      alert("Gallery images added successfully!");
+      setFiles([]);
+      setGalleryModalOpen(false);
+    } catch (error) {
+      console.error("Error uploading gallery images:", error);
+      alert("Failed to upload gallery images");
+    } finally {
+      setUploadingGallery(false);
+    }
+  };
+
+  const handleDeleteGalleryImage = async (imageId: string) => {
+    try {
+      await axiosInstance.delete(`/api/clinic/delete-gallery-image/${imageId}`);
+      await fetchProfile(); // Refresh data
+      alert("Gallery image deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting gallery image:", error);
+      alert("Failed to delete gallery image");
+    }
+  };
+
+  const renderStars = (rating: number) => {
+    return Array.from({ length: 5 }, (_, i) => (
+      <Star
+        key={i}
+        className={`h-4 w-4 ${
+          i < rating 
+            ? 'fill-yellow-400 text-yellow-400' 
+            : 'fill-gray-200 text-gray-200'
+        }`}
+      />
+    ));
   };
 
   if (loading) {
@@ -152,7 +392,7 @@ export default function Profile() {
               <div className="flex items-center gap-6">
                 <div className="relative">
                   <ProfileAvatar
-                    src={profile.profileImage?.docUrl}
+                    src={profile.profileImage?.docUrl || profile.clinicProfileImage}
                     fallback={profile.clinicName[0]}
                     size="xl"
                     profileId={profile.id}
@@ -174,13 +414,19 @@ export default function Profile() {
                   <p className="text-blue-100 text-lg mb-2">
                     Owned by Dr. {profile.ownerName}
                   </p>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
-                      {profile.jobRequirements.length} Job Posts
+                      {profile.jobRequirements?.length || 0} Job Posts
                     </Badge>
                     <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
-                      {profile.connections.length} Active Hires
+                      {profile.connections?.length || 0} Active Hires
                     </Badge>
+                    {(profile.totalReviews || 0) > 0 && (
+                      <Badge variant="secondary" className="bg-white/20 text-white border-white/30 flex items-center gap-1">
+                        <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                        {profile.averageRating}/5 ({profile.totalReviews} reviews)
+                      </Badge>
+                    )}
                   </div>
                 </div>
               </div>
@@ -210,7 +456,7 @@ export default function Profile() {
         </div>
 
         {/* Profile Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
           {/* Clinic Information */}
           <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
             <CardHeader>
@@ -241,14 +487,34 @@ export default function Profile() {
                   <MapPin className="h-4 w-4" />
                   Clinic Address
                 </Label>
+                {editing ? (
+                  <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}>
+                    <LocationSearch
+                      value={editData.clinicAddress || ""}
+                      onChange={(value) => setEditData({...editData, clinicAddress: value})}
+                      onPlaceSelect={(place) => {
+                        if (place && place.formatted_address) {
+                          const lat = place.geometry?.location?.lat();
+                          const lng = place.geometry?.location?.lng();
+                          setEditData({
+                            ...editData,
+                            clinicAddress: place.formatted_address,
+                            latitude: lat || undefined,
+                            longitude: lng || undefined
+                          });
+                        }
+                      }}
+                    />
+                  </APIProvider>
+                ) : (
                 <Textarea
                   id="clinicAddress"
-                  value={editing ? editData.clinicAddress || "" : profile.clinicAddress}
-                  onChange={(e) => editing && setEditData({...editData, clinicAddress: e.target.value})}
-                  disabled={!editing}
-                  className={editing ? "border-blue-300" : "bg-gray-50"}
+                    value={profile.clinicAddress}
+                    disabled
+                    className="bg-gray-50"
                   rows={3}
                 />
+                )}
               </div>
               
               <div className="space-y-2">
@@ -354,18 +620,30 @@ export default function Profile() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-900">{profile.jobRequirements.length}</div>
+                  <div className="text-2xl font-bold text-blue-900">{profile.jobRequirements?.length || 0}</div>
                   <div className="text-sm text-blue-600">Total Job Posts</div>
                 </div>
                 <div className="text-center p-4 bg-green-50 rounded-lg">
-                  <div className="text-2xl font-bold text-green-900">{profile.connections.length}</div>
+                  <div className="text-2xl font-bold text-green-900">{profile.connections?.length || 0}</div>
                   <div className="text-sm text-green-600">Active Hires</div>
                 </div>
                 <div className="text-center p-4 bg-purple-50 rounded-lg">
                   <div className="text-2xl font-bold text-purple-900">
-                    {profile.jobRequirements.filter(req => req.requirementStatus === 'POSTED').length}
+                    {profile.jobRequirements?.filter(req => req.requirementStatus === 'POSTED').length || 0}
                   </div>
                   <div className="text-sm text-purple-600">Open Positions</div>
+                </div>
+                <div className="text-center p-4 bg-yellow-50 rounded-lg">
+                  <div className="text-2xl font-bold text-yellow-900">{profile.averageRating?.toFixed(1) || '0.0'}</div>
+                  <div className="text-sm text-yellow-600">Average Rating</div>
+                </div>
+                <div className="text-center p-4 bg-indigo-50 rounded-lg">
+                  <div className="text-2xl font-bold text-indigo-900">{profile.documents?.length || 0}</div>
+                  <div className="text-sm text-indigo-600">Documents</div>
+                </div>
+                <div className="text-center p-4 bg-pink-50 rounded-lg">
+                  <div className="text-2xl font-bold text-pink-900">{profile.galleryImages?.length || 0}</div>
+                  <div className="text-sm text-pink-600">Gallery Images</div>
                 </div>
               </CardContent>
             </Card>
@@ -381,9 +659,9 @@ export default function Profile() {
                 </div>
               </CardHeader>
               <CardContent>
-                {profile.jobRequirements.length > 0 ? (
+                {(profile.jobRequirements?.length || 0) > 0 ? (
                   <div className="space-y-3">
-                    {profile.jobRequirements.slice(0, 3).map((job) => (
+                    {profile.jobRequirements?.slice(0, 3).map((job) => (
                       <div key={job.id} className="p-3 border border-gray-200 rounded-lg">
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="font-medium text-gray-900 text-sm">{job.title}</h4>
@@ -396,7 +674,7 @@ export default function Profile() {
                         </div>
                         <div className="flex items-center gap-4 text-xs text-gray-500">
                           <span>{formatJobType(job.type)}</span>
-                          <span>{job._count.pitches} applications</span>
+                          <span>{job._count?.pitches || 0} applications</span>
                           <span>{new Date(job.createdAt).toLocaleDateString()}</span>
                         </div>
                       </div>
@@ -419,16 +697,16 @@ export default function Profile() {
                 </div>
               </CardHeader>
               <CardContent>
-                {profile.connections.length > 0 ? (
+                {(profile.connections?.length || 0) > 0 ? (
                   <div className="space-y-3">
-                    {profile.connections.slice(0, 3).map((connection) => (
+                    {profile.connections?.slice(0, 3).map((connection) => (
                       <div key={connection.id} className="p-3 border border-gray-200 rounded-lg">
                         <h4 className="font-medium text-gray-900 text-sm">
-                          Dr. {connection.doctor.fullName}
+                          Dr. {connection.doctor?.fullName}
                         </h4>
                         <div className="flex items-center gap-4 text-xs text-gray-500 mt-1">
-                          <span>{connection.doctor.specialization}</span>
-                          <span>{connection.jobRequirement.title}</span>
+                          <span>{connection.doctor?.specialization}</span>
+                          <span>{connection.jobRequirement?.title}</span>
                           <span>{new Date(connection.createdAt).toLocaleDateString()}</span>
                         </div>
                       </div>
@@ -440,6 +718,337 @@ export default function Profile() {
               </CardContent>
             </Card>
           </div>
+        </div>
+
+        {/* Additional Sections */}
+        {/* Documents Section */}
+        <div className="mt-8">
+          <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-lg">
+                    <FileText className="h-5 w-5 text-indigo-600" />
+                  </div>
+                  <CardTitle className="text-xl text-gray-900">Documents</CardTitle>
+                </div>
+                <Dialog open={documentModalOpen} onOpenChange={setDocumentModalOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload Document
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Upload New Document</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="documentFile">Choose File</Label>
+                        <Input
+                          id="documentFile"
+                          type="file"
+                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                          onChange={(e) => {
+                            const files = e.target.files;
+                            if (files) setFiles((p)=>[...p, ...Array.from(files)]);
+                          }}
+                          disabled={uploadingDocument}
+                          multiple
+                        />
+                      </div>
+                      {
+                        files.length > 0 && (
+                          <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 justify-center gap-4">
+                            {files.map((file)=>(
+                              <div key={file.name} className=" relative flex flex-col items-center justify-center border p-2">
+                                {file.type==="image/jpeg" || file.type==="image/png" ? (
+                                  <Image src={URL.createObjectURL(file)} alt={file.name} className="w-20 h-20 object-cover" width={80} height={80} objectFit="cover" />
+                                ) : (
+                                  <>
+                                    <FileIcon className="h-20 w-20 text-blue-600 mb-2" />
+                                    <p className="text-sm text-gray-500">{file.name}</p>
+                                  </>
+                                )}
+                                <Button variant="outline" size="icon" className="absolute top-0 right-0" onClick={()=>setFiles((p)=>p.filter((f)=>f.name !== file.name))}>
+                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        )
+                      }
+                      <Button onClick={()=>handleDocumentUpload(files)}>
+                        {
+                          uploadingDocument?(
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Uploading...
+                            </>
+                          ):(
+                            <p>Upload {files.length} files</p>
+                          )
+                        }
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {(profile.documents?.length || 0) > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {profile.documents?.map((doc) => (
+                    <div key={doc.id} className="p-4 border border-gray-200 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <FileText className="h-5 w-5 text-blue-600" />
+                        <div className="flex gap-2">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => window.open(doc.docUrl, '_blank')}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => {
+                              const link = document.createElement('a');
+                              link.href = doc.docUrl;
+                              link.download = doc.name;
+                              link.click();
+                            }}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="icon" variant="ghost" className="text-red-600 hover:text-red-700">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Document</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete &quot;{doc.name}&quot;? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeleteDocument(doc.id)}>
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+                      <h4 className="font-medium text-gray-900 text-sm mb-1">{doc.name}</h4>
+                      <p className="text-xs text-gray-500">{doc.type}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center py-8">No documents uploaded yet.</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Gallery Section */}
+        <div className="mt-8">
+          <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-br from-pink-100 to-red-100 rounded-lg">
+                    <ImageIcon className="h-5 w-5 text-pink-600" />
+                  </div>
+                  <CardTitle className="text-xl text-gray-900">Clinic Gallery</CardTitle>
+                </div>
+                <Dialog open={galleryModalOpen} onOpenChange={setGalleryModalOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Image
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add Gallery Image</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="galleryImages">Choose File</Label>
+                        <Input
+                          id="galleryImage"
+                          type="file"
+                          accept=".jpg,.jpeg,.png"
+                          onChange={(e) => {
+                            const files = e.target.files;
+                            if (files) setFiles((p)=>[...p, ...Array.from(files)]);
+                          }}
+                          disabled={uploadingDocument}
+                          multiple
+                        />
+                      </div>
+                      {
+                        files.length > 0 && (
+                          <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 justify-center gap-4">
+                            {files.map((file)=>(
+                              <div key={file.name} className=" relative flex flex-col items-center justify-center border p-2">
+                                {file.type==="image/jpeg" || file.type==="image/png" ? (
+                                  <Image src={URL.createObjectURL(file)} alt={file.name} className="w-20 h-20 object-cover" width={80} height={80} objectFit="cover" />
+                                ) : (
+                                  <>
+                                    <FileIcon className="h-20 w-20 text-blue-600 mb-2" />
+                                    <p className="text-sm text-gray-500">{file.name}</p>
+                                  </>
+                                )}
+                                <Button variant="outline" size="icon" className="absolute top-0 right-0" onClick={()=>setFiles((p)=>p.filter((f)=>f.name !== file.name))}>
+                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        )
+                      }
+                      <Button onClick={()=>handleGalleryUpload(files)}>
+                        {
+                          uploadingGallery?(
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Uploading...
+                            </>
+                          ):(
+                            <p>Upload {files.length} files</p>
+                          )
+                        }
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {(profile.galleryImages?.length || 0) > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {profile.galleryImages?.map((image) => (
+                    <div key={image.id} className="relative group">
+                      <Image
+                        src={image.imageUrl}
+                        alt={image.caption || "Clinic image"}
+                        width={500}
+                        height={300}
+                        className="w-full h-48 object-cover rounded-lg"
+                      />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button size="icon" variant="secondary" className="text-red-600 hover:text-red-700">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Image</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete this image? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDeleteGalleryImage(image.id)}>
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                      {image.caption && (
+                        <p className="text-sm text-gray-600 mt-2">{image.caption}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center py-8">No gallery images added yet.</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Reviews Section */}
+        <div className="mt-8">
+          <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-br from-yellow-100 to-orange-100 rounded-lg">
+                    <Star className="h-5 w-5 text-yellow-600" />
+                  </div>
+                  <CardTitle className="text-xl text-gray-900">Reviews & Ratings</CardTitle>
+                </div>
+                {(profile.totalReviews || 0) > 0 && (
+                  <div className="text-right">
+                    <div className="flex items-center gap-2">
+                      {renderStars(Math.round(profile.averageRating || 0))}
+                      <span className="text-lg font-bold text-gray-900">{profile.averageRating}/5</span>
+                    </div>
+                    <p className="text-sm text-gray-500">{profile.totalReviews} reviews</p>
+                  </div>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {(profile.reviews?.length || 0) > 0 ? (
+                <div className="space-y-4">
+                  {profile.reviews?.slice(0, 5).map((review) => (
+                    <div key={review.id} className="p-4 border border-gray-200 rounded-lg">
+                      <div className="flex items-start gap-4">
+                        <div className="flex-shrink-0">
+                          <Image
+                            src={review.doctor.profileImage?.docUrl || `https://ui-avatars.com/api/?name=${review.doctor.fullName}&background=3b82f6&color=ffffff`}
+                            alt={review.doctor.fullName}
+                            width={40}
+                            height={40}
+                            className="w-10 h-10 rounded-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-2">
+                            <div>
+                              <h4 className="font-medium text-gray-900">Dr. {review.doctor.fullName}</h4>
+                              <p className="text-sm text-gray-500">{review.doctor.specialization}</p>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {renderStars(review.rating)}
+                            </div>
+                          </div>
+                          {review.comment && (
+                            <p className="text-gray-700 text-sm">{review.comment}</p>
+                          )}
+                          <p className="text-xs text-gray-500 mt-2">
+                            {new Date(review.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {(profile.reviews?.length || 0) > 5 && (
+                    <div className="text-center">
+                      <p className="text-sm text-gray-500">Showing 5 of {profile.reviews?.length} reviews</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center py-8">No reviews yet.</p>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

@@ -1,0 +1,25 @@
+{
+  "name": "@health-platform/shared-types",
+  "version": "1.0.0",
+  "description": "Shared TypeScript types for health platform",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "types",
+    "typescript",
+    "health-platform"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "files": [
+    "dist/**/*"
+  ]
+} 

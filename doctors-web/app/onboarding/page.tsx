@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useRouter } from "next/navigation"
-import { getUser, onboardingDoctor } from "@/lib/utils"
+import { checkUserExists, getUser, onboardingDoctor } from "@/lib/utils"
 import { setAuthCookie } from "@/lib/set-auth-cookie"
-import { Loader2, Trash2, Upload, Camera, MapPin, Phone, User, Stethoscope, FileText, CheckCircle2, Circle, Calendar, Award } from "lucide-react"
+import { Loader2, Trash2, Upload, Camera, MapPin, Phone, User, Stethoscope, FileText, CheckCircle2, Calendar, Award } from "lucide-react"
 import { APIProvider } from "@vis.gl/react-google-maps"
 import OnboardingMapSection from "@/components/onboarding-map-section"
 import { Slider } from "@/components/ui/slider"
@@ -63,38 +63,30 @@ export default function Onboarding() {
   const [profileImage, setProfileImage] = useState<File | null>(null)
 
   const [loading, setLoading] = useState(false)
-  const [isCheckingUser, setIsCheckingUser] = useState(true)
+  const [isCheckingUser] = useState(true)
 
   const handleNext = () => setStep((s) => s + 1)
   const handlePrev = () => setStep((s) => s - 1)
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        setIsCheckingUser(true)
-        const userData = await getUser(user?.id ?? "")
-        if (userData.status === 200) {
-          setAuthCookie("onboarded", "true")
-          router.push("/dashboard")
+    const initializeOnboarding = async () => {
+      const check_user = await getUser(user?.id ?? "")
+      if (check_user) {
+        const existingUser = await checkUserExists(user?.id ?? "")
+        if (existingUser.status === 200 && existingUser.data?.onboarded) {
+          router.push('/dashboard')
         } else {
-          setIsCheckingUser(false)
+          // Initialize form with user data
           setFullName(`${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim())
           setEmail(user?.emailAddresses[0]?.emailAddress ?? "")
           setPhoneNumber(user?.phoneNumbers[0]?.phoneNumber ?? "")
         }
-      } catch (error) {
-        console.error("Error fetching user data:", error)
-        setIsCheckingUser(false)
-        setFullName(`${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim())
-        setEmail(user?.emailAddresses[0]?.emailAddress ?? "")
-        setPhoneNumber(user?.phoneNumbers[0]?.phoneNumber ?? "")
+      } else {
+        router.push('/sign-in')
       }
     }
-
-    if (user?.id) {
-      fetchUserData()
-    }
-  }, [user])
+    initializeOnboarding()
+  }, [router, user?.id, user?.firstName, user?.lastName, user?.emailAddresses, user?.phoneNumbers])
 
   const addCertification = () => {
     if (currentCertification.trim() && !certifications.includes(currentCertification.trim())) {

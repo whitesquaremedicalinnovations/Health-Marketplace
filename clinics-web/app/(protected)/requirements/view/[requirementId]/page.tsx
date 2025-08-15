@@ -1,6 +1,5 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -23,7 +22,6 @@ interface Requirement {
 }
 
 export default function ViewRequirement() {
-  const { getToken } = useAuth();
   const router = useRouter();
   const { requirementId } = useParams();
   const [requirement, setRequirement] = useState<Requirement | null>(null);

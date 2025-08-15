@@ -13,16 +13,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { 
   User, 
-  Stethoscope, 
+  Stethoscope,
+  MapPin, 
+  Calendar,
   Phone, 
   Mail, 
-  MapPin, 
+  Award,
   Edit, 
   Save, 
   X,
   Camera,
-  Award,
-  Calendar,
   Heart,
   Briefcase,
   Trash2,
@@ -30,6 +30,8 @@ import {
 } from "lucide-react";
 import { axiosInstance } from "@/lib/axios";
 import { Loading } from "@/components/ui/loading";
+import LocationSearch  from "@/components/ui/location-search";
+import { APIProvider } from "@vis.gl/react-google-maps";
 
 enum DoctorSpecialization {
   GENERAL_PHYSICIAN = "GENERAL_PHYSICIAN",
@@ -54,14 +56,20 @@ interface DoctorProfile {
   gender: string;
   dateOfBirth: string;
   address: string;
+  latitude?: number;
+  longitude?: number;
   specialization: DoctorSpecialization;
   experience: number;
   about: string;
   additionalInformation: string;
   certifications: string[];
-  profileImage?: {
+  profileImage?: string;
+  documents?: Array<{
+    id: string;
     docUrl: string;
-  };
+    docType?: string;
+    uploadedAt?: string;
+  }>;
   pitches: Array<{
     id: string;
     status: string;
@@ -86,6 +94,11 @@ interface DoctorProfile {
   }>;
 }
 
+interface UploadedItem {
+  url: string;
+  fieldName: string;
+}
+
 export default function Profile() {
   const { user } = useUser();
   const [profile, setProfile] = useState<DoctorProfile | null>(null);
@@ -93,6 +106,8 @@ export default function Profile() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [currentCertification, setCurrentCertification] = useState("");
+  const [uploadingDocuments, setUploadingDocuments] = useState(false);
+  const [uploadingProfileImage, setUploadingProfileImage] = useState(false);
 
   // Editing states
   const [editData, setEditData] = useState<Partial<DoctorProfile>>({});
@@ -102,8 +117,19 @@ export default function Profile() {
       if (user?.id) {
         try {
           const response = await axiosInstance.get(`/api/doctor/get-doctor/${user.id}`);
-          setProfile(response.data.doctor);
-          setEditData(response.data.doctor);
+          const doctorData = response.data?.success ? response.data.data : response.data.doctor;
+          
+          // Ensure arrays exist with fallbacks
+          const profileWithDefaults = {
+            ...doctorData,
+            pitches: doctorData?.pitches || [],
+            accepted: doctorData?.accepted || [],
+            documents: doctorData?.documents || [],
+            certifications: doctorData?.certifications || []
+          };
+          
+          setProfile(profileWithDefaults);
+          setEditData(profileWithDefaults);
         } catch (error) {
           console.error("Error fetching profile:", error);
         } finally {
@@ -122,7 +148,18 @@ export default function Profile() {
         ...editData
       });
       if (response.status === 200) {
-        setProfile(response.data.doctor);
+        const updatedData = response.data?.success ? response.data.data : response.data.doctor;
+        
+        // Ensure arrays exist with fallbacks
+        const profileWithDefaults = {
+          ...updatedData,
+          pitches: updatedData?.pitches || profile?.pitches || [],
+          accepted: updatedData?.accepted || profile?.accepted || [],
+          documents: updatedData?.documents || profile?.documents || [],
+          certifications: updatedData?.certifications || profile?.certifications || []
+        };
+        
+        setProfile(profileWithDefaults);
         setEditing(false);
       }
     } catch (error) {
@@ -133,22 +170,24 @@ export default function Profile() {
   };
 
   const addCertification = () => {
-    if (currentCertification.trim() && editData.certifications && !editData.certifications.includes(currentCertification.trim())) {
+    if (currentCertification.trim()) {
+      const currentCerts = editData.certifications || [];
+      if (!currentCerts.includes(currentCertification.trim())) {
       setEditData({
         ...editData,
-        certifications: [...editData.certifications, currentCertification.trim()]
+          certifications: [...currentCerts, currentCertification.trim()]
       });
       setCurrentCertification("");
+      }
     }
   };
 
   const removeCertification = (index: number) => {
-    if (editData.certifications) {
+    const currentCerts = editData.certifications || [];
       setEditData({
         ...editData,
-        certifications: editData.certifications.filter((_, i) => i !== index)
+      certifications: currentCerts.filter((_, i) => i !== index)
       });
-    }
   };
 
   const formatSpecialization = (spec: string) => {
@@ -162,6 +201,96 @@ export default function Profile() {
       case 'REJECTED': return 'bg-red-100 text-red-800';
       case 'WITHDRAWN': return 'bg-gray-100 text-gray-800';
       default: return 'bg-blue-100 text-blue-800';
+    }
+  };
+
+
+
+  const handleDocumentUpload = async (files: File[]) => {
+    if (files.length === 0) return;
+    
+    setUploadingDocuments(true);
+    try {
+      const formData = new FormData();
+      files.forEach(file => formData.append("documents", file));
+      
+      const uploadResponse = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      
+      const uploadData = await uploadResponse.json();
+      
+      if (uploadResponse.ok) {
+        // Update profile with new documents
+        const updateResponse = await axiosInstance.post(`/api/user/profile/update-documents/${user?.id}`, {
+          documents: uploadData.uploaded.map((item: UploadedItem) => item.url)
+        });
+        
+        if (updateResponse.status === 200) {
+          // Refresh profile data
+          const response = await axiosInstance.get(`/api/doctor/get-doctor/${user?.id}`);
+          setProfile(response.data.doctor);
+          setEditData(response.data.doctor);
+        }
+      }
+    } catch (error) {
+      console.error("Error uploading documents:", error);
+    } finally {
+      setUploadingDocuments(false);
+    }
+  };
+
+  const handleProfileImageUpload = async (file: File) => {
+    setUploadingProfileImage(true);
+    try {
+      const formData = new FormData();
+      formData.append("profileImage", file);
+      
+      const uploadResponse = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      
+      const uploadData = await uploadResponse.json();
+      
+      if (uploadResponse.ok) {
+        const profileImageUrl = uploadData.uploaded.find((item: UploadedItem) => item.fieldName === "profileImage")?.url;
+        
+        if (profileImageUrl) {
+          // Update profile with new profile image
+          const updateResponse = await axiosInstance.post(`/api/user/profile/update/${user?.id}`, {
+            role: "DOCTOR",
+            profileImage: profileImageUrl
+          });
+          
+          if (updateResponse.status === 200) {
+            // Refresh profile data
+            const response = await axiosInstance.get(`/api/doctor/get-doctor/${user?.id}`);
+            setProfile(response.data.doctor);
+            setEditData(response.data.doctor);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error uploading profile image:", error);
+    } finally {
+      setUploadingProfileImage(false);
+    }
+  };
+
+  const handleDeleteDocument = async (documentId: string) => {
+    try {
+      const response = await axiosInstance.delete(`/api/user/profile/delete-document/${user?.id}/${documentId}`);
+      
+      if (response.status === 200) {
+        // Refresh profile data
+        const profileResponse = await axiosInstance.get(`/api/doctor/get-doctor/${user?.id}`);
+        setProfile(profileResponse.data.doctor);
+        setEditData(profileResponse.data.doctor);
+      }
+    } catch (error) {
+      console.error("Error deleting document:", error);
     }
   };
 
@@ -180,7 +309,7 @@ export default function Profile() {
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-3">Profile Not Found</h3>
               <p className="text-gray-600">
-                We couldn't find your profile. Please contact support if this persists.
+                We couldn&apos;t find your profile. Please contact support if this persists.
               </p>
             </CardContent>
           </Card>
@@ -200,18 +329,38 @@ export default function Profile() {
               <div className="flex items-center gap-6">
                 <div className="relative">
                   <Avatar className="h-24 w-24 border-4 border-white shadow-xl">
-                    <AvatarImage src={profile.profileImage?.docUrl || ""} />
+                    <AvatarImage src={profile.profileImage || ""} />
                     <AvatarFallback className="bg-white text-blue-600 text-2xl font-bold">
                       {profile.fullName[0]}
                     </AvatarFallback>
                   </Avatar>
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    className="absolute -bottom-2 -right-2 h-8 w-8 border-2 border-white bg-white hover:bg-gray-50"
-                  >
-                    <Camera className="h-4 w-4" />
-                  </Button>
+                  <div className="absolute -bottom-2 -right-2">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          handleProfileImageUpload(file);
+                        }
+                      }}
+                      className="hidden"
+                      id="profile-image-upload"
+                    />
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="h-8 w-8 border-2 border-white bg-white hover:bg-gray-50"
+                      onClick={() => document.getElementById('profile-image-upload')?.click()}
+                      disabled={uploadingProfileImage}
+                    >
+                      {uploadingProfileImage ? (
+                        <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                      ) : (
+                        <Camera className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
                 <div>
                   <h1 className="text-4xl font-bold text-white mb-2">
@@ -351,13 +500,33 @@ export default function Profile() {
                   <MapPin className="h-4 w-4" />
                   Address
                 </Label>
+                {editing ? (
+                  <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}>  
+                  <LocationSearch
+                    value={editData.address || ""}
+                    onChange={(value) => setEditData({...editData, address: value})}
+                    onPlaceSelect={(place: google.maps.places.PlaceResult | null) => {
+                      if (!place) return;
+                      const address = place.formatted_address || "";
+                      const lat = place.geometry?.location?.lat();
+                      const lng = place.geometry?.location?.lng();
+                      setEditData({
+                        ...editData, 
+                        address,
+                        latitude: lat,
+                        longitude: lng
+                      });
+                    }}
+                  />
+                  </APIProvider>
+                ) : (
                 <Input
                   id="address"
-                  value={editing ? editData.address || "" : profile.address}
-                  onChange={(e) => editing && setEditData({...editData, address: e.target.value})}
-                  disabled={!editing}
-                  className={editing ? "border-blue-300" : "bg-gray-50"}
+                    value={profile.address}
+                    disabled={true}
+                    className="bg-gray-50"
                 />
+                )}
               </div>
             </CardContent>
           </Card>
@@ -568,6 +737,138 @@ export default function Profile() {
                   ))}
                   {profile.accepted.length === 0 && (
                     <p className="text-gray-500 text-sm text-center py-4">No active jobs</p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Documents Management */}
+          <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="text-xl text-gray-900 flex items-center gap-2">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Document Management
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Upload Documents */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-semibold text-gray-900">Upload New Documents</h4>
+                  <div className="text-sm text-gray-500">
+                    Max 10MB per file
+                  </div>
+                </div>
+                
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+                  <input
+                    type="file"
+                    multiple
+                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      if (files.length > 0) {
+                        handleDocumentUpload(files);
+                      }
+                    }}
+                    className="hidden"
+                    id="document-upload"
+                  />
+                  <div className="text-center">
+                    <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                      <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <div className="mt-4">
+                      <Button
+                        type="button"
+                        onClick={() => document.getElementById('document-upload')?.click()}
+                        disabled={uploadingDocuments}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        {uploadingDocuments ? (
+                          <>
+                            <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                            Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                            Upload Documents
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    <p className="mt-2 text-sm text-gray-500">
+                      PDF, Image files up to 10MB
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Existing Documents */}
+              <div className="space-y-4">
+                <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Uploaded Documents ({profile.documents?.length || 0})
+                </h4>
+                
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {profile.documents && profile.documents.length > 0 ? (
+                    profile.documents.map((doc, index) => (
+                      <div key={doc.id || index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-blue-100 rounded">
+                            <svg className="h-4 w-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm text-gray-900">
+                              Document {index + 1}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {doc.docType || 'Professional Document'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => window.open(doc.docUrl, '_blank')}
+                          >
+                            <svg className="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            View
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDeleteDocument(doc.id)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <p className="mt-2 text-sm">No documents uploaded yet</p>
+                      <p className="text-xs text-gray-400">Upload your professional certificates and documents</p>
+                    </div>
                   )}
                 </div>
               </div>

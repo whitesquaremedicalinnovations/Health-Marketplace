@@ -37,6 +37,11 @@ interface News {
   };
 }
 
+interface Like {
+  userId: string;
+  doctorId?: string;
+}
+
 export default function NewsDetail() {
   const { newsId } = useParams();
   const { userId } = useAuth();
@@ -49,10 +54,16 @@ export default function NewsDetail() {
   useEffect(() => {
     const fetchNews = async () => {
       try {
+        setLoading(true);
         const response = await axiosInstance.get(`/api/user/news/${newsId}`);
-        setNews(response.data.news);
-        setLikeCount(response.data.news._count.likes);
-        setLiked(response.data.news.likes.some((like: { doctorId: string; }) => like.doctorId === userId));
+        const newsData = response.data.news;
+        setNews(newsData);
+        
+        // Check if user has liked this news
+        if (userId && newsData.likes) {
+          const userLike = newsData.likes.find((like: Like) => like.userId === userId);
+          setLiked(!!userLike);
+        }
       } catch (error) {
         console.error("Error fetching news:", error);
       } finally {
@@ -63,7 +74,7 @@ export default function NewsDetail() {
     if (newsId) {
       fetchNews();
     }
-  }, [newsId]);
+  }, [newsId, userId]);
 
   const handleLike = async () => {
     try {

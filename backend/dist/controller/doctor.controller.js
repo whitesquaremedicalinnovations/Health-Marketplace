@@ -1,5 +1,8 @@
 import { prisma } from "../utils/prisma.js";
 import getDistance from "../utils/distance.js";
+import { ResponseHelper, asyncHandler } from "../utils/response.js";
+import { AppError } from "../utils/app-error.js";
+import { ErrorCode } from "../types/errors.js";
 export const getDoctors = async (req, res) => {
     try {
         const doctors = await prisma.doctor.findMany({
@@ -125,6 +128,11 @@ export const getClinicsByLocation = async (req, res) => {
         }
         const clinicsData = clinics.map(clinic => ({
             id: clinic.id,
+            owner: {
+                email: clinic.email,
+                ownerName: clinic.ownerName,
+                ownerPhoneNumber: clinic.ownerPhoneNumber,
+            },
             clinicName: clinic.clinicName,
             clinicAddress: clinic.clinicAddress,
             latitude: clinic.latitude,
@@ -232,6 +240,8 @@ export const getRequirementsByLocation = async (req, res) => {
                 clinicName: req.clinic.clinicName,
                 clinicAddress: req.clinic.clinicAddress,
                 profileImage: req.clinic.clinicProfileImage ? req.clinic.clinicProfileImage.docUrl : null,
+                latitude: req.clinic.latitude,
+                longitude: req.clinic.longitude,
             },
             applicationsCount: req._count.pitches,
         }));
@@ -376,58 +386,55 @@ export const withdrawPitch = async (req, res) => {
         res.status(500).json({ message: "Something went wrong" });
     }
 };
-export const getMyAcceptedPitches = async (req, res) => {
-    try {
-        const { doctorId } = req.query;
-        if (!doctorId) {
-            return res.status(400).json({ message: "Doctor ID is required" });
-        }
-        const acceptedWork = await prisma.acceptedWork.findMany({
-            where: { doctorId: doctorId },
-            include: {
-                clinic: {
-                    select: {
-                        id: true,
-                        clinicName: true,
-                        clinicAddress: true,
-                        clinicPhoneNumber: true,
-                        clinicProfileImage: true,
-                    }
-                },
-                job: {
-                    select: {
-                        id: true,
-                        title: true,
-                        description: true,
-                        type: true,
-                        specialization: true,
-                        location: true,
-                        additionalInformation: true,
-                        createdAt: true,
+export const getMyAcceptedPitches = asyncHandler(async (req, res) => {
+    const { doctorId } = req.query;
+    if (!doctorId) {
+        throw AppError.badRequest(ErrorCode.VALIDATION_ERROR, "Doctor ID is required");
+    }
+    const acceptedWork = await prisma.acceptedWork.findMany({
+        where: { doctorId: doctorId },
+        include: {
+            clinic: {
+                select: {
+                    id: true,
+                    clinicName: true,
+                    clinicAddress: true,
+                    clinicPhoneNumber: true,
+                    clinicProfileImage: {
+                        select: {
+                            docUrl: true
+                        }
                     }
                 }
             },
-            orderBy: {
-                connectedAt: 'desc'
+            job: {
+                select: {
+                    id: true,
+                    title: true,
+                    description: true,
+                    type: true,
+                    specialization: true,
+                    location: true,
+                    additionalInformation: true,
+                    createdAt: true,
+                }
             }
-        });
-        const connectionsData = acceptedWork.map(work => ({
-            id: work.id,
-            connectedAt: work.connectedAt,
-            clinic: {
-                ...work.clinic,
-                profileImage: work.clinic.clinicProfileImage ?
-                    work.clinic.clinicProfileImage.docUrl : null,
-            },
-            job: work.job,
-        }));
-        res.status(200).json({ connections: connectionsData });
-    }
-    catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Something went wrong" });
-    }
-};
+        },
+        orderBy: {
+            connectedAt: 'desc'
+        }
+    });
+    const connectionsData = acceptedWork.map(work => ({
+        id: work.id,
+        connectedAt: work.connectedAt,
+        clinic: {
+            ...work.clinic,
+            profileImage: work.clinic.clinicProfileImage?.docUrl || null,
+        },
+        job: work.job,
+    }));
+    ResponseHelper.success(res, { connections: connectionsData }, "Connected clinics fetched successfully");
+});
 // Add a dashboard overview for doctors
 export const getDoctorDashboardOverview = async (req, res) => {
     try {
@@ -532,6 +539,86 @@ export const getAllDoctors = async (req, res) => {
             latitude: doctor.latitude,
             longitude: doctor.longitude,
             profileImage: doctor.profileImage ? doctor.profileImage.docUrl : null,
+        }));
+        res.status(200).json({ doctors: doctorsData });
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Something went wrong" });
+    }
+};
+export const getDoctorsByLocationForClinic = async (req, res) => {
+    try {
+        const { lat, lng, radius, sortBy, search, experience_min, experience_max } = req.query;
+        let doctors = await prisma.doctor.findMany({
+            include: {
+                profileImage: true,
+                accepted: true,
+            }
+        });
+        // Search filter
+        if (search) {
+            const searchLower = search.toLowerCase();
+            doctors = doctors.filter(doctor => doctor.fullName.toLowerCase().includes(searchLower) ||
+                doctor.specialization.toLowerCase().includes(searchLower) ||
+                doctor.address.toLowerCase().includes(searchLower));
+        }
+        // Experience filter
+        if (experience_min) {
+            doctors = doctors.filter(doctor => doctor.experience >= parseInt(experience_min, 10));
+        }
+        if (experience_max) {
+            doctors = doctors.filter(doctor => doctor.experience <= parseInt(experience_max, 10));
+        }
+        // Location filter
+        if (lat && lng && radius) {
+            const latitude = parseFloat(lat);
+            const longitude = parseFloat(lng);
+            const searchRadius = parseFloat(radius);
+            doctors = doctors.filter(doctor => {
+                if (doctor.latitude && doctor.longitude) {
+                    const distance = getDistance(latitude, longitude, doctor.latitude, doctor.longitude);
+                    return distance <= searchRadius;
+                }
+                return false;
+            });
+        }
+        // Sorting
+        switch (sortBy) {
+            case 'experience_asc':
+                doctors.sort((a, b) => a.experience - b.experience);
+                break;
+            case 'experience_desc':
+                doctors.sort((a, b) => b.experience - a.experience);
+                break;
+            case 'name_asc':
+                doctors.sort((a, b) => a.fullName.localeCompare(b.fullName));
+                break;
+            case 'name_desc':
+                doctors.sort((a, b) => b.fullName.localeCompare(a.fullName));
+                break;
+            default: // Nearest by default
+                if (lat && lng) {
+                    const latitude = parseFloat(lat);
+                    const longitude = parseFloat(lng);
+                    doctors.sort((a, b) => {
+                        const distA = a.latitude && a.longitude ? getDistance(latitude, longitude, a.latitude, a.longitude) : Infinity;
+                        const distB = b.latitude && b.longitude ? getDistance(latitude, longitude, b.latitude, b.longitude) : Infinity;
+                        return distA - distB;
+                    });
+                }
+                break;
+        }
+        const doctorsData = doctors.map(doctor => ({
+            id: doctor.id,
+            fullName: doctor.fullName,
+            specialization: doctor.specialization,
+            experience: doctor.experience,
+            address: doctor.address,
+            latitude: doctor.latitude,
+            longitude: doctor.longitude,
+            profileImage: doctor.profileImage ? doctor.profileImage.docUrl : null,
+            distance: lat && lng && doctor.latitude && doctor.longitude ? getDistance(parseFloat(lat), parseFloat(lng), doctor.latitude, doctor.longitude) : undefined,
         }));
         res.status(200).json({ doctors: doctorsData });
     }

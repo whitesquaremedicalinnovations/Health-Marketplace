@@ -1,18 +1,59 @@
+import http from "http";
+import { Server } from "socket.io";
 import dotenv from "dotenv";
 import app from "./app.ts";
+import { handleUncaughtException } from "./middlewares/error-handler.ts";
+import { logger } from "./utils/logger.ts";
+import { registerSocketHandlers } from "./socket.ts";
+import { setSocketInstance } from "./controller/chat.controller.ts";
 
 dotenv.config();
+handleUncaughtException();
 
 const port = process.env.PORT || 8000;
 
-const server = app.listen(port, () => {
-  console.log(`[server]: Server is running at http://localhost:${port}`);
+const httpServer = http.createServer(app);
+
+const io = new Server(httpServer, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+  },
 });
 
-server.on("error", (error: any) => {
+// Share Socket.IO instance with chat controller for REST API integration
+setSocketInstance(io);
+
+registerSocketHandlers(io);
+
+httpServer.listen(port, () => {
+  logger.info(`Server is running at http://localhost:${port}`, {
+    port,
+    environment: process.env.NODE_ENV || "development",
+  });
+});
+
+httpServer.on("error", (error: any) => {
   if (error.code === "EADDRINUSE") {
-    console.error(`[server]: Port ${port} is already in use.`);
+    logger.error(`Port ${port} is already in use.`, error);
   } else {
-    console.error(`[server]: An error occurred:`, error);
+    logger.error(`Server startup error:`, error);
   }
+  process.exit(1);
+});
+
+process.on("SIGTERM", () => {
+  logger.info("SIGTERM received, shutting down gracefully");
+  httpServer.close(() => {
+    logger.info("Server closed");
+    process.exit(0);
+  });
+});
+
+process.on("SIGINT", () => {
+  logger.info("SIGINT received, shutting down gracefully");
+  httpServer.close(() => {
+    logger.info("Server closed");
+    process.exit(0);
+  });
 });

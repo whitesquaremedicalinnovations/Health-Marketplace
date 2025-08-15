@@ -19,10 +19,8 @@ import {
   Star, 
   Briefcase, 
   MessageSquare,
-  TrendingUp,
   CheckCircle,
   ArrowRight,
-  Award,
   Clock
 } from "lucide-react";
 import { Loading, SkeletonList } from "@/components/ui/loading";
@@ -178,58 +176,6 @@ export default function Connections() {
           </Card>
         ) : (
           <>
-            {/* Statistics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-              <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-emerald-50 hover:shadow-2xl transition-all duration-300">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="p-3 bg-emerald-500 rounded-xl">
-                      <CheckCircle className="h-6 w-6 text-white" />
-                    </div>
-                    <Badge variant="secondary" className="bg-emerald-100 text-emerald-800">
-                      Active
-                    </Badge>
-                  </div>
-                  <div className="text-3xl font-bold text-gray-900 mb-1">
-                    {connections.filter(conn => getConnectionStrength(conn.connectionCount).label === "Strong").length}
-                  </div>
-                  <p className="text-gray-600 text-sm">Strong Partnerships</p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-blue-50 hover:shadow-2xl transition-all duration-300">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="p-3 bg-blue-500 rounded-xl">
-                      <TrendingUp className="h-6 w-6 text-white" />
-                    </div>
-                    <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                      Growth
-                    </Badge>
-                  </div>
-                  <div className="text-3xl font-bold text-gray-900 mb-1">
-                    {Math.round((connections.length / Math.max(connections.length, 1)) * 100)}%
-                  </div>
-                  <p className="text-gray-600 text-sm">Network Growth</p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-purple-50 hover:shadow-2xl transition-all duration-300">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="p-3 bg-purple-500 rounded-xl">
-                      <Award className="h-6 w-6 text-white" />
-                    </div>
-                    <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-                      Quality
-                    </Badge>
-                  </div>
-                  <div className="text-3xl font-bold text-gray-900 mb-1">4.9</div>
-                  <p className="text-gray-600 text-sm">Average Rating</p>
-                </CardContent>
-              </Card>
-            </div>
-
             {/* Connections List */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
               {connections.map((connection, index) => {
@@ -354,7 +300,6 @@ export default function Connections() {
             {/* Quick Actions */}
             <div className="mt-16">
               <Card className="border-0 shadow-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white overflow-hidden">
-                <div className="absolute inset-0 bg-black/10"></div>
                 <CardContent className="relative z-10 p-8">
                   <div className="text-center">
                     <h3 className="text-2xl font-bold mb-2">Expand Your Network</h3>

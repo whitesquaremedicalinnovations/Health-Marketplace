@@ -1,385 +1,503 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@clerk/nextjs";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { 
-  MessageCircle, 
-  Send, 
-  Search, 
-  Phone, 
-  Video, 
-  MoreVertical,
-  Circle,
-  Clock,
-  CheckCheck,
-  Paperclip,
-  Smile
-} from "lucide-react";
+import { axiosInstance } from "@/lib/axios";
 import { Loading } from "@/components/ui/loading";
+import DoctorsList from "@/components/chat/doctors-list";
+import PatientsList from "@/components/chat/patients-list";
+import ChatInterface from "@/components/chat/chat-interface";
+import { io, Socket } from "socket.io-client";
 
-interface ChatUser {
+interface ConnectedDoctor {
   id: string;
-  name: string;
-  avatar: string | null;
-  lastMessage: string;
-  lastMessageTime: string;
-  isOnline: boolean;
-  unreadCount: number;
-  role: "doctor" | "admin";
+  fullName: string;
+  specialization: string;
+  phoneNumber: string;
+  profileImage?: {
+    docUrl: string;
+  };
 }
 
-interface Message {
+interface Patient {
+  id: string;
+  name: string;
+  phoneNumber: string;
+  gender: string;
+  dateOfBirth: string;
+  address: string;
+  status: 'ACTIVE' | 'COMPLETED';
+  assignedDoctors: {
+    id: string;
+    fullName: string;
+  }[];
+  _count: {
+    feedbacks: number;
+    assignedDoctors: number;
+  };
+  createdAt: string;
+}
+
+interface ChatMessage {
   id: string;
   content: string;
   senderId: string;
+  senderType: 'clinic' | 'doctor';
   timestamp: string;
-  type: "text" | "image" | "file";
-  status: "sent" | "delivered" | "read";
+  read: boolean;
+  attachments?: {
+    url: string;
+    filename: string;
+    type: 'image' | 'video' | 'audio' | 'document' | 'other';
+  }[];
+}
+
+interface Chat {
+  id: string;
+  patientId: string;
+  patient: {
+    id: string;
+    name: string;
+    phoneNumber: string;
+    status: string;
+  };
+  participants: {
+    id: string;
+    doctorId?: string;
+    clinicId?: string;
+    doctor?: {
+      id: string;
+      fullName: string;
+      specialization: string;
+    };
+    clinic?: {
+      id: string;
+      clinicName: string;
+      clinicAddress: string;
+    };
+  }[];
+  _count: {
+    messages: number;
+  };
+  lastMessageAt?: string;
+  createdAt: string;
+}
+
+interface SocketMessage {
+  id: string;
+  content: string;
+  senderClinicId?: string;
+  senderDoctorId?: string;
+  createdAt: string;
+  attachments?: {
+    url: string;
+    filename: string;
+    type: "image" | "video" | "audio" | "document" | "other";
+  }[];
 }
 
 export default function ChatPage() {
   const { userId } = useAuth();
-  const [selectedChat, setSelectedChat] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [newMessage, setNewMessage] = useState("");
+
+  // State management
+  const [connectedDoctors, setConnectedDoctors] = useState<ConnectedDoctor[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
+  const [patientsLoading, setPatientsLoading] = useState(false);
+  
+  // Selection states
+  const [selectedDoctor, setSelectedDoctor] = useState<ConnectedDoctor | null>(null);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  
+  // Chat states
+  const [currentChat, setCurrentChat] = useState<Chat | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [socket, setSocket] = useState<Socket | null>(null);
 
-  // Mock data - in real app, fetch from API
-  const [chatUsers] = useState<ChatUser[]>([
-    {
-      id: "1",
-      name: "Dr. Sarah Johnson",
-      avatar: null,
-      lastMessage: "Thank you for the opportunity to work with your clinic.",
-      lastMessageTime: "2 min ago",
-      isOnline: true,
-      unreadCount: 2,
-      role: "doctor"
-    },
-    {
-      id: "2", 
-      name: "Dr. Michael Chen",
-      avatar: null,
-      lastMessage: "I'm available for the upcoming procedure.",
-      lastMessageTime: "1 hour ago",
-      isOnline: false,
-      unreadCount: 0,
-      role: "doctor"
-    },
-    {
-      id: "3",
-      name: "Dr. Emily Rodriguez", 
-      avatar: null,
-      lastMessage: "Could we schedule a meeting to discuss the requirements?",
-      lastMessageTime: "3 hours ago",
-      isOnline: true,
-      unreadCount: 1,
-      role: "doctor"
-    },
-    {
-      id: "4",
-      name: "Healthcare Admin",
-      avatar: null,
-      lastMessage: "New updates available for your dashboard.",
-      lastMessageTime: "1 day ago", 
-      isOnline: true,
-      unreadCount: 0,
-      role: "admin"
-    }
-  ]);
+  // View states - for mobile navigation
+  const [currentView, setCurrentView] = useState<'doctors' | 'patients' | 'chat'>('doctors');
 
-  const [messages] = useState<Message[]>([
-    {
-      id: "1",
-      content: "Hello! I'm very interested in the cardiology position you posted.",
-      senderId: "1",
-      timestamp: "10:30 AM",
-      type: "text",
-      status: "read"
-    },
-    {
-      id: "2", 
-      content: "Thank you for your interest! Could you tell me more about your experience?",
-      senderId: userId || "",
-      timestamp: "10:32 AM",
-      type: "text",
-      status: "read"
-    },
-    {
-      id: "3",
-      content: "I have 8 years of experience in cardiology and have worked with several leading hospitals.",
-      senderId: "1", 
-      timestamp: "10:35 AM",
-      type: "text",
-      status: "read"
-    },
-    {
-      id: "4",
-      content: "That sounds excellent! We'd love to schedule an interview with you.",
-      senderId: userId || "",
-      timestamp: "10:38 AM", 
-      type: "text",
-      status: "delivered"
-    },
-    {
-      id: "5",
-      content: "Thank you for the opportunity to work with your clinic.",
-      senderId: "1",
-      timestamp: "10:45 AM",
-      type: "text", 
-      status: "sent"
+  // Initialize Socket.IO connection
+  useEffect(() => {
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+    console.log('Connecting to Socket.IO server at:', backendUrl);
+    
+    const newSocket = io(backendUrl, {
+      transports: ['websocket', 'polling'],
+      autoConnect: true,
+      forceNew: true,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000
+    });
+    
+    newSocket.on('connect', () => {
+      console.log('✅ Connected to Socket.IO server:', newSocket.id);
+    });
+
+    newSocket.on('disconnect', () => {
+      console.log('❌ Disconnected from Socket.IO server');
+    });
+
+    newSocket.on('connect_error', (error) => {
+      console.error('❌ Socket.IO connection error:', error);
+    });
+
+    newSocket.on('receive_message', (message: SocketMessage) => {
+      console.log('📨 Received message via Socket.IO:', message);
+      
+      // Don't add our own messages from Socket.IO since we already have them optimistically
+      const isMyMessage = (message.senderClinicId === userId) || (message.senderDoctorId === userId);
+      if (isMyMessage) {
+        console.log('⚠️ Ignoring own message from Socket.IO (already added optimistically)');
+        return;
+      }
+      
+      // Format the message to match our ChatMessage interface
+      const formattedMessage: ChatMessage = {
+        id: message.id,
+        content: message.content,
+        senderId: message.senderDoctorId || message.senderClinicId || "",
+        senderType: message.senderDoctorId ? 'doctor' : 'clinic',
+        timestamp: message.createdAt,
+        read: false,
+        attachments: message.attachments || []
+      };
+
+      // Prevent duplicate messages
+      setMessages(prev => {
+        const exists = prev.some(msg => msg.id === formattedMessage.id);
+        if (exists) {
+          console.log('⚠️ Message already exists, skipping duplicate');
+          return prev;
+        }
+        console.log('✅ Adding new message from other participant to state');
+        return [...prev, formattedMessage];
+      });
+    });
+
+    newSocket.on('error', (error: Error) => {
+      console.error('❌ Socket.IO error:', error);
+      alert(error.message || 'A Socket.IO error occurred');
+    });
+
+    setSocket(newSocket);
+
+    return () => {
+      console.log('🔌 Cleaning up Socket.IO connection');
+      newSocket.disconnect();
+    };
+  }, [userId]);
+
+  const fetchConnectedDoctors = useCallback(async () => {
+    if (!userId) return;
+    try {
+      setLoading(true);
+      const response = await axiosInstance.get(`/api/clinic/connected-doctors/${userId}`);
+      const doctorsData = response.data?.success ? response.data.data : response.data;
+      setConnectedDoctors(doctorsData || []);
+    } catch (error) {
+      console.error("Error fetching connected doctors:", error);
+      setConnectedDoctors([]);
+    } finally {
+      setLoading(false);
     }
-  ]);
+  }, [userId]);
 
   useEffect(() => {
-    // Simulate loading
-    setTimeout(() => {
-      setLoading(false);
-      if (chatUsers.length > 0) {
-        setSelectedChat(chatUsers[0].id);
-      }
-    }, 1000);
-  }, [chatUsers]);
+    fetchConnectedDoctors();
+  }, [fetchConnectedDoctors]);
 
-  const selectedUser = chatUsers.find(user => user.id === selectedChat);
-  const filteredUsers = chatUsers.filter(user => 
-    user.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleSendMessage = () => {
-    if (newMessage.trim()) {
-      // In real app, send message via API
-      setNewMessage("");
+  const fetchPatientsForDoctor = async (doctorId: string) => {
+    try {
+      setPatientsLoading(true);
+      const response = await axiosInstance.get(`/api/patient/get-clinic-patients/${userId}`);
+      const allPatients = response.data?.success ? response.data.data : response.data;
+      
+      // Filter patients assigned to the selected doctor
+      const filteredPatients = (allPatients || []).filter((patient: Patient) =>
+        patient.assignedDoctors.some(doctor => doctor.id === doctorId)
+      );
+      
+      setPatients(filteredPatients);
+    } catch (error) {
+      console.error("Error fetching patients:", error);
+      setPatients([]);
+    } finally {
+      setPatientsLoading(false);
     }
   };
 
-  // const getTimeAgo = (timeString: string) => {
-  //   // Simple time formatter - in real app use proper date library
-  //   return timeString;
-  // };
+  const getOrCreateChat = async (doctorId: string, patientId: string) => {
+    try {
+      setMessagesLoading(true);
+      
+      console.log(`🔄 Creating/loading chat for doctor: ${doctorId}, patient: ${patientId}, clinic: ${userId}`);
+      
+      // Get or create chat
+      const chatResponse = await axiosInstance.post('/api/chat/get-or-create-chat', {
+        patientId,
+        doctorId,
+        clinicId: userId
+      });
+
+      const chatData = chatResponse.data?.success ? chatResponse.data.data : chatResponse.data;
+      console.log(`💬 Chat data received:`, chatData);
+      setCurrentChat(chatData);
+
+      if (chatData && socket) {
+        console.log(`🏠 Joining Socket.IO room: ${chatData.id}`);
+        
+        // Join the chat room
+        socket.emit('join_chat', chatData.id);
+        
+        // Load existing messages
+        console.log(`📥 Loading existing messages for chat: ${chatData.id}`);
+        const messagesResponse = await axiosInstance.get(`/api/messages/chat/${chatData.id}`);
+        const messagesData = messagesResponse.data?.success ? messagesResponse.data.data : messagesResponse.data;
+        
+        console.log(`📨 Loaded ${messagesData.messages?.length || 0} existing messages`);
+        
+        const formattedMessages = (messagesData.messages || []).map((msg: SocketMessage) => ({
+          id: msg.id,
+          content: msg.content,
+          senderId: msg.senderDoctorId || msg.senderClinicId || "",
+          senderType: msg.senderDoctorId ? 'doctor' : 'clinic',
+          timestamp: msg.createdAt,
+          read: true, // Assuming existing messages are read
+          attachments: msg.attachments
+        }));
+
+        setMessages(formattedMessages);
+        console.log(`✅ Set ${formattedMessages.length} messages in state`);
+      } else {
+        console.error(`❌ Missing chatData or socket:`, { chatData: !!chatData, socket: !!socket });
+      }
+    } catch (error) {
+      console.error("❌ Error creating/loading chat:", error);
+      setMessages([]);
+    } finally {
+      setMessagesLoading(false);
+    }
+  };
+
+  const handleDoctorSelect = (doctor: ConnectedDoctor) => {
+    setSelectedDoctor(doctor);
+    setSelectedPatient(null);
+    setCurrentChat(null);
+    setMessages([]);
+    setCurrentView('patients');
+    fetchPatientsForDoctor(doctor.id);
+  };
+
+  const handlePatientSelect = (patient: Patient) => {
+    setSelectedPatient(patient);
+    setCurrentView('chat');
+    if (selectedDoctor) {
+      getOrCreateChat(selectedDoctor.id, patient.id);
+    }
+  };
+
+  const handleSendMessage = async (messageContent: string, attachments?: { url: string; filename: string; type: string }[]) => {
+    if (!currentChat || !selectedDoctor || !selectedPatient || !socket) {
+      console.error(`❌ Cannot send message - missing requirements:`, {
+        currentChat: !!currentChat,
+        selectedDoctor: !!selectedDoctor,
+        selectedPatient: !!selectedPatient,
+        socket: !!socket
+      });
+      return;
+    }
+
+    // Generate optimistic message ID and timestamp
+    const optimisticMessageId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const timestamp = new Date().toISOString();
+
+    // Create optimistic message for instant UI update
+    const optimisticMessage: ChatMessage = {
+      id: optimisticMessageId,
+      content: messageContent,
+      senderId: userId || "",
+      senderType: 'clinic',
+      timestamp,
+      read: false,
+      attachments: (attachments || []).map(att => ({
+        ...att,
+        type: att.type as 'image' | 'video' | 'audio' | 'document' | 'other'
+      }))
+    };
+
+    console.log(`⚡ Adding optimistic message:`, optimisticMessage);
+    
+    // Add optimistic message immediately to UI
+    setMessages(prev => [...prev, optimisticMessage]);
+
+    try {
+      console.log(`📤 Sending message to chat: ${currentChat.id}`);
+      console.log(`📝 Message content: "${messageContent}"`);
+      
+      // Send message via API
+      const messageData = {
+        chatId: currentChat.id,
+        content: messageContent,
+        senderId: userId,
+        senderType: 'clinic',
+        attachments
+      };
+
+      console.log(`🚀 Sending message via API:`, messageData);
+      const response = await axiosInstance.post('/api/chat/send-message', messageData);
+      console.log(`✅ Message sent successfully via API:`, response.data);
+
+      // Replace optimistic message with real message from server
+      const realMessage = response.data?.success ? response.data.data : response.data;
+      const serverMessage: ChatMessage = {
+        id: realMessage.id,
+        content: realMessage.content,
+        senderId: realMessage.senderClinicId || realMessage.senderDoctorId,
+        senderType: realMessage.senderClinicId ? 'clinic' : 'doctor',
+        timestamp: realMessage.createdAt,
+        read: false,
+        attachments: realMessage.attachments || []
+      };
+
+      console.log(`🔄 Replacing optimistic message with server message:`, serverMessage);
+
+      // Replace the optimistic message with the real one
+      setMessages(prev => prev.map(msg => 
+        msg.id === optimisticMessageId ? serverMessage : msg
+      ));
+
+      console.log(`⏳ Waiting for Socket.IO to deliver to other participants...`);
+    } catch (error) {
+      console.error("❌ Error sending message:", error);
+      
+      // Remove the optimistic message on error and show error state
+      setMessages(prev => prev.map(msg => 
+        msg.id === optimisticMessageId 
+          ? { ...msg, content: `❌ Failed to send: ${msg.content}`, read: false }
+          : msg
+      ));
+      
+      alert("Failed to send message");
+    }
+  };
+
+  const handleBack = () => {
+    if (currentView === 'chat') {
+      setCurrentView('patients');
+      setSelectedPatient(null);
+      setCurrentChat(null);
+      setMessages([]);
+      if (socket && currentChat) {
+        socket.emit('leave_chat', currentChat.id);
+      }
+    } else if (currentView === 'patients') {
+      setCurrentView('doctors');
+      setSelectedDoctor(null);
+      setPatients([]);
+    }
+  };
 
   if (loading) {
-    return <Loading variant="page" icon="message" text="Loading conversations..." />;
+    return <Loading variant="page" text="Loading chat..." />;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      <div className="container mx-auto p-8">
-        {/* Chat Interface */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 h-[calc(100vh-300px)]">
-          {/* Chat List */}
-          <div className="lg:col-span-1">
-            <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm h-full">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <MessageCircle className="h-5 w-5 text-blue-600" />
-                  Conversations
-                </CardTitle>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Search conversations..."
-                    className="pl-10 h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-              </CardHeader>
-              <CardContent className="p-0 flex-1 overflow-y-auto">
-                <div className="space-y-1">
-                  {filteredUsers.map((user) => (
-                    <div
-                      key={user.id}
-                      onClick={() => setSelectedChat(user.id)}
-                      className={`flex items-center gap-3 p-4 cursor-pointer transition-all duration-200 hover:bg-blue-50 ${
-                        selectedChat === user.id ? 'bg-blue-100 border-r-4 border-blue-600' : ''
-                      }`}
-                    >
-                      <div className="relative">
-                        <Avatar className="h-12 w-12 border-2 border-white shadow-md">
-                          <AvatarImage src={user.avatar || ""} alt={user.name} />
-                          <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold">
-                            {user.name[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                        {user.isOnline && (
-                          <div className="absolute -bottom-0 -right-0 w-4 h-4 bg-emerald-500 border-2 border-white rounded-full"></div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="font-semibold text-gray-900 truncate">{user.name}</p>
-                          <div className="flex items-center gap-1">
-                            {user.unreadCount > 0 && (
-                              <Badge className="bg-blue-600 text-white text-xs min-w-[20px] h-5 flex items-center justify-center">
-                                {user.unreadCount}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                        <p className="text-sm text-gray-600 truncate">{user.lastMessage}</p>
-                        <div className="flex items-center justify-between mt-1">
-                          <span className="text-xs text-gray-500">{user.lastMessageTime}</span>
-                          <Badge variant="outline" className={`text-xs ${
-                            user.role === 'doctor' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-                          }`}>
-                            {user.role}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+    <div className="h-[92vh] bg-gray-100 dark:bg-gray-900 flex flex-col">
+      {/* Mobile Layout */}
+      <div className="md:hidden flex-1 flex flex-col">
+        {currentView === 'doctors' && (
+          <div className="flex-1 bg-white dark:bg-gray-900">
+            <DoctorsList
+              doctors={connectedDoctors}
+              onDoctorSelect={handleDoctorSelect}
+            />
           </div>
+        )}
+        
+        {currentView === 'patients' && selectedDoctor && (
+          <div className="flex-1 bg-white dark:bg-gray-900">
+            <PatientsList
+              doctor={selectedDoctor}
+              patients={patients}
+              loading={patientsLoading}
+              onPatientSelect={handlePatientSelect}
+              onBack={handleBack}
+            />
+          </div>
+        )}
+        
+        {currentView === 'chat' && selectedDoctor && selectedPatient && (
+          <div className="flex-1">
+            <ChatInterface
+              doctor={selectedDoctor}
+              patient={selectedPatient}
+              messages={messages}
+              messagesLoading={messagesLoading}
+              onSendMessage={handleSendMessage}
+              onBack={handleBack}
+              currentUserId={userId || ""}
+            />
+          </div>
+        )}
+      </div>
 
-          {/* Chat Window */}
-          <div className="lg:col-span-3">
-            {selectedUser ? (
-              <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm h-full flex flex-col">
-                {/* Chat Header */}
-                <CardHeader className="pb-4 border-b border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="relative">
-                        <Avatar className="h-12 w-12 border-2 border-white shadow-md">
-                          <AvatarImage src={selectedUser.avatar || ""} alt={selectedUser.name} />
-                          <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold">
-                            {selectedUser.name[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                        {selectedUser.isOnline && (
-                          <div className="absolute -bottom-0 -right-0 w-4 h-4 bg-emerald-500 border-2 border-white rounded-full"></div>
-                        )}
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-lg text-gray-900">{selectedUser.name}</h3>
-                        <div className="flex items-center gap-2">
-                                                     {selectedUser.isOnline ? (
-                             <div className="flex items-center gap-1 text-emerald-600">
-                               <Circle className="h-3 w-3 fill-current" />
-                               <span className="text-sm">Online</span>
-                             </div>
-                           ) : (
-                            <div className="flex items-center gap-1 text-gray-500">
-                              <Clock className="h-3 w-3" />
-                              <span className="text-sm">Last seen 2h ago</span>
-                            </div>
-                          )}
-                          <Badge variant="outline" className={`text-xs ${
-                            selectedUser.role === 'doctor' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-                          }`}>
-                            {selectedUser.role}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" className="border-blue-200 text-blue-600 hover:bg-blue-50">
-                        <Phone className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="sm" className="border-green-200 text-green-600 hover:bg-green-50">
-                        <Video className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="sm" className="border-gray-200 text-gray-600 hover:bg-gray-50">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
+      {/* Desktop Layout */}
+      <div className="hidden md:flex flex-1">
+        {/* Left Sidebar */}
+        <div className="w-80 bg-white dark:bg-gray-900 border-r dark:border-gray-700 flex flex-col">
+          {!selectedDoctor ? (
+            <DoctorsList
+              doctors={connectedDoctors}
+              onDoctorSelect={handleDoctorSelect}
+            />
+          ) : (
+            <PatientsList
+              doctor={selectedDoctor}
+              patients={patients}
+              loading={patientsLoading}
+              onPatientSelect={handlePatientSelect}
+              onBack={handleBack}
+            />
+          )}
+        </div>
 
-                {/* Messages */}
-                <CardContent className="flex-1 overflow-y-auto p-6 space-y-4">
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex ${message.senderId === userId ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div className={`max-w-[70%] ${
-                        message.senderId === userId 
-                          ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' 
-                          : 'bg-gray-100 text-gray-900'
-                      } rounded-2xl px-4 py-3 shadow-lg`}>
-                        <p className="text-sm leading-relaxed">{message.content}</p>
-                        <div className={`flex items-center gap-1 mt-2 justify-end ${
-                          message.senderId === userId ? 'text-blue-100' : 'text-gray-500'
-                        }`}>
-                          <span className="text-xs">{message.timestamp}</span>
-                          {message.senderId === userId && (
-                            <CheckCheck className={`h-3 w-3 ${
-                              message.status === 'read' ? 'text-blue-200' : 
-                              message.status === 'delivered' ? 'text-blue-300' : 'text-blue-400'
-                            }`} />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-
-                {/* Message Input */}
-                <div className="p-6 border-t border-gray-200">
-                  <div className="flex items-end gap-3">
-                    <Button variant="outline" size="sm" className="border-gray-200 text-gray-600 hover:bg-gray-50">
-                      <Paperclip className="h-4 w-4" />
-                    </Button>
-                    <div className="flex-1 relative">
-                      <Textarea
-                        placeholder="Type your message..."
-                        className="min-h-[44px] max-h-32 resize-none border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 pr-12"
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            handleSendMessage();
-                          }
-                        }}
-                      />
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-2 bottom-2 text-gray-500 hover:text-gray-700"
-                      >
-                        <Smile className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <Button 
-                      onClick={handleSendMessage}
-                      disabled={!newMessage.trim()}
-                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg"
-                    >
-                      <Send className="h-4 w-4" />
-                    </Button>
+        {/* Main Chat Area */}
+        <div className="flex-1 flex flex-col">
+          {selectedDoctor && selectedPatient ? (
+            <ChatInterface
+              doctor={selectedDoctor}
+              patient={selectedPatient}
+              messages={messages}
+              messagesLoading={messagesLoading}
+              onSendMessage={handleSendMessage}
+              onBack={handleBack}
+              currentUserId={userId || ""}
+            />
+          ) : (
+            <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+              <div className="text-center p-8">
+                <div className="w-64 h-64 mx-auto mb-8 bg-green-50 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                  <div className="w-32 h-32 bg-green-100 dark:bg-green-800/50 rounded-full flex items-center justify-center">
+                    <svg className="w-16 h-16 text-green-600 dark:text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
+                    </svg>
                   </div>
                 </div>
-              </Card>
-            ) : (
-              <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm h-full">
-                <CardContent className="flex items-center justify-center h-full">
-                  <div className="text-center">
-                    <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <MessageCircle className="h-12 w-12 text-blue-600" />
-                    </div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">Select a Conversation</h3>
-                    <p className="text-gray-600">Choose a conversation from the sidebar to start chatting.</p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+                <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
+                  {!selectedDoctor ? "Select a Doctor" : "Select a Patient"}
+                </h3>
+                <p className="text-gray-500 dark:text-gray-400 max-w-md">
+                  {!selectedDoctor
+                    ? "Choose a connected doctor from the list to view their assigned patients and start chatting."
+                    : "Choose a patient to start discussing their case with " + selectedDoctor.fullName + "."
+                  }
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -25,10 +25,8 @@ import {
   ArrowRight,
   FileText,
   MessageSquare,
-  Activity,
   MapPin,
   Heart,
-  Building
 } from "lucide-react";
 import { Loading } from "@/components/ui/loading";
 
@@ -112,7 +110,7 @@ export default function Dashboard() {
                 Welcome back, Doctor!
               </h1>
               <p className="text-blue-100 text-lg mb-6">
-                Here's your professional activity and new opportunities
+                Here&apos;s your professional activity and new opportunities
               </p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">

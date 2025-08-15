@@ -40,6 +40,9 @@ export const ProfileAvatar = ({
   clickable = true
 }: ProfileAvatarProps) => {
   const router = useRouter();
+  console.log("Every detail", {
+    src, alt, fallback, size, profileId, profileType, className, clickable
+  })
 
   const handleClick = () => {
     if (!clickable || !profileId || !profileType) return;

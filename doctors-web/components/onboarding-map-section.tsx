@@ -46,6 +46,7 @@ const OnboardingMapSection: React.FC<OnboardingMapSectionProps> = ({
 
     useEffect(() => {
         handleSetCurrentLocation();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {
@@ -63,7 +64,7 @@ const OnboardingMapSection: React.FC<OnboardingMapSectionProps> = ({
         if (clinicLocation) {
             setMapCenter(clinicLocation);
         }
-    }, [clinicLocation]);
+    }, [clinicLocation, setMapCenter]);
 
 
     return (
@@ -88,7 +89,7 @@ const OnboardingMapSection: React.FC<OnboardingMapSectionProps> = ({
             </Button>
             <div className="space-y-2 mt-4">
                 <ReusableMap
-                    places={clinicLocation ? [clinicLocation] : []}
+                    places={clinicLocation ? [{ lat: clinicLocation.lat, lng: clinicLocation.lng, clinicName: clinicAddress }] : []}
                     center={mapCenter}
                     updateLocation={updateLocation}
                 />

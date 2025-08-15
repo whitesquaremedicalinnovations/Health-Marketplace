@@ -48,6 +48,7 @@ interface Overview {
     id: string;
     createdAt: string;
     doctor: {
+      id: string;
       fullName: string;
       profileImage: {
         docUrl: string;
@@ -76,7 +77,31 @@ export default function Dashboard() {
       axiosInstance
         .get(`/api/clinic/get-dashboard-overview/${userId}`)
         .then((res) => {
-          setOverview(res.data);
+          const overviewData = res.data?.success ? res.data.data : res.data;
+          
+          // Ensure arrays exist with fallbacks
+          const overviewWithDefaults = {
+            ...overviewData,
+            requirementsByStatus: overviewData?.requirementsByStatus || [],
+            pitchesByStatus: overviewData?.pitchesByStatus || [],
+            recentPitches: overviewData?.recentPitches || [],
+            latestNews: overviewData?.latestNews || []
+          };
+          
+          setOverview(overviewWithDefaults);
+        })
+        .catch((error) => {
+          console.error("Error fetching dashboard overview:", error);
+          // Set default values on error
+          setOverview({
+            totalRequirements: 0,
+            requirementsByStatus: [],
+            totalPitches: 0,
+            pitchesByStatus: [],
+            recentPitches: [],
+            totalAccepted: 0,
+            latestNews: []
+          });
         });
     }
   }, [userId]);
@@ -85,12 +110,12 @@ export default function Dashboard() {
     return <Loading variant="page" icon="activity" text="Loading your dashboard..." />;
   }
 
-  const requirementsChartData = overview.requirementsByStatus.map((item) => ({
+  const requirementsChartData = (overview.requirementsByStatus || []).map((item) => ({
     name: item.requirementStatus,
     value: item._count.requirementStatus,
   }));
 
-  const pitchesChartData = overview.pitchesByStatus.map((item) => ({
+  const pitchesChartData = (overview.pitchesByStatus || []).map((item) => ({
     name: item.status,
     value: item._count.status,
   }));
@@ -284,7 +309,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {overview.recentPitches.length === 0 ? (
+                {(overview.recentPitches || []).length === 0 ? (
                   <div className="text-center py-8">
                     <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
                       <MessageSquare className="h-6 w-6 text-gray-400" />
@@ -292,7 +317,7 @@ export default function Dashboard() {
                     <p className="text-gray-500">No recent applications</p>
                   </div>
                 ) : (
-                  overview.recentPitches.map((pitch) => (
+                  (overview.recentPitches || []).map((pitch) => (
                     <div key={pitch.id} className="flex items-center gap-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-100">
                       <ProfileAvatar
                         src={pitch.doctor.profileImage?.docUrl}
@@ -343,7 +368,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {overview.latestNews.length === 0 ? (
+                {(overview.latestNews || []).length === 0 ? (
                   <div className="text-center py-8">
                     <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
                       <FileText className="h-6 w-6 text-gray-400" />
@@ -351,7 +376,7 @@ export default function Dashboard() {
                     <p className="text-gray-500">No recent news</p>
                   </div>
                 ) : (
-                  overview.latestNews.map((news) => (
+                  (overview.latestNews || []).map((news) => (
                     <div 
                       key={news.id} 
                       className="flex items-center gap-4 p-4 bg-gradient-to-r from-emerald-50 to-blue-50 rounded-xl border border-emerald-100 cursor-pointer hover:shadow-md transition-all duration-200"

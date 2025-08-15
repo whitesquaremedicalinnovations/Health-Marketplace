@@ -51,6 +51,7 @@ model Document {
 
   profileImageOf Doctor? @relation("UserProfileImage")
   clinicProfileImageOf Clinic? @relation("ClinicProfileImage")
+  patientProfileImageOf Patient? @relation("PatientProfileImage")
 }
 
 model Doctor {
@@ -78,10 +79,18 @@ model Doctor {
   accepted       AcceptedWork[]
   newsComments NewsComment[]
   newsLikes    NewsLike[]
-
+  chats ChatParticipant[]
   payments      Payment[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  messages Message[] @relation("MessageSenderDoctor")
+  patients Patient[]
+  @@index([email])
+  @@index([specialization])
+  @@index([latitude, longitude])
+  @@index([isVerified])
+  @@index([createdAt])
 }
 
 model Clinic {
@@ -104,10 +113,63 @@ model Clinic {
   accepted       AcceptedWork[]   
   newsComments NewsComment[]
   newsLikes    NewsLike[]
-
+  galleryImages ClinicGalleryImage[]
+  chats ChatParticipant[]
+  patients Patient[]
   payments      Payment[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  messages Message[] @relation("MessageSenderClinic")
+  
+  @@index([email])
+  @@index([latitude, longitude])
+  @@index([isVerified])
+  @@index([createdAt])
+  @@index([clinicName])
+}
+
+model Patient {
+  id String @id @default(uuid())
+  name String
+  phoneNumber String
+  gender String
+  dateOfBirth DateTime
+  profileImageId String? @unique
+  profileImage   Document? @relation("PatientProfileImage", fields: [profileImageId], references: [id])
+  address String
+  latitude Float?
+  longitude Float?
+
+  clinicId String
+  clinic Clinic @relation(fields: [clinicId], references: [id])
+
+  status PatientStatus @default(ACTIVE)
+  feedbacks Feedback[]
+
+  assignedDoctors   Doctor[]
+  chats Chat[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clinicId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([phoneNumber])
+  @@index([latitude, longitude])
+}
+
+model Feedback {
+  id String @id @default(uuid())
+  feedback String
+  patientId String
+  patient Patient @relation(fields: [patientId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+enum PatientStatus {
+  ACTIVE
+  COMPLETED
 }
 
 model Admin {
@@ -148,6 +210,13 @@ model JobRequirement {
 
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+  
+  @@index([clinicId])
+  @@index([specialization])
+  @@index([type])
+  @@index([requirementStatus])
+  @@index([createdAt])
+  @@index([clinicId, requirementStatus])
 }
 
 
@@ -164,6 +233,13 @@ model Pitch {
 
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
+  
+  @@index([doctorId])
+  @@index([jobRequirementId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([doctorId, status])
+  @@index([jobRequirementId, status])
 }
 
 enum PitchStatus {
@@ -276,4 +352,104 @@ model OnboardingFee {
   fee Float
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Chat {
+  id String @id @default(uuid())
+  
+  // Link chat to a specific patient
+  patientId String
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  
+  messages Message[]
+  participants ChatParticipant[]
+  lastMessageAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([patientId])
+  @@index([lastMessageAt])
+}
+
+model ChatParticipant{
+  id String @id @default(uuid())
+  doctorId String?
+  doctor Doctor? @relation(fields: [doctorId], references: [id])
+  clinicId String?
+  clinic Clinic? @relation(fields: [clinicId], references: [id])
+  chatId String
+  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  joinedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([chatId])
+  @@index([doctorId])
+  @@index([clinicId])
+  @@unique([chatId, doctorId])
+  @@unique([chatId, clinicId])
+}
+
+enum MessageStatus {
+  SENT
+  DELIVERED
+  READ
+}
+
+model Message {
+  id String @id @default(uuid())
+  content String
+  
+  // Only one sender per message
+  senderDoctorId String?
+  senderDoctor Doctor? @relation("MessageSenderDoctor", fields: [senderDoctorId], references: [id])
+  senderClinicId String?
+  senderClinic Clinic? @relation("MessageSenderClinic", fields: [senderClinicId], references: [id])
+  
+  chatId String
+  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  
+  // Message status and read tracking
+  status MessageStatus @default(SENT)
+  readAt DateTime?
+  
+  // Attachment support
+  attachments MessageAttachment[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([chatId])
+  @@index([createdAt])
+  @@index([senderDoctorId])
+  @@index([senderClinicId])
+  @@index([status])
+}
+
+model MessageAttachment {
+  id String @id @default(uuid())
+  messageId String
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  
+  filename String
+  url String
+  type String // 'image', 'video', 'audio', 'document', 'other'
+  size Int? // File size in bytes
+  
+  createdAt DateTime @default(now())
+
+  @@index([messageId])
+}
+
+model ClinicGalleryImage {
+  id          String   @id @default(uuid())
+  imageUrl    String
+  caption     String?
+  isActive    Boolean  @default(true)
+  
+  clinicId    String
+  clinic      Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
