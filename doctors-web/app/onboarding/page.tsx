@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import Image from "next/image"
 import { axiosInstance } from "@/lib/axios"
 import PaymentButton from "@/components/payment-button"
+import { toast } from "sonner"
 
 enum DoctorSpecialization {
   GENERAL_PHYSICIAN = "GENERAL_PHYSICIAN",
@@ -150,8 +151,8 @@ export default function Onboarding() {
       profileImageUrl = data.uploaded.find((item: { fieldName: string; url: string; }) => item.fieldName === "profileImage")?.url
       documentUrls = data.uploaded.filter((item: { fieldName: string; url: string; }) => item.fieldName === "documents").map((item: { url: string; }) => item.url)
     } catch (err) {
-      console.error("Upload failed", err)
-      alert("Upload failed")
+      console.log("Upload failed", err)
+      toast("Upload failed")
       setLoading(false)
       return;
     }
@@ -182,12 +183,12 @@ export default function Onboarding() {
         setAuthCookie("onboarded", "true")
         router.push("/dashboard")
       } else {
-        alert("Failed to complete onboarding. Please try again.")
-        console.error("Onboarding failed with status:", response.status)
+        toast("Failed to complete onboarding. Please try again.")
+        console.log("Onboarding failed with status:", response.status)
       }
     } catch (err) {
-      console.error("Error during onboarding:", err)
-      alert("An error occurred during onboarding. Please try again.")
+      console.log("Error during onboarding:", err)
+      toast("An error occurred during onboarding. Please try again.")
     } finally {
       setLoading(false)
     }

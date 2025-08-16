@@ -131,7 +131,7 @@ export default function Profile() {
           setProfile(profileWithDefaults);
           setEditData(profileWithDefaults);
         } catch (error) {
-          console.error("Error fetching profile:", error);
+          console.log("Error fetching profile:", error);
         } finally {
           setLoading(false);
         }
@@ -163,7 +163,7 @@ export default function Profile() {
         setEditing(false);
       }
     } catch (error) {
-      console.error("Error updating profile:", error);
+      console.log("Error updating profile:", error);
     } finally {
       setSaving(false);
     }
@@ -235,7 +235,7 @@ export default function Profile() {
         }
       }
     } catch (error) {
-      console.error("Error uploading documents:", error);
+      console.log("Error uploading documents:", error);
     } finally {
       setUploadingDocuments(false);
     }
@@ -273,7 +273,7 @@ export default function Profile() {
         }
       }
     } catch (error) {
-      console.error("Error uploading profile image:", error);
+      console.log("Error uploading profile image:", error);
     } finally {
       setUploadingProfileImage(false);
     }
@@ -290,7 +290,7 @@ export default function Profile() {
         setEditData(profileResponse.data.doctor);
       }
     } catch (error) {
-      console.error("Error deleting document:", error);
+      console.log("Error deleting document:", error);
     }
   };
 

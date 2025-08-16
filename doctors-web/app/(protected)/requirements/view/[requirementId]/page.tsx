@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar, MapPin, Briefcase, ArrowLeft, Eye, Users, Clock } from "lucide-react";
 import { axiosInstance } from "@/lib/axios";
 import { Loading } from "@/components/ui/loading";
+import { toast } from "sonner";
 
 interface Requirement {
   id: string;
@@ -33,7 +34,7 @@ export default function ViewRequirement() {
       if(response.status === 200){
         setRequirement(response.data.requirement)
       }else{
-        alert("Failed to fetch requirement")
+        toast("Failed to fetch requirement")
       }
       setLoading(false);
     };

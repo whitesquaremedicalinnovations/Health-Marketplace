@@ -60,7 +60,7 @@ export default function CommentSection({ newsId }: CommentSectionProps) {
       collectCommentsWithReplies(fetchedComments);
       setCollapsedReplies(commentsWithReplies);
     } catch (error) {
-      console.error("Error fetching comments:", error);
+      console.log("Error fetching comments:", error);
     }
   }, [newsId]);
 
@@ -80,7 +80,7 @@ export default function CommentSection({ newsId }: CommentSectionProps) {
       setNewComment("");
       fetchComments();
     } catch (error) {
-      console.error("Error posting comment:", error);
+      console.log("Error posting comment:", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -100,7 +100,7 @@ export default function CommentSection({ newsId }: CommentSectionProps) {
       setReplyingTo(null);
       fetchComments();
     } catch (error) {
-      console.error("Error posting reply:", error);
+      console.log("Error posting reply:", error);
     } finally {
       setIsSubmitting(false);
     }

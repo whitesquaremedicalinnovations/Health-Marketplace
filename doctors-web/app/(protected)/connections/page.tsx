@@ -64,7 +64,7 @@ export default function Connections() {
       const connectionsData = response.data?.success ? response.data.data.connections : response.data?.connections || [];
       setConnections(connectionsData);
     } catch (error) {
-      console.error("Error fetching connections:", error);
+      console.log("Error fetching connections:", error);
     } finally {
       setLoading(false);
     }

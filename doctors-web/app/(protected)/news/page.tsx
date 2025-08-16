@@ -46,7 +46,7 @@ export default function News() {
       const response = await axiosInstance.get("/api/user/news");
       setNews(response.data.news);
     } catch (error) {
-      console.error("Error fetching news:", error);
+      console.log("Error fetching news:", error);
     } finally {
       setLoading(false);
     }

@@ -40,6 +40,7 @@ import { APIProvider } from "@vis.gl/react-google-maps";
 import axios from "axios";
 import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { toast } from "sonner";
 
 interface Clinic {
   id: string;
@@ -158,7 +159,7 @@ export default function Profile() {
       setProfile(clinicWithDefaults);
       setEditData(clinicWithDefaults);
     } catch (error) {
-      console.error("Error fetching profile:", error);
+      console.log("Error fetching profile:", error);
     } finally {
       setLoading(false);
     }
@@ -226,7 +227,7 @@ export default function Profile() {
         setProfile(clinicWithDefaults);
         setEditData(clinicWithDefaults);
       setEditing(false);
-      alert("Profile updated successfully!");
+      toast("Profile updated successfully!");
         
         // Refresh the profile from server to ensure sync
         setTimeout(() => {
@@ -236,9 +237,9 @@ export default function Profile() {
         throw new Error(`Invalid response: ${JSON.stringify(response.data)}`);
       }
     } catch (error: unknown) {
-      console.error("Error updating profile:", error);
+      console.log("Error updating profile:", error);
       const errorMessage = error instanceof Error ? error.message : "Failed to update profile";
-      alert(`Update failed: ${errorMessage}`);
+      toast(`Update failed: ${errorMessage}`);
     } finally {
       setSaving(false);
     }
@@ -282,12 +283,12 @@ export default function Profile() {
         await axiosInstance.post('/api/clinic/upload-document', doc);
       }      
       await fetchProfile(); // Refresh data
-      alert("Documents uploaded successfully!");
+      toast("Documents uploaded successfully!");
       setFiles([]);
       setDocumentModalOpen(false);
     } catch (error) {
-      console.error("Error uploading documents:", error);
-      alert("Failed to upload documents");
+      console.log("Error uploading documents:", error);
+      toast("Failed to upload documents");
     } finally {
       setUploadingDocument(false);
     }
@@ -297,10 +298,10 @@ export default function Profile() {
     try {
       await axiosInstance.delete(`/api/clinic/delete-document/${documentId}`);
       await fetchProfile(); // Refresh data
-      alert("Document deleted successfully!");
+      toast("Document deleted successfully!");
     } catch (error) {
-      console.error("Error deleting document:", error);
-      alert("Failed to delete document");
+      console.log("Error deleting document:", error);
+      toast("Failed to delete document");
     }
   };
 
@@ -334,12 +335,12 @@ export default function Profile() {
       
       setNewGalleryCaption("");
       await fetchProfile(); // Refresh data
-      alert("Gallery images added successfully!");
+      toast("Gallery images added successfully!");
       setFiles([]);
       setGalleryModalOpen(false);
     } catch (error) {
-      console.error("Error uploading gallery images:", error);
-      alert("Failed to upload gallery images");
+      console.log("Error uploading gallery images:", error);
+      toast("Failed to upload gallery images");
     } finally {
       setUploadingGallery(false);
     }
@@ -349,10 +350,10 @@ export default function Profile() {
     try {
       await axiosInstance.delete(`/api/clinic/delete-gallery-image/${imageId}`);
       await fetchProfile(); // Refresh data
-      alert("Gallery image deleted successfully!");
+      toast("Gallery image deleted successfully!");
     } catch (error) {
-      console.error("Error deleting gallery image:", error);
-      alert("Failed to delete gallery image");
+      console.log("Error deleting gallery image:", error);
+      toast("Failed to delete gallery image");
     }
   };
 
@@ -402,7 +403,7 @@ export default function Profile() {
         }
       }
     } catch (error) {
-      console.error("Error uploading profile image:", error);
+      console.log("Error uploading profile image:", error);
     } finally {
       setUploadingProfileImage(false);
     }

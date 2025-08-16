@@ -103,7 +103,7 @@ export default function SearchClinics() {
         const userLocationData = userResponse.data.doctor;
         
         if (!userLocationData.latitude || !userLocationData.longitude) {
-          console.error("User location not available");
+          console.log("User location not available");
           setClinics([]);
           return;
         }
@@ -132,7 +132,7 @@ export default function SearchClinics() {
       
       setClinics(clinicsWithDistance);
     } catch (error) {
-      console.error("Error fetching clinics:", error);
+      console.log("Error fetching clinics:", error);
     } finally {
       setClinicsLoading(false);
     }

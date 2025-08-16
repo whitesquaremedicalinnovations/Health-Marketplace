@@ -113,7 +113,7 @@ export default function PatientCard({
       setShowFeedbackModal(true);
     }
     catch(error){
-      console.error("Error fetching feedbacks:", error);
+      console.log("Error fetching feedbacks:", error);
     }
   };
 

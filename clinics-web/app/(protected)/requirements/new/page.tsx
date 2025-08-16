@@ -33,6 +33,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { axiosInstance } from "@/lib/axios";
 import { Loading } from "@/components/ui/loading";
 import { DoctorSpecialization } from "@/lib/types";
+import { toast } from "sonner";
 
 const formSchema = z.object({
   title: z.string().min(2, "Title must be at least 2 characters."),
@@ -65,11 +66,11 @@ export default function NewRequirement() {
       if(response.status === 201){
           router.push("/requirements");
       }else{
-        alert("Failed to post requirement")
+        toast("Failed to post requirement")
       }
     } catch (error) {
-      console.error("Error posting requirement:", error);
-      alert("Failed to post requirement")
+      console.log("Error posting requirement:", error);
+      toast("Failed to post requirement")
     } finally {
       setIsSubmitting(false);
     }

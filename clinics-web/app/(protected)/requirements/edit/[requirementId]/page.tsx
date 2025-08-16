@@ -33,6 +33,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { axiosInstance } from "@/lib/axios";
 import { Loading } from "@/components/ui/loading";
 import { DoctorSpecialization } from "@/lib/types";
+import { toast } from "sonner";
 
 const formSchema = z.object({
   title: z.string().min(2, "Title must be at least 2 characters."),
@@ -64,7 +65,7 @@ export default function EditRequirement() {
           date: response.data.requirement.date ? new Date(response.data.requirement.date) : undefined,
         });
       }else{
-        alert("Failed to fetch requirement")
+        toast("Failed to fetch requirement")
       }
       setLoading(false);
     };
@@ -80,11 +81,11 @@ export default function EditRequirement() {
       if(response.status === 200){
         router.push("/requirements");
       }else{
-        alert("Failed to update requirement")
+        toast("Failed to update requirement")
       }
     } catch (error) {
-      console.error("Error updating requirement:", error);
-      alert("Failed to update requirement")
+      console.log("Error updating requirement:", error);
+      toast("Failed to update requirement")
     } finally {
       setIsSubmitting(false);
     }

@@ -62,7 +62,7 @@ export default function Connections() {
           const response = await axiosInstance.get(`/api/clinic/get-connections/${userId}`);
           setConnections(response.data.connections);
         } catch (error) {
-          console.error("Error fetching connections:", error);
+          console.log("Error fetching connections:", error);
         } finally {
           setLoading(false);
         }

@@ -30,6 +30,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import Image from "next/image";
+import { toast } from "sonner";
 
 interface Doctor {
   id: string;
@@ -89,8 +90,8 @@ export default function ViewApplications() {
           setPitches(pitchesResponse.data.pitches);
         }
       } catch (error) {
-        console.error("Error fetching data:", error);
-        alert("Failed to fetch applications");
+        console.log("Error fetching data:", error);
+        toast("Failed to fetch applications");
       } finally {
         setLoading(false);
       }
@@ -121,11 +122,11 @@ export default function ViewApplications() {
         setShowAcceptDialog(false);
         setSelectedPitch(null);
       } else {
-        alert("Failed to accept application");
+        toast("Failed to accept application");
       }
     } catch (error) {
-      console.error("Error accepting pitch:", error);
-      alert("Failed to accept application");
+      console.log("Error accepting pitch:", error);
+      toast("Failed to accept application");
     } finally {
       setActionLoading(null);
     }
@@ -150,11 +151,11 @@ export default function ViewApplications() {
         setShowRejectDialog(false);
         setSelectedPitch(null);
       } else {
-        alert("Failed to reject application");
+        toast("Failed to reject application");
       }
     } catch (error) {
-      console.error("Error rejecting pitch:", error);
-      alert("Failed to reject application");
+      console.log("Error rejecting pitch:", error);
+      toast("Failed to reject application");
     } finally {
       setActionLoading(null);
     }

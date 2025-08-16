@@ -55,7 +55,7 @@ export default function DoctorProfile() {
         const response = await axiosInstance.get(`/api/doctor/get-doctor/${doctorId}`);
         setDoctor(response.data.doctor);
       } catch (error) {
-        console.error("Error fetching doctor:", error);
+        console.log("Error fetching doctor:", error);
       } finally {
         setLoading(false);
       }

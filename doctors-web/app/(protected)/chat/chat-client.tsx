@@ -9,6 +9,7 @@ import ClinicsList from "@/components/chat/clinics-list";
 import PatientsList from "@/components/chat/patients-list";
 import ChatInterface from "@/components/chat/chat-interface";
 import { io, Socket } from "socket.io-client";
+import { toast } from "sonner";
 
 interface ConnectedClinic {
   id: string;
@@ -197,7 +198,7 @@ export default function ChatClient() {
 
     newSocket.on('error', (error: SocketError) => {
       console.error('❌ Socket.IO error:', error);
-      alert(error.message || 'A Socket.IO error occurred');
+      toast(error.message || 'A Socket.IO error occurred');
     });
 
     setSocket(newSocket);
@@ -360,7 +361,7 @@ export default function ChatClient() {
           : msg
       ));
       
-      alert("Failed to send message");
+      toast("Failed to send message");
     }
   };
 

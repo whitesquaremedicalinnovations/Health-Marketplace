@@ -15,6 +15,7 @@ import {
   Loader2
 } from "lucide-react";
 import Image from "next/image";
+import { toast } from "sonner";
 
 interface AttachmentModalProps {
   open: boolean;
@@ -109,7 +110,7 @@ export default function AttachmentModal({ open, onOpenChange, onSend }: Attachme
           [fileData.file.name]: 100
         }));
       } catch (error) {
-        console.error(`Error uploading ${fileData.file.name}:`, error);
+        console.log(`Error uploading ${fileData.file.name}:`, error);
         throw error;
       }
     }
@@ -135,8 +136,8 @@ export default function AttachmentModal({ open, onOpenChange, onSend }: Attachme
       setUploadProgress({});
       onOpenChange(false);
     } catch (error) {
-      console.error('Error uploading files:', error);
-      alert('Failed to upload files. Please try again.');
+      console.log('Error uploading files:', error);
+      toast('Failed to upload files. Please try again.');
     } finally {
       setUploading(false);
     }

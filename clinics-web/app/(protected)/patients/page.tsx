@@ -15,6 +15,7 @@ import PatientForm from "@/components/patients/patient-form";
 import PatientAssignmentDialog from "@/components/patients/patient-assignment-dialog";
 import PatientFeedbackDialog from "@/components/patients/patient-feedback-dialog";
 import PatientDeleteDialog from "@/components/patients/patient-delete-dialog";
+import { toast } from "sonner";
 
 interface Patient {
   id: string;
@@ -118,7 +119,7 @@ export default function PatientsPage() {
       const patientsData = response.data?.success ? response.data.data : response.data;
       setPatients(patientsData || []);
     } catch (error) {
-      console.error("Error fetching patients:", error);
+      console.log("Error fetching patients:", error);
       setPatients([]);
     } finally {
       setLoading(false);
@@ -132,7 +133,7 @@ export default function PatientsPage() {
       const doctorsData = response.data?.success ? response.data.data : response.data;
       setConnectedDoctors(doctorsData || []);
     } catch (error) {
-      console.error("Error fetching connected doctors:", error);
+      console.log("Error fetching connected doctors:", error);
       setConnectedDoctors([]);
     }
   }, [userId]);
@@ -207,7 +208,7 @@ export default function PatientsPage() {
   // CRUD operations
   const handleCreatePatient = async () => {
     if (!formData.name || !formData.phoneNumber || !formData.gender || !formData.dateOfBirth || !formData.address) {
-      alert("Please fill in all required fields");
+      toast("Please fill in all required fields");
       return;
     }
 
@@ -224,8 +225,8 @@ export default function PatientsPage() {
       resetForm();
       fetchPatients();
     } catch (error) {
-      console.error("Error creating patient:", error);
-      alert("Failed to create patient");
+      console.log("Error creating patient:", error);
+      toast("Failed to create patient");
     } finally {
       setSubmitting(false);
     }
@@ -233,7 +234,7 @@ export default function PatientsPage() {
 
   const handleEditPatient = async () => {
     if (!selectedPatient || !formData.name || !formData.phoneNumber || !formData.gender || !formData.dateOfBirth || !formData.address) {
-      alert("Please fill in all required fields");
+      toast("Please fill in all required fields");
       return;
     }
 
@@ -250,8 +251,8 @@ export default function PatientsPage() {
       setSelectedPatient(null);
       fetchPatients();
     } catch (error) {
-      console.error("Error updating patient:", error);
-      alert("Failed to update patient");
+      console.log("Error updating patient:", error);
+      toast("Failed to update patient");
     } finally {
       setSubmitting(false);
     }
@@ -268,8 +269,8 @@ export default function PatientsPage() {
       setSelectedPatient(null);
       fetchPatients();
     } catch (error) {
-      console.error("Error deleting patient:", error);
-      alert("Failed to delete patient");
+      console.log("Error deleting patient:", error);
+      toast("Failed to delete patient");
     } finally {
       setSubmitting(false);
     }
@@ -289,8 +290,8 @@ export default function PatientsPage() {
       setSelectedDoctor(null);
       fetchPatients();
     } catch (error) {
-      console.error("Error assigning doctor:", error);
-      alert("Failed to assign doctor");
+      console.log("Error assigning doctor:", error);
+      toast("Failed to assign doctor");
     } finally {
       setSubmitting(false);
     }
@@ -303,14 +304,14 @@ export default function PatientsPage() {
       });
       fetchPatients();
     } catch (error) {
-      console.error("Error deassigning doctor:", error);
-      alert("Failed to deassign doctor");
+      console.log("Error deassigning doctor:", error);
+      toast("Failed to deassign doctor");
     }
   };
 
   const handleAddFeedback = async () => {
     if (!selectedPatient || !feedbackText.trim()) {
-      alert("Please enter feedback text");
+      toast("Please enter feedback text");
       return;
     }
 
@@ -325,8 +326,8 @@ export default function PatientsPage() {
       setFeedbackText("");
       fetchPatients();
     } catch (error) {
-      console.error("Error adding feedback:", error);
-      alert("Failed to add feedback");
+      console.log("Error adding feedback:", error);
+      toast("Failed to add feedback");
     } finally {
       setSubmitting(false);
     }
@@ -367,8 +368,8 @@ export default function PatientsPage() {
       fetchPatients();
     }
     catch(error){
-      console.error("Error changing status:", error);
-      alert("Failed to change status");
+      console.log("Error changing status:", error);
+      toast("Failed to change status");
     }
   }
 

@@ -32,6 +32,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import  LocationSearch  from "@/components/ui/location-search";
 import ReusableMap from "@/components/ui/reusable-map";
 import { APIProvider } from "@vis.gl/react-google-maps";
+import { toast } from "sonner";
 
 interface JobRequirement {
   id: string;
@@ -119,7 +120,7 @@ export default function JobRequirements() {
       });
       setRequirements(response.data.requirements || []);
     } catch (error: unknown) {
-      console.error("Error fetching requirements:", error);
+      console.log("Error fetching requirements:", error);
       setRequirements([]);
     } finally {
       if (isInitialLoad) {
@@ -248,7 +249,7 @@ export default function JobRequirements() {
         message: applicationMessage.trim()
       });
       
-      alert("Application submitted successfully!");
+      toast("Application submitted successfully!");
       setShowApplyDialog(false);
       setApplicationMessage("");
       setSelectedRequirement(null);
@@ -256,11 +257,11 @@ export default function JobRequirements() {
       // Refresh requirements to update application count
       fetchRequirements(false);
     } catch (error: unknown) {
-      console.error("Error submitting application:", error);
+      console.log("Error submitting application:", error);
       const errorMsg = error instanceof Error && 'response' in error ? 
         (error as { response?: { data?: { message?: string } } }).response?.data?.message || "Failed to submit application" :
         "Failed to submit application";
-      alert(errorMsg);
+      toast(errorMsg);
     } finally {
       setApplyingId(null);
     }

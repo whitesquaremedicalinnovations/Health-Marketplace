@@ -27,6 +27,7 @@ import {
 import { Loading } from "@/components/ui/loading";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AxiosError } from "axios";
+import { toast } from "sonner";
 
 interface Application {
   id: string;
@@ -68,7 +69,7 @@ export default function MyApplications() {
       const response = await axiosInstance.get(`/api/doctor/get-my-pitches?doctorId=${userId}`);
       setApplications(response.data.pitches);
     } catch (error: unknown) {
-      console.error("Error fetching applications:", error);
+      console.log("Error fetching applications:", error);
     } finally {
       setLoading(false);
     }
@@ -94,9 +95,9 @@ export default function MyApplications() {
         )
       );
       
-      alert("Application withdrawn successfully");
+      toast("Application withdrawn successfully");
     } catch (error: unknown) {
-      console.error("Error withdrawing application:", error);
+      console.log("Error withdrawing application:", error);
       const errorMessage = error instanceof Error && 'response' in error ? 
         (error as AxiosError).response?.data || "Failed to withdraw application" :
         "Failed to withdraw application";

@@ -147,7 +147,7 @@ export default function ClinicProfile() {
         });
       }
     } catch (err: unknown) {
-      console.error("Error fetching clinic:", err);
+      console.log("Error fetching clinic:", err);
       
       const error = err as { response?: { data?: { message?: string }; status?: number }; message?: string };
       const errorMessage = error.response?.data?.message || error.message || "Failed to load clinic";

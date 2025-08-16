@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Upload, X, FileText, Image as ImageIcon, Video, Music, File, Loader2 } from "lucide-react";
+import { toast } from 'sonner';
 
 interface FileWithPreview {
   file: File;
@@ -115,8 +116,8 @@ export default function AttachmentModal({ open, onOpenChange, onSend }: Attachme
       setUploadProgress({});
       onOpenChange(false);
     } catch (error) {
-      console.error('Upload failed:', error);
-      alert('Failed to upload files. Please try again.');
+      console.log('Upload failed:', error);
+      toast('Failed to upload files. Please try again.');
     } finally {
       setUploading(false);
     }

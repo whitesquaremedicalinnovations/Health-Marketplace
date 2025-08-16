@@ -8,6 +8,7 @@ import DoctorsList from "@/components/chat/doctors-list";
 import PatientsList from "@/components/chat/patients-list";
 import ChatInterface from "@/components/chat/chat-interface";
 import { io, Socket } from "socket.io-client";
+import { toast } from "sonner";
 
 interface ConnectedDoctor {
   id: string;
@@ -179,7 +180,7 @@ export default function ChatPage() {
 
     newSocket.on('error', (error: Error) => {
       console.error('❌ Socket.IO error:', error);
-      alert(error.message || 'A Socket.IO error occurred');
+      toast(error.message || 'A Socket.IO error occurred');
     });
 
     setSocket(newSocket);
@@ -380,7 +381,7 @@ export default function ChatPage() {
           : msg
       ));
       
-      alert("Failed to send message");
+      toast("Failed to send message");
     }
   };
 

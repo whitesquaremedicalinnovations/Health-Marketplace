@@ -26,6 +26,7 @@ import { axiosInstance } from "@/lib/axios";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loading } from "@/components/ui/loading";
+import { toast } from "sonner";
 
 interface Requirement {
   id: string;
@@ -57,11 +58,11 @@ export default function Requirements() {
           if(response.status === 200){
             setRequirements(response.data.requirements)
           }else{
-            alert("Failed to fetch requirements")
+            toast("Failed to fetch requirements")
           }
         } catch (error) {
           console.error("Error fetching requirements:", error);
-          alert("Failed to fetch requirements")
+          toast("Failed to fetch requirements")
         } finally {
           setLoading(false);
         }
@@ -95,11 +96,11 @@ export default function Requirements() {
           )
         );
       } else {
-        alert("Failed to mark requirement as completed");
+        toast("Failed to mark requirement as completed");
       }
     } catch (error) {
       console.error("Error completing requirement:", error);
-      alert("Failed to mark requirement as completed");
+      toast("Failed to mark requirement as completed");
     }
 
     setShowCompleteDialog(false);

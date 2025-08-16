@@ -24,6 +24,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Button } from "@/components/ui/button";
 import { MoreVertical } from "lucide-react";
 import FeedbackModal from "@/components/chat/feedbackModal";
+import { toast } from "sonner";
 
 interface Patient {
   id: string;
@@ -99,7 +100,7 @@ export default function PatientsPage() {
       const patientsData = response.data?.success ? response.data.data : response.data;
       setPatients(patientsData || []);
     } catch (error) {
-      console.error("Error fetching patients:", error);
+      console.log("Error fetching patients:", error);
       setPatients([]);
     } finally {
       setLoading(false);
@@ -112,7 +113,7 @@ export default function PatientsPage() {
       const clinicsData = response.data?.success ? response.data.data.connections : response.data?.connections || [];
       setConnectedClinics(clinicsData);
     } catch (error) {
-      console.error("Error fetching connected clinics:", error);
+      console.log("Error fetching connected clinics:", error);
       setConnectedClinics([]);
     }
   }, [userId]);
@@ -167,7 +168,7 @@ export default function PatientsPage() {
       setShowFeedbackModal(true);
     }
     catch(error){
-      console.error("Error fetching feedbacks:", error);
+      console.log("Error fetching feedbacks:", error);
     }
   };
 
@@ -177,8 +178,8 @@ export default function PatientsPage() {
       fetchPatients();
     }
     catch(error){
-      console.error("Error changing status:", error);
-      alert("Failed to change status");
+      console.log("Error changing status:", error);
+      toast("Failed to change status");
     }
   }
 

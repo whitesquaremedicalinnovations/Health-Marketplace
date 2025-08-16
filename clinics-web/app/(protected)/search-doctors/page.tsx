@@ -69,7 +69,7 @@ export default function SearchDoctors() {
         const userLocationData = userResponse.data?.success ? userResponse.data.data : userResponse.data.clinic;
         
         if (!userLocationData.latitude || !userLocationData.longitude) {
-          console.error("User location not available");
+          console.log("User location not available");
           setDoctors([]);
           return;
         }
@@ -93,7 +93,7 @@ export default function SearchDoctors() {
       
       setDoctors(response.data.doctors);
     } catch (error) {
-      console.error("Error fetching doctors:", error);
+      console.log("Error fetching doctors:", error);
     } finally {
       setDoctorsLoading(false);
     }

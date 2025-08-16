@@ -91,7 +91,7 @@ export default function Dashboard() {
           setOverview(overviewWithDefaults);
         })
         .catch((error) => {
-          console.error("Error fetching dashboard overview:", error);
+          console.log("Error fetching dashboard overview:", error);
           // Set default values on error
           setOverview({
             totalRequirements: 0,

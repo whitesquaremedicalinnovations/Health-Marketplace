@@ -5,6 +5,7 @@ import { useEffect, useCallback } from 'react';
 import ReusableMap from './ui/reusable-map';
 import { Button } from './ui/button';
 import AddressAutocomplete from './ui/address-autocomplete';
+import { toast } from 'sonner';
 
 interface OnboardingMapSectionProps {
     clinicAddress: string;
@@ -33,8 +34,8 @@ const OnboardingMapSection: React.FC<OnboardingMapSectionProps> = ({
                 setMapCenter({ lat: latitude, lng: longitude });
             },
             (error) => {
-                console.error('Error obtaining location:', error);
-                alert('Unable to retrieve your location. Please ensure location services are enabled.');
+                console.log('Error obtaining location:', error);
+                toast('Unable to retrieve your location. Please ensure location services are enabled.');
             }
         );
     }, [setClinicLocation, setMapCenter]);

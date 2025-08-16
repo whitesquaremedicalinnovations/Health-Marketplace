@@ -54,7 +54,7 @@ export default function NewsDetail() {
         setLikeCount(response.data.news._count.likes);
         setLiked(response.data.news.likes.some((like: { clinicId: string; }) => like.clinicId === userId));
       } catch (error) {
-        console.error("Error fetching news:", error);
+        console.log("Error fetching news:", error);
       } finally {
         setLoading(false);
       }
@@ -79,7 +79,7 @@ export default function NewsDetail() {
         setLikeCount(prev => prev - 1);
       }
     } catch (error) {
-      console.error("Error liking news:", error);
+      console.log("Error liking news:", error);
     }
   };
 

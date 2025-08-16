@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea"
 import Image from "next/image"
 import { axiosInstance } from "@/lib/axios"
 import PaymentButton from "@/components/payment-button"
+import { toast } from "sonner"
 
 export default function Onboarding() {
   const { user } = useUser()
@@ -121,7 +122,7 @@ export default function Onboarding() {
       documents = data.uploaded.filter((item: { fieldName: string; url: string; }) => item.fieldName === "clinicDocuments").map((item: { url: string; }) => item.url)
     } catch (err) {
       console.log("Upload failed", err)
-      alert("Upload failed")
+      toast("Upload failed")
       setLoading(false)
       return;
     }
@@ -146,12 +147,12 @@ export default function Onboarding() {
       if (response.status === 200) {
         router.push("/dashboard")
       } else {
-        alert("Failed to onboard clinic. Please try again.")
+        toast("Failed to onboard clinic. Please try again.")
         console.log("Onboarding failed with status:", response.status)
       }
     } catch (err) {
       console.log("Error during onboarding:", err)
-      alert("An error occurred during onboarding. Please try again.")
+      toast("An error occurred during onboarding. Please try again.")
     } finally {
       setLoading(false)
     }
