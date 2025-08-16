@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import {
   ArrowLeft,
   Send,
+  Smile,
   Paperclip,
   MoreVertical,
   Check,
@@ -22,7 +23,6 @@ import {
 import { Loading } from "@/components/ui/loading";
 import AttachmentModal from "./attachment-modal";
 import Image from "next/image";
-import { toast } from "sonner";
 
 interface ConnectedDoctor {
   id: string;
@@ -90,20 +90,12 @@ export default function ChatInterface({
   }, [messages]);
 
   const handleSendMessage = () => {
-    if(patient.status === 'COMPLETED'){
-      toast.error("Patient is completed");
-      return;
-    }
     if (!newMessage.trim()) return;
     onSendMessage(newMessage.trim());
     setNewMessage("");
   };
 
   const handleSendWithAttachments = (files: File[], urls: string[]) => {
-    if(patient.status === 'COMPLETED'){
-      toast.error("Patient is completed");
-      return;
-    }
     const attachments = files.map((file, index) => ({
       url: urls[index],
       filename: file.name,
@@ -408,7 +400,6 @@ export default function ChatInterface({
       {/* Message Input */}
       <div className="bg-white dark:bg-gray-800 border-t dark:border-gray-700 p-4">
         <div className="flex items-end gap-2">
-        {patient.status!=="COMPLETED" && (
           <Button 
             variant="ghost" 
             size="sm" 
@@ -417,7 +408,6 @@ export default function ChatInterface({
           >
             <Paperclip className="h-5 w-5" />
           </Button>
-          )}
           
           <div className="flex-1 relative">
             <Input
@@ -428,11 +418,18 @@ export default function ChatInterface({
               className="pr-12 py-3 rounded-full border-gray-300 dark:border-gray-600 focus:border-green-500 focus:ring-green-500 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
               maxLength={1000}
             />
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-gray-500 dark:text-gray-400"
+            >
+              <Smile className="h-5 w-5" />
+            </Button>
           </div>
           
           <Button
             onClick={handleSendMessage}
-            disabled={!newMessage.trim() || patient.status==="COMPLETED"}
+            disabled={!newMessage.trim()}
             size="sm"
             className={`p-3 rounded-full ${
               newMessage.trim() 
@@ -455,7 +452,6 @@ export default function ChatInterface({
       </div>
 
       {/* Attachment Modal */}
-
       <AttachmentModal
         open={showAttachmentModal}
         onOpenChange={setShowAttachmentModal}

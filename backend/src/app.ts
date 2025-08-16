@@ -9,6 +9,7 @@ import chatRoutes from "./routes/chat.routes.ts";
 import messageRoutes from "./routes/messages.routes.ts";
 import { errorHandler } from "./middlewares/error-handler.ts";
 import { logger } from "./utils/logger.ts";
+import paymentsRoutes from "./routes/payments.routes.ts";
 
 const app: Express = express();
 
@@ -56,6 +57,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/patient", patientRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/payments", paymentsRoutes);
 
 // 404
 app.use("*", (req, res) => {

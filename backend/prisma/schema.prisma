@@ -80,7 +80,6 @@ model Doctor {
   newsComments NewsComment[]
   newsLikes    NewsLike[]
   chats ChatParticipant[]
-  payments      Payment[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -116,7 +115,6 @@ model Clinic {
   galleryImages ClinicGalleryImage[]
   chats ChatParticipant[]
   patients Patient[]
-  payments      Payment[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -283,17 +281,14 @@ model AcceptedWork {
 model Payment {
   id             String     @id @default(uuid())
 
-  doctorId       String
-  doctor         Doctor     @relation(fields: [doctorId], references: [id])
-  clinicId       String
-  clinic         Clinic     @relation(fields: [clinicId], references: [id])
+  email          String
+  userType       String
 
   amount         Float
   currency       String     @default("INR")
   status         PaymentStatus
-  provider       String     // Razorpay, etc.
+  provider       String     @default("RAZORPAY")
   referenceId    String     @unique
-  purpose        String     // Onboarding fee, etc.
 
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt

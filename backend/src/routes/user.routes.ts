@@ -1,11 +1,13 @@
 import { Router } from "express";
-import { onboardingDoctor, onboardingClinic, getProfile, updateProfile, updateDocuments, deleteDocument, getNewsById, getNews, likeNews, commentOnNews, getNewsComments } from "../controller/user.controller.ts";
+import { onboardingDoctor, onboardingClinic, getProfile, updateProfile, updateDocuments, deleteDocument, getNewsById, getNews, likeNews, commentOnNews, getNewsComments, checkUserExists } from "../controller/user.controller.ts";
 
 const router = Router();
 
 //Onboarding Routes
 router.post("/onboarding/doctor", onboardingDoctor);
 router.post("/onboarding/clinic", onboardingClinic);
+
+router.get("/check-user-exists/:id", checkUserExists)
 
 // Profile Routes
 router.get("/profile", getProfile);

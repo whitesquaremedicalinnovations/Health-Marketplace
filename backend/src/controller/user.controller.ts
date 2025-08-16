@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { prisma } from "../utils/prisma.ts";
 import { getDoctor, getClinic, getDoctorById, getClinicById } from "../utils/get-user.ts";
-import { connect } from "http2";
+
 
 export const onboardingDoctor = async (req: Request, res: Response) => {
     const { doctorId, email, fullName, gender, dateOfBirth, phoneNumber, address, specialization, additionalInformation, experience, about, certifications, profileImage, documents, locationRange, location, preferredRadius } = req.body;
@@ -524,4 +524,20 @@ export const getNewsComments = async (req: Request, res: Response) => {
     } catch (error) {
         res.status(500).json({ message: "Something went wrong" });
     }
+}
+
+export const checkUserExists = async (req: Request, res: Response) => {
+  try{
+
+    const { id } = req.params;
+    const doctor = await prisma.doctor.findUnique({
+      where: { id }
+    });
+    const clinic = await prisma.clinic.findUnique({
+      where: { id }
+    });
+    res.status(200).json({ doctor, clinic });
+  } catch (error) {
+    res.status(500).json({ message: "Something went wrong" });
+  }
 }

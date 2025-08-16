@@ -14,7 +14,7 @@ export const getUser = async (id: string) => {
     console.log("user", user)
     return {status: user.status, data: user.data}
   } catch (error) {
-    console.error("Error fetching user:", error)
+    console.log("Error fetching user:", error)
     // Return error status so the calling code can handle it
     return {status: 404, data: null}
   }
@@ -43,7 +43,7 @@ export const onboardingClinic = async (data: {
     }
     return {status: user.status, data: user.data}
   } catch (error) {
-    console.error("Error during clinic onboarding:", error)
+    console.log("Error during clinic onboarding:", error)
     return {status: 500, data: null}
   }
 }

@@ -340,13 +340,13 @@ export const updatePatientStatus = asyncHandler(async (req, res) => {
     // Ensure patient exists
     const patient = await prisma.patient.findUnique({
         where: { id: patientId },
-        select: { id: true }
+        select: { id: true, assignedDoctors: { select: { id: true } } }
     });
     if (!patient) {
         throw AppError.notFound("Patient");
     }
     // Special handling for COMPLETED
-    if (status === PatientStatus.COMPLETED) {
+    if (status === PatientStatus.COMPLETED && patient.assignedDoctors.length > 0) {
         const existingRequest = await prisma.changeStatusRequest.findFirst({
             where: { patientId, status }
         });

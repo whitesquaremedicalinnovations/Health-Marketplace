@@ -15,6 +15,8 @@ import OnboardingMapSection from "@/components/onboarding-map-section"
 import { Slider } from "@/components/ui/slider"
 import { Textarea } from "@/components/ui/textarea"
 import Image from "next/image"
+import { axiosInstance } from "@/lib/axios"
+import PaymentButton from "@/components/payment-button"
 
 export default function Onboarding() {
   const { user } = useUser()
@@ -39,8 +41,32 @@ export default function Onboarding() {
   const [loading, setLoading] = useState(false)
   const [isCheckingUser, setIsCheckingUser] = useState(true)
 
+  const [onboardingAmount, setOnboardingAmount] = useState(0)
+  const [hasEmailPaid, setHasEmailPaid] = useState(false)
+
   const handleNext = () => setStep((s) => s + 1)
   const handlePrev = () => setStep((s) => s - 1)
+
+  useEffect(() => {
+    const fetchOnboardingAmount = async () => {
+      const res = await axiosInstance.get("/api/admin/get-onboarding-fee")
+      const data = res.data
+      setOnboardingAmount(data.onboardingFee.fee)
+    }
+
+    const checkEmailPayment = async () => {
+      const res = await axiosInstance.get("/api/payments/get-email-payment", {
+        params: {
+          email: ownerEmail,
+          userType: "CLINIC",
+        }
+      })
+      const data = res.data
+      setHasEmailPaid(data.data.payment !== null)
+    }
+    fetchOnboardingAmount()
+    checkEmailPayment()
+  }, [ownerEmail])
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -59,7 +85,7 @@ export default function Onboarding() {
           setOwnerPhoneNumber(user?.phoneNumbers[0]?.phoneNumber ?? "")
         }
       } catch (error) {
-        console.error("Error fetching user data:", error)
+        console.log("Error fetching user data:", error)
         setIsCheckingUser(false)
         setOwnerFirstName(user?.firstName ?? "")
         setOwnerLastName(user?.lastName ?? "")
@@ -94,7 +120,7 @@ export default function Onboarding() {
       profileImage = data.uploaded.find((item: { fieldName: string; url: string; }) => item.fieldName === "clinicProfileImage")?.url
       documents = data.uploaded.filter((item: { fieldName: string; url: string; }) => item.fieldName === "clinicDocuments").map((item: { url: string; }) => item.url)
     } catch (err) {
-      console.error("Upload failed", err)
+      console.log("Upload failed", err)
       alert("Upload failed")
       setLoading(false)
       return;
@@ -121,10 +147,10 @@ export default function Onboarding() {
         router.push("/dashboard")
       } else {
         alert("Failed to onboard clinic. Please try again.")
-        console.error("Onboarding failed with status:", response.status)
+        console.log("Onboarding failed with status:", response.status)
       }
     } catch (err) {
-      console.error("Error during onboarding:", err)
+      console.log("Error during onboarding:", err)
       alert("An error occurred during onboarding. Please try again.")
     } finally {
       setLoading(false)
@@ -486,23 +512,29 @@ export default function Onboarding() {
                     Continue
                   </Button>
                 ) : (
-                  <Button 
-                    type="submit" 
-                    disabled={loading}
-                    className="px-8 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Setting up your clinic...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="mr-2 h-4 w-4" />
-                        Complete Setup
-                      </>
+                  <>
+                    {hasEmailPaid ? (
+                      <Button 
+                        type="submit" 
+                        disabled={loading}
+                        className="px-8 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {loading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Setting up your clinic...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 className="mr-2 h-4 w-4" />
+                            Complete Setup
+                          </>
+                        )}
+                      </Button>
+                    ):(
+                      <PaymentButton amount={onboardingAmount} currency="INR" receipt="Onboarding Fee" name={clinicName} email={ownerEmail} phone={ownerPhoneNumber} userType="CLINIC" setHasEmailPaid={setHasEmailPaid}/>
                     )}
-                  </Button>
+                  </>
                 )}
               </div>
             </form>

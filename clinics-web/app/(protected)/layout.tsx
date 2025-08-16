@@ -10,7 +10,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
     const [isVerified, setIsVerified] = useState(false);
 
     useEffect(() => {
-        if(userData?.clinic?.isVerified){
+        if(userData?.data?.isVerified){
             setIsVerified(true);
         }
         console.log("userData", userData)
@@ -61,7 +61,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
             <Header />
             <main className="relative">
                 {
-                    !isVerified && !loading && userData?.clinic?.isVerified === false ? (
+                    !isVerified && !loading && userData?.data?.isVerified === false ? (
                         <div className="min-h-[calc(100vh-5rem)] bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-6">
                             <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center">
                                 <div className="space-y-6">

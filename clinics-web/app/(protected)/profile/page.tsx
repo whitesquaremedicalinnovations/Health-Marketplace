@@ -6,7 +6,6 @@ import { axiosInstance } from "@/lib/axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ProfileAvatar } from "@/components/ui/profile-avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,6 +39,7 @@ import LocationSearch from "@/components/ui/location-search";
 import { APIProvider } from "@vis.gl/react-google-maps";
 import axios from "axios";
 import Image from "next/image";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface Clinic {
   id: string;
@@ -118,6 +118,11 @@ interface Connection {
   createdAt: string;
 }
 
+interface UploadedItem {
+  url: string;
+  fieldName: string;
+}
+
 export default function Profile() {
   const { userId } = useAuth();
   const [profile, setProfile] = useState<Clinic | null>(null);
@@ -131,6 +136,7 @@ export default function Profile() {
   const [files, setFiles] = useState<File[]>([]);
   const [documentModalOpen, setDocumentModalOpen] = useState(false);
   const [galleryModalOpen, setGalleryModalOpen] = useState(false);
+  const [uploadingProfileImage, setUploadingProfileImage] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     if (!userId) return;
@@ -363,6 +369,45 @@ export default function Profile() {
     ));
   };
 
+  const handleProfileImageUpload = async (file: File) => {
+    setUploadingProfileImage(true);
+    try {
+      const formData = new FormData();
+      formData.append("profileImage", file);
+      
+      const uploadResponse = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      
+      const uploadData = await uploadResponse.json();
+      
+      if (uploadResponse.ok) {
+        const profileImageUrl = uploadData.uploaded.find((item: UploadedItem) => item.fieldName === "profileImage")?.url;
+        
+        if (profileImageUrl) {
+          // Update profile with new profile image
+          const updateResponse = await axiosInstance.post(`/api/user/profile/update/${userId}`, {
+            role: "CLINIC",
+            profileImage: profileImageUrl
+          });
+          
+          if (updateResponse.status === 200) {
+            // Refresh profile data
+            const response = await axiosInstance.get(`/api/clinic/get-clinic/${userId}`);
+            const clinic = response.data?.success ? response.data.data : response.data.clinic;
+            setProfile(clinic);
+            setEditData(clinic);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error uploading profile image:", error);
+    } finally {
+      setUploadingProfileImage(false);
+    }
+  };
+
   if (loading) {
     return <Loading variant="page" text="Loading your profile..." />;
   }
@@ -390,23 +435,41 @@ export default function Profile() {
             <div className="absolute inset-0 bg-black/10"></div>
             <div className="relative z-10 flex items-center justify-between">
               <div className="flex items-center gap-6">
-                <div className="relative">
-                  <ProfileAvatar
-                    src={profile.profileImage?.docUrl || profile.clinicProfileImage}
-                    fallback={profile.clinicName[0]}
-                    size="xl"
-                    profileId={profile.id}
-                    profileType="clinic"
-                    className="border-4 border-white shadow-xl"
-                  />
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    className="absolute -bottom-2 -right-2 h-8 w-8 border-2 border-white bg-white hover:bg-gray-50"
-                  >
-                    <Camera className="h-4 w-4" />
-                  </Button>
-                </div>
+              <div className="relative">
+                  <Avatar className="h-24 w-24 border-4 border-white shadow-xl">
+                    <AvatarImage src={profile.profileImage?.docUrl || ""} alt={profile.clinicName} />
+                    <AvatarFallback className="bg-white text-blue-600 text-2xl font-bold">
+                      {profile.clinicName[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="absolute -bottom-2 -right-2">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          handleProfileImageUpload(file);
+                        }
+                      }}
+                      className="hidden"
+                      id="profile-image-upload"
+                    />
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="h-8 w-8 border-2 border-white bg-white hover:bg-gray-50"
+                      onClick={() => document.getElementById('profile-image-upload')?.click()}
+                      disabled={uploadingProfileImage}
+                    >
+                      {uploadingProfileImage ? (
+                        <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                      ) : (
+                        <Camera className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>  
                 <div>
                   <h1 className="text-4xl font-bold text-white mb-2">
                     {profile.clinicName}

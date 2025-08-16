@@ -41,7 +41,6 @@ export default function SearchDoctors() {
   const router = useRouter();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [filteredDoctors, setFilteredDoctors] = useState<Doctor[]>([]);
-  const [loading] = useState(true);
   const [doctorsLoading, setDoctorsLoading] = useState(false);
   const [mapCenter, setMapCenter] = useState<{lat: number, lng: number}>({ lat: 28.6139, lng: 77.2090 });
   
@@ -126,7 +125,7 @@ export default function SearchDoctors() {
     }
   };
 
-  if (loading) {
+  if (doctorsLoading) {
     return <Loading variant="page" text="Finding healthcare professionals..." />;
   }
 

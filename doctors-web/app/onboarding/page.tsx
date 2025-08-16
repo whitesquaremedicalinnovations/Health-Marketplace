@@ -16,6 +16,8 @@ import { Slider } from "@/components/ui/slider"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import Image from "next/image"
+import { axiosInstance } from "@/lib/axios"
+import PaymentButton from "@/components/payment-button"
 
 enum DoctorSpecialization {
   GENERAL_PHYSICIAN = "GENERAL_PHYSICIAN",
@@ -63,23 +65,51 @@ export default function Onboarding() {
   const [profileImage, setProfileImage] = useState<File | null>(null)
 
   const [loading, setLoading] = useState(false)
-  const [isCheckingUser] = useState(true)
+  const [isCheckingUser, setIsCheckingUser] = useState(true)
+
+  const [onboardingAmount, setOnboardingAmount] = useState(0)
+  const [hasEmailPaid, setHasEmailPaid] = useState(false)
 
   const handleNext = () => setStep((s) => s + 1)
   const handlePrev = () => setStep((s) => s - 1)
 
   useEffect(() => {
+    const fetchOnboardingAmount = async () => {
+      const res = await axiosInstance.get("/api/admin/get-onboarding-fee")
+      const data = res.data
+      setOnboardingAmount(data.onboardingFee.fee)
+    }
+
+    const checkEmailPayment = async () => {
+      const res = await axiosInstance.get("/api/payments/get-email-payment", {
+        params: {
+          email: email,
+          userType: "DOCTOR",
+        }
+      })
+      const data = res.data
+      setHasEmailPaid(data.data.payment !== null)
+    }
+    fetchOnboardingAmount()
+    checkEmailPayment()
+  }, [email])
+
+  useEffect(() => {
     const initializeOnboarding = async () => {
       const check_user = await getUser(user?.id ?? "")
+      console.log("Check User", check_user)
       if (check_user) {
         const existingUser = await checkUserExists(user?.id ?? "")
-        if (existingUser.status === 200 && existingUser.data?.onboarded) {
+        console.log("Existing User", existingUser)
+        if (existingUser.status === 200 && existingUser.data?.doctor) {
+          setAuthCookie("onboarded", "true")
           router.push('/dashboard')
         } else {
           // Initialize form with user data
           setFullName(`${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim())
           setEmail(user?.emailAddresses[0]?.emailAddress ?? "")
           setPhoneNumber(user?.phoneNumbers[0]?.phoneNumber ?? "")
+          setIsCheckingUser(false)
         }
       } else {
         router.push('/sign-in')
@@ -672,23 +702,29 @@ export default function Onboarding() {
                     Continue
                   </Button>
                 ) : (
-                  <Button 
-                    type="submit" 
-                    disabled={loading}
-                    className="px-8 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating your profile...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="mr-2 h-4 w-4" />
-                        Complete Profile
-                      </>
+                  <>
+                    {hasEmailPaid ? (
+                      <Button 
+                        type="submit" 
+                        disabled={loading}
+                        className="px-8 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {loading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Creating your profile...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 className="mr-2 h-4 w-4" />
+                            Complete Profile
+                          </>
+                        )}
+                      </Button>
+                    ):(
+                      <PaymentButton amount={onboardingAmount} currency="INR" receipt="Onboarding Fee" name={fullName} email={email} phone={phoneNumber} userType="DOCTOR" setHasEmailPaid={setHasEmailPaid}/>
                     )}
-                  </Button>
+                  </>                  
                 )}
               </div>
             </form>

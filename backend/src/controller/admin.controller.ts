@@ -46,9 +46,9 @@ export const getAllPayments = async (req: Request, res: Response) => {
     res.status(200).json({ payments });
 }
 
-export const getAllOnboardingFees = async (req: Request, res: Response) => {
-    const onboardingFees = await prisma.onboardingFee.findMany();
-    res.status(200).json({ onboardingFees });
+export const getOnboardingFee = async (req: Request, res: Response) => {
+    const onboardingFee = await prisma.onboardingFee.findFirst();
+    res.status(200).json({ onboardingFee });
 }
 
 export const setOnboardingFee = async (req: Request, res: Response) => {

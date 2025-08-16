@@ -475,3 +475,18 @@ export const getNewsComments = async (req, res) => {
         res.status(500).json({ message: "Something went wrong" });
     }
 };
+export const checkUserExists = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const doctor = await prisma.doctor.findUnique({
+            where: { id }
+        });
+        const clinic = await prisma.clinic.findUnique({
+            where: { id }
+        });
+        res.status(200).json({ doctor, clinic });
+    }
+    catch (error) {
+        res.status(500).json({ message: "Something went wrong" });
+    }
+};
