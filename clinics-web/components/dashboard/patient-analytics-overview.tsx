@@ -75,10 +75,7 @@ export default function PatientAnalyticsOverview({ userId }: PatientAnalyticsOve
     try {
       setLoading(true);
       
-      // Simulate API call - replace with actual endpoint
-      const response = await axiosInstance.get(`/api/analytics/patient-overview/${userId}?days=${timeFrame}`);
-      
-      // For now, we'll create mock data structure based on existing patient data
+      // Fetch real data from existing endpoints
       const patientsResponse = await axiosInstance.get(`/api/patient/get-clinic-patients/${userId}`);
       const allPatients = patientsResponse.data?.success ? patientsResponse.data.data : patientsResponse.data;
       
@@ -90,20 +87,52 @@ export default function PatientAnalyticsOverview({ userId }: PatientAnalyticsOve
       const activePatients = allPatients?.filter((p: any) => p.status === 'ACTIVE').length || 0;
       const completedPatients = allPatients?.filter((p: any) => p.status === 'COMPLETED').length || 0;
       
+      // Calculate time-based metrics
+      const timeFrameDays = parseInt(timeFrame);
+      const cutoffDate = new Date(Date.now() - timeFrameDays * 24 * 60 * 60 * 1000);
+      
+      const recentPatients = (allPatients || []).filter((p: any) => 
+        new Date(p.createdAt) >= cutoffDate
+      );
+      const recentCompleted = (allPatients || []).filter((p: any) => 
+        p.status === 'COMPLETED' && new Date(p.updatedAt || p.createdAt) >= cutoffDate
+      );
+      
+      // Calculate average completion time from completed patients
+      const completedPatientsWithDates = (allPatients || []).filter((p: any) => 
+        p.status === 'COMPLETED' && p.createdAt && p.updatedAt
+      );
+      
+      let averageCompletionTime = 30; // default
+      if (completedPatientsWithDates.length > 0) {
+        const totalDays = completedPatientsWithDates.reduce((sum: number, p: any) => {
+          const start = new Date(p.createdAt);
+          const end = new Date(p.updatedAt);
+          const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+          return sum + Math.max(1, days); // minimum 1 day
+        }, 0);
+        averageCompletionTime = Math.round(totalDays / completedPatientsWithDates.length);
+      }
+      
       const mockAnalytics: PatientAnalytics = {
         totalPatients,
         activePatients,
         completedPatients,
-        averageCompletionTime: Math.floor(Math.random() * 30) + 15, // 15-45 days
+        averageCompletionTime,
         completionRate: totalPatients > 0 ? Math.round((completedPatients / totalPatients) * 100) : 0,
-        newPatientsThisPeriod: Math.floor(totalPatients * 0.3),
-        completedThisPeriod: Math.floor(completedPatients * 0.4),
+        newPatientsThisPeriod: recentPatients.length,
+        completedThisPeriod: recentCompleted.length,
         averagePatientsPerDoctor: connectedDoctors?.length > 0 ? Math.round(totalPatients / connectedDoctors.length) : 0,
-        busyDoctors: (connectedDoctors || []).slice(0, 3).map((doc: any, index: number) => ({
-          id: doc.id,
-          fullName: doc.fullName,
-          patientCount: Math.floor(Math.random() * 15) + 5
-        })),
+        busyDoctors: (connectedDoctors || []).map((doc: any) => {
+          const doctorPatients = (allPatients || []).filter((p: any) => 
+            p.assignedDoctors?.some((d: any) => d.id === doc.id)
+          );
+          return {
+            id: doc.id,
+            fullName: doc.fullName,
+            patientCount: doctorPatients.length
+          };
+        }).sort((a, b) => b.patientCount - a.patientCount).slice(0, 3),
         dailyActivity: Array.from({ length: 7 }, (_, i) => ({
           date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { weekday: 'short' }),
           newPatients: Math.floor(Math.random() * 5) + 1,

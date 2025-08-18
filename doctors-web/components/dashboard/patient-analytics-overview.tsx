@@ -91,27 +91,59 @@ export default function DoctorPatientAnalyticsOverview({ userId }: DoctorPatient
     try {
       setLoading(true);
       
-      // Fetch actual patient data
+      // Fetch actual patient data from existing endpoints
       const patientsResponse = await axiosInstance.get(`/api/patient/get-doctor-patients/${userId}`);
       const allPatients = patientsResponse.data?.success ? patientsResponse.data.data : patientsResponse.data;
       
-      // Fetch connected clinics
-      const clinicsResponse = await axiosInstance.get(`/api/doctor/connected-clinics/${userId}`);
-      const connectedClinics = clinicsResponse.data?.success ? clinicsResponse.data.data : clinicsResponse.data;
+      // For connected clinics, we'll extract from patient data since patients have clinic info
+      const uniqueClinics = new Map();
+      (allPatients || []).forEach((patient: any) => {
+        if (patient.clinic) {
+          uniqueClinics.set(patient.clinic.id, patient.clinic);
+        }
+      });
+      const connectedClinics = Array.from(uniqueClinics.values());
       
       // Calculate analytics from existing data
       const totalPatients = allPatients?.length || 0;
       const activePatients = allPatients?.filter((p: any) => p.status === 'ACTIVE').length || 0;
       const completedPatients = allPatients?.filter((p: any) => p.status === 'COMPLETED').length || 0;
       
+      // Calculate time-based metrics
+      const timeFrameDays = parseInt(timeFrame);
+      const cutoffDate = new Date(Date.now() - timeFrameDays * 24 * 60 * 60 * 1000);
+      
+      const recentPatients = (allPatients || []).filter((p: any) => 
+        new Date(p.createdAt) >= cutoffDate
+      );
+      const recentCompleted = (allPatients || []).filter((p: any) => 
+        p.status === 'COMPLETED' && new Date(p.updatedAt || p.createdAt) >= cutoffDate
+      );
+      
+      // Calculate average completion time from completed patients
+      const completedPatientsWithDates = (allPatients || []).filter((p: any) => 
+        p.status === 'COMPLETED' && p.createdAt && p.updatedAt
+      );
+      
+      let averageCompletionTime = 25; // default
+      if (completedPatientsWithDates.length > 0) {
+        const totalDays = completedPatientsWithDates.reduce((sum: number, p: any) => {
+          const start = new Date(p.createdAt);
+          const end = new Date(p.updatedAt);
+          const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+          return sum + Math.max(1, days); // minimum 1 day
+        }, 0);
+        averageCompletionTime = Math.round(totalDays / completedPatientsWithDates.length);
+      }
+      
       // Group patients by clinic
-      const patientsByClinic = (connectedClinics || []).map((clinic: any) => {
-        const clinicPatients = allPatients?.filter((p: any) => p.clinic.id === clinic.clinic.id) || [];
+      const patientsByClinic = connectedClinics.map((clinic: any) => {
+        const clinicPatients = allPatients?.filter((p: any) => p.clinic.id === clinic.id) || [];
         const clinicCompleted = clinicPatients.filter((p: any) => p.status === 'COMPLETED').length;
         
         return {
-          clinicId: clinic.clinic.id,
-          clinicName: clinic.clinic.clinicName,
+          clinicId: clinic.id,
+          clinicName: clinic.clinicName,
           patientCount: clinicPatients.length,
           completionRate: clinicPatients.length > 0 ? Math.round((clinicCompleted / clinicPatients.length) * 100) : 0
         };
@@ -121,11 +153,11 @@ export default function DoctorPatientAnalyticsOverview({ userId }: DoctorPatient
         totalPatients,
         activePatients,
         completedPatients,
-        averageCompletionTime: Math.floor(Math.random() * 25) + 10, // 10-35 days
+        averageCompletionTime,
         completionRate: totalPatients > 0 ? Math.round((completedPatients / totalPatients) * 100) : 0,
-        newPatientsThisPeriod: Math.floor(totalPatients * 0.25),
-        completedThisPeriod: Math.floor(completedPatients * 0.35),
-        clinicsWorkedWith: connectedClinics?.length || 0,
+        newPatientsThisPeriod: recentPatients.length,
+        completedThisPeriod: recentCompleted.length,
+        clinicsWorkedWith: connectedClinics.length || 0,
         patientsByClinic: patientsByClinic.slice(0, 5),
         dailyActivity: Array.from({ length: 7 }, (_, i) => ({
           date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { weekday: 'short' }),
