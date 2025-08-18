@@ -69,6 +69,7 @@ export default function SearchDoctorsScreen() {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("nearest");
   const [experienceRange, setExperienceRange] = useState([0, 50]);
+  const [specializationFilter, setSpecializationFilter] = useState("all");
   const [radius, setRadius] = useState(50);
   const [customLocation, setCustomLocation] = useState<{
     lat: number;
@@ -76,6 +77,64 @@ export default function SearchDoctorsScreen() {
   } | null>(null);
   const [customLocationAddress, setCustomLocationAddress] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [filteredDoctors, setFilteredDoctors] = useState<Doctor[]>([]);
+
+  // Specializations list
+  const SPECIALIZATIONS = [
+    'GENERAL_PHYSICIAN',
+    'CARDIOLOGIST', 
+    'DERMATOLOGIST',
+    'ENDOCRINOLOGIST',
+    'GYNECOLOGIST',
+    'NEUROSURGEON',
+    'ORTHOPEDIC_SURGEON',
+    'PLASTIC_SURGEON',
+    'UROLOGIST',
+    'ENT_SPECIALIST',
+    'PEDIATRICIAN',
+    'PSYCHIATRIST',
+    'DENTIST'
+  ];
+
+  // Filter and search logic
+  useEffect(() => {
+    let filtered = doctors;
+
+    // Text search
+    if (searchTerm) {
+      filtered = filtered.filter(doctor =>
+        doctor.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        doctor.specialization.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        doctor.address.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Specialization filter
+    if (specializationFilter !== "all") {
+      filtered = filtered.filter(doctor => doctor.specialization === specializationFilter);
+    }
+
+    // Experience range filter
+    filtered = filtered.filter(doctor => 
+      doctor.experience >= experienceRange[0] && doctor.experience <= experienceRange[1]
+    );
+
+    // Sort filtered results
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case "nearest":
+          return (a.distance || 999999) - (b.distance || 999999);
+        case "experience":
+          return b.experience - a.experience;
+        case "name":
+          return a.fullName.localeCompare(b.fullName);
+        default:
+          return 0;
+      }
+    });
+
+    setFilteredDoctors(filtered);
+  }, [doctors, searchTerm, specializationFilter, experienceRange, sortBy]);
 
   const fetchClinicAndDoctors = useCallback(async () => {
     setLoading(true);
@@ -222,6 +281,43 @@ export default function SearchDoctorsScreen() {
 
       {showFilters && (
         <View className="bg-white p-4 rounded-lg shadow-md mb-4">
+          {/* Specialization Filter */}
+          <View className="mb-4">
+            <Text className="text-base font-semibold mb-2">Specialization</Text>
+            <View style={{ backgroundColor: '#f9fafb', borderRadius: 8, borderWidth: 1, borderColor: '#e5e7eb' }}>
+              <Picker
+                selectedValue={specializationFilter}
+                onValueChange={(itemValue) => setSpecializationFilter(itemValue)}
+                style={{ height: 50 }}
+              >
+                <Picker.Item label="All Specializations" value="all" />
+                {SPECIALIZATIONS.map((spec) => (
+                  <Picker.Item 
+                    key={spec} 
+                    label={spec.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())} 
+                    value={spec} 
+                  />
+                ))}
+              </Picker>
+            </View>
+          </View>
+
+          {/* Sort By */}
+          <View className="mb-4">
+            <Text className="text-base font-semibold mb-2">Sort By</Text>
+            <View style={{ backgroundColor: '#f9fafb', borderRadius: 8, borderWidth: 1, borderColor: '#e5e7eb' }}>
+              <Picker
+                selectedValue={sortBy}
+                onValueChange={(itemValue) => setSortBy(itemValue)}
+                style={{ height: 50 }}
+              >
+                <Picker.Item label="Nearest First" value="nearest" />
+                <Picker.Item label="Most Experienced" value="experience" />
+                <Picker.Item label="Name A-Z" value="name" />
+              </Picker>
+            </View>
+          </View>
+
           <View>
             <Text className="text-base font-semibold mb-2">
               Experience (Years): {experienceRange[0]} - {experienceRange[1]}
@@ -290,7 +386,7 @@ export default function SearchDoctorsScreen() {
         </View>
       ) : (
         <FlatList
-          data={doctors}
+          data={filteredDoctors}
           keyExtractor={(item) => item.id}
           renderItem={renderDoctorItem}
           ListEmptyComponent={
@@ -298,6 +394,9 @@ export default function SearchDoctorsScreen() {
               <Text className="text-lg text-gray-600">No doctors found.</Text>
               <Text className="text-gray-500">
                 Try adjusting your filters or search radius.
+              </Text>
+              <Text className="text-sm text-gray-400 mt-2">
+                Found {doctors.length} total doctors, {filteredDoctors.length} match your criteria
               </Text>
             </View>
           }
