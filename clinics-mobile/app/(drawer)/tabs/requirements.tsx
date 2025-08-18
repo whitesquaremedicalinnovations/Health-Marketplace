@@ -7,8 +7,12 @@ import {
   Text,
   TouchableOpacity,
   View,
+  SafeAreaView,
+  StatusBar,
+  Dimensions,
 } from "react-native";
 import { useCallback, useEffect, useState } from "react";
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { useUser } from "@clerk/clerk-expo";
 import { useRouter } from "expo-router";
@@ -20,11 +24,20 @@ import {
   Eye,
   MapPin,
   PlusCircle,
+  Clock,
+  Users,
+  DollarSign,
+  Filter,
+  Search,
+  X,
+  AlertCircle,
 } from "lucide-react-native";
 import Toast from "react-native-toast-message";
 
 import { axiosInstance } from "../../../lib/axios";
 import { getRequirementsByClinic } from "../../../lib/utils";
+
+const { width } = Dimensions.get('window');
 
 interface Requirement {
   id: string;

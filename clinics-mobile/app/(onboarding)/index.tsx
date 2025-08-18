@@ -3,19 +3,41 @@ import {
   View,
   Text,
   TextInput,
-  Button,
   ScrollView,
   TouchableOpacity,
   Image,
+  SafeAreaView,
+  StatusBar,
+  Dimensions,
+  Alert,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useUser } from "@clerk/clerk-expo";
-import { Trash2 } from "lucide-react-native";
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
+import { 
+  Trash2, 
+  Upload, 
+  Camera, 
+  MapPin, 
+  Phone, 
+  User as UserIcon, 
+  Building, 
+  FileText, 
+  CheckCircle2,
+  CreditCard,
+  Shield,
+  Clock,
+  Loader2,
+} from "lucide-react-native";
 import { axiosInstance } from "../../lib/axios";
 import { onboardingClinic } from "../../lib/utils";
 import Toast from 'react-native-toast-message';
 import * as ImagePicker from 'expo-image-picker';
+
+const { width, height } = Dimensions.get('window');
 
 export default function OnboardingScreen() {
   const { user } = useUser();
@@ -44,17 +66,56 @@ export default function OnboardingScreen() {
   const [loading, setLoading] = useState(false);
   const [onboardingAmount, setOnboardingAmount] = useState(0);
   const [hasEmailPaid, setHasEmailPaid] = useState(false);
+  const [isCheckingUser, setIsCheckingUser] = useState(true);
 
   const handleNext = () => setStep((s) => s + 1);
   const handlePrev = () => setStep((s) => s - 1);
 
   useEffect(() => {
-    if (user) {
-      setOwnerFirstName(user.firstName ?? "");
-      setOwnerLastName(user.lastName ?? "");
-      setOwnerEmail(user.emailAddresses[0]?.emailAddress ?? "");
-      setOwnerPhoneNumber(user.phoneNumbers[0]?.phoneNumber ?? "");
-    }
+    const fetchOnboardingAmount = async () => {
+      try {
+        const res = await axiosInstance.get("/api/admin/get-onboarding-fee");
+        const data = res.data;
+        setOnboardingAmount(data.onboardingFee.fee);
+      } catch (error) {
+        console.error("Error fetching onboarding fee:", error);
+        setOnboardingAmount(500); // Default fallback
+      }
+    };
+
+    const checkEmailPayment = async () => {
+      if (ownerEmail) {
+        try {
+          const res = await axiosInstance.get("/api/payments/get-email-payment", {
+            params: {
+              email: ownerEmail,
+              userType: "CLINIC",
+            }
+          });
+          const data = res.data;
+          setHasEmailPaid(data.data.payment !== null);
+        } catch (error) {
+          console.error("Error checking payment status:", error);
+          setHasEmailPaid(false);
+        }
+      }
+    };
+
+    fetchOnboardingAmount();
+    checkEmailPayment();
+  }, [ownerEmail]);
+
+  useEffect(() => {
+    const initializeOnboarding = async () => {
+      if (user) {
+        setOwnerFirstName(user.firstName ?? "");
+        setOwnerLastName(user.lastName ?? "");
+        setOwnerEmail(user.emailAddresses[0]?.emailAddress ?? "");
+        setOwnerPhoneNumber(user.phoneNumbers[0]?.phoneNumber ?? "");
+        setIsCheckingUser(false);
+      }
+    };
+    initializeOnboarding();
   }, [user]);
 
   const handleChooseProfileImage = async () => {
@@ -81,6 +142,34 @@ export default function OnboardingScreen() {
     }
   };
 
+
+  const handlePayment = async () => {
+    Alert.alert(
+      'Payment Required',
+      `Complete your clinic registration with a one-time fee of ₹${onboardingAmount}`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Pay Now',
+          onPress: () => {
+            // In a real app, integrate with Razorpay or other payment gateway
+            // For now, we'll simulate payment success
+            setTimeout(() => {
+              setHasEmailPaid(true);
+              Toast.show({
+                type: 'success',
+                text1: 'Payment Successful',
+                text2: 'You can now complete your registration',
+              });
+            }, 2000);
+          },
+        },
+      ]
+    );
+  };
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -152,11 +241,16 @@ export default function OnboardingScreen() {
       const response = await onboardingClinic(data);
       if (response.status === 200) {
         await AsyncStorage.setItem("hasOnboarded", "true");
+        Toast.show({
+          type: 'success',
+          text1: 'Registration Complete!',
+          text2: 'Welcome to HealthCare Platform',
+        });
         router.replace("/(drawer)/tabs");
       } else {
         Toast.show({
           type: 'error',
-          text1: 'Onboarding Failed',
+          text1: 'Registration Failed',
           text2: 'Please try again.',
         });
       }
@@ -173,178 +267,418 @@ export default function OnboardingScreen() {
   };
 
 
+  if (isCheckingUser) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }}>
+        <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
+        <View className="flex-1 justify-center items-center">
+          <View className="bg-white rounded-full p-8 shadow-lg mb-4">
+            <Clock size={32} color="#3b82f6" />
+          </View>
+          <Text className="text-lg font-semibold text-gray-800">Checking your profile...</Text>
+          <Text className="text-sm text-gray-500 mt-1">Please wait while we verify your account</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <ScrollView className="flex-1 bg-gray-50">
-      <View className="p-6">
-        <View className="mb-8">
-          <Text className="text-3xl font-bold text-center text-gray-800">
-            Welcome to HealthCare Platform
-          </Text>
-          <Text className="text-lg text-center text-gray-600 mt-2">
-            Let's set up your clinic profile
-          </Text>
-        </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }}>
+      <StatusBar barStyle="light-content" backgroundColor="#3b82f6" />
+      
+      {/* Animated Background */}
+      <View style={{ position: 'absolute', inset: 0 }}>
+        <LinearGradient
+          colors={['#f8fafc', '#e0e7ff', '#ddd6fe']}
+          style={{ flex: 1 }}
+        />
+        <View
+          style={{
+            position: 'absolute',
+            top: -100,
+            right: -100,
+            width: 200,
+            height: 200,
+            backgroundColor: '#3b82f6',
+            opacity: 0.1,
+            borderRadius: 100,
+          }}
+        />
+        <View
+          style={{
+            position: 'absolute',
+            bottom: -80,
+            left: -80,
+            width: 160,
+            height: 160,
+            backgroundColor: '#8b5cf6',
+            opacity: 0.1,
+            borderRadius: 80,
+          }}
+        />
+      </View>
 
-        {/* Step Indicator */}
-        <View className="flex-row items-center justify-center mb-8">
-          <View
-            className={`w-8 h-8 rounded-full flex items-center justify-center ${
-              step >= 1 ? "bg-blue-500" : "bg-gray-300"
-            }`}
-          >
-            <Text className="text-white font-bold">1</Text>
-          </View>
-          <View
-            className={`flex-1 h-1 ${
-              step >= 2 ? "bg-blue-500" : "bg-gray-300"
-            }`}
-          />
-          <View
-            className={`w-8 h-8 rounded-full flex items-center justify-center ${
-              step >= 2 ? "bg-blue-500" : "bg-gray-300"
-            }`}
-          >
-            <Text className="text-white font-bold">2</Text>
-          </View>
-        </View>
-
-        {step === 1 && (
-          <View>
-            <Text className="text-2xl font-semibold text-gray-800 mb-6 text-center">
-              Owner Information
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 40 }}
+      >
+        {/* Header */}
+        <LinearGradient
+          colors={['#3b82f6', '#8b5cf6']}
+          style={{ 
+            paddingHorizontal: 24, 
+            paddingTop: Platform.OS === 'ios' ? 40 : 60, 
+            paddingBottom: 40,
+            borderBottomLeftRadius: 32,
+            borderBottomRightRadius: 32,
+          }}
+        >
+          <View className="items-center mb-8">
+            <View className="w-24 h-24 bg-white/20 rounded-full items-center justify-center mb-4">
+              <Building size={40} color="white" />
+            </View>
+            <Text className="text-3xl font-bold text-white text-center mb-2">
+              Welcome to HealthCare Platform
             </Text>
-            <View className="mb-4">
-              <Text className="text-gray-700 mb-2">First Name</Text>
-              <TextInput
-                className="border border-gray-300 p-3 rounded-lg"
-                placeholder="John"
-                value={ownerFirstName}
-                onChangeText={setOwnerFirstName}
-              />
-            </View>
-            <View className="mb-4">
-              <Text className="text-gray-700 mb-2">Last Name</Text>
-              <TextInput
-                className="border border-gray-300 p-3 rounded-lg"
-                placeholder="Doe"
-                value={ownerLastName}
-                onChangeText={setOwnerLastName}
-              />
-            </View>
-            <View className="mb-4">
-              <Text className="text-gray-700 mb-2">Email Address</Text>
-              <TextInput
-                className="border border-gray-300 p-3 rounded-lg bg-gray-200"
-                value={ownerEmail}
-                editable={false}
-              />
-            </View>
-            <View className="mb-4">
-              <Text className="text-gray-700 mb-2">Phone Number</Text>
-              <TextInput
-                className="border border-gray-300 p-3 rounded-lg"
-                placeholder="+1 (555) 123-4567"
-                value={ownerPhoneNumber}
-                onChangeText={setOwnerPhoneNumber}
-              />
-            </View>
-          </View>
-        )}
-
-        {step === 2 && (
-          <View>
-            <Text className="text-2xl font-semibold text-gray-800 mb-6 text-center">
-              Clinic Details
+            <Text className="text-blue-100 text-base text-center">
+              Let's set up your clinic profile in just 3 simple steps
             </Text>
-            <View className="mb-4">
-              <Text className="text-gray-700 mb-2">Clinic Name</Text>
-              <TextInput
-                className="border border-gray-300 p-3 rounded-lg"
-                placeholder="HealthCare Plus"
-                value={clinicName}
-                onChangeText={setClinicName}
-              />
-            </View>
-            <View className="mb-4">
-              <Text className="text-gray-700 mb-2">Clinic Phone Number</Text>
-              <TextInput
-                className="border border-gray-300 p-3 rounded-lg"
-                placeholder="+1 (555) 987-6543"
-                value={clinicPhoneNumber}
-                onChangeText={setClinicPhoneNumber}
-              />
-            </View>
-            <View className="mb-4">
-              <Text className="text-gray-700 mb-2">Additional Details</Text>
-              <TextInput
-                className="border border-gray-300 p-3 rounded-lg h-24"
-                placeholder="Services, timings, etc."
-                value={clinicAdditionalDetails}
-                onChangeText={setClinicAdditionalDetails}
-                multiline
-              />
-            </View>
+          </View>
 
-            <View className="mb-4">
-              <Text className="text-gray-700 mb-2">Clinic Address</Text>
-              <TextInput
-                className="border border-gray-300 p-3 rounded-lg"
-                placeholder="123 Main St, Anytown, USA"
-                value={clinicAddress}
-                onChangeText={setClinicAddress}
-              />
+          {/* Progress Indicator */}
+          <View className="flex-row items-center justify-center">
+            <View className="flex-row items-center">
+              <View className={`w-10 h-10 rounded-full items-center justify-center ${step >= 1 ? 'bg-white' : 'bg-white/30'}`}>
+                {step > 1 ? (
+                  <CheckCircle2 size={20} color="#3b82f6" />
+                ) : (
+                  <UserIcon size={20} color={step >= 1 ? "#3b82f6" : "white"} />
+                )}
+              </View>
+              <Text className="text-white text-xs font-medium ml-2 mr-4">Owner Info</Text>
             </View>
-
-            <View className="mb-4">
-              <Text className="text-gray-700 mb-2">Clinic Documents</Text>
-              <TouchableOpacity 
-                className="border border-dashed border-gray-400 p-6 rounded-lg flex items-center justify-center"
-                onPress={handleChooseDocuments}
-              >
-                <Text>Upload Documents</Text>
-              </TouchableOpacity>
-              <View className="mt-4">
-                {clinicDocuments.map((doc, index) => (
-                  <View key={index} className="flex-row items-center justify-between bg-gray-100 p-2 rounded-lg mb-2">
-                    <Text className="truncate w-4/5">{doc.fileName}</Text>
-                    <TouchableOpacity onPress={() => setClinicDocuments(clinicDocuments.filter((_, i) => i !== index))}>
-                      <Trash2 color="red" />
-                    </TouchableOpacity>
-                  </View>
-                ))}
+            <View className={`flex-1 h-1 rounded-full ${step >= 2 ? 'bg-white' : 'bg-white/30'}`} />
+            <View className="flex-row items-center">
+              <Text className="text-white text-xs font-medium mr-2 ml-4">Clinic Details</Text>
+              <View className={`w-10 h-10 rounded-full items-center justify-center ${step >= 2 ? 'bg-white' : 'bg-white/30'}`}>
+                {step > 2 ? (
+                  <CheckCircle2 size={20} color="#3b82f6" />
+                ) : (
+                  <Building size={20} color={step >= 2 ? "#3b82f6" : "white"} />
+                )}
               </View>
             </View>
-
-            {/* TODO: Implement Profile Image Upload */}
-            <View className="mb-4">
-              <Text className="text-gray-700 mb-2">Clinic Profile Image</Text>
-              <TouchableOpacity 
-                className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center self-center"
-                onPress={handleChooseProfileImage}
-              >
-                {clinicProfileImage ? (
-                  <Image source={{ uri: clinicProfileImage.uri }} className="w-32 h-32 rounded-full" />
-                ) : (
-                  <Text>Upload Image</Text>
-                )}
-              </TouchableOpacity>
+            <View className={`flex-1 h-1 rounded-full ${step >= 3 ? 'bg-white' : 'bg-white/30'}`} />
+            <View className="flex-row items-center">
+              <Text className="text-white text-xs font-medium mr-2 ml-4">Payment</Text>
+              <View className={`w-10 h-10 rounded-full items-center justify-center ${step >= 3 ? 'bg-white' : 'bg-white/30'}`}>
+                <CreditCard size={20} color={step >= 3 ? "#3b82f6" : "white"} />
+              </View>
             </View>
           </View>
-        )}
+        </LinearGradient>
 
-        <View className="flex-row justify-between mt-8">
-          {step > 1 ? (
-            <Button title="Previous" onPress={handlePrev} />
-          ) : (
-            <View />
-          )}
-          {step < 2 ? (
-            <Button title="Next" onPress={handleNext} />
-          ) : (
-            <Button title="Finish Onboarding" onPress={handleSubmit} disabled={loading?true:false}/>
-          )}
+        <View style={{ padding: 24, paddingTop: 32 }}>
+          {/* Profile Image Upload */}
+          <View className="items-center mb-8">
+            <TouchableOpacity 
+              onPress={handleChooseProfileImage}
+              className="relative"
+            >
+              <View
+                className={`w-32 h-32 rounded-full items-center justify-center border-4 border-dashed ${
+                  clinicProfileImage ? 'border-blue-400 bg-blue-50' : 'border-gray-300 bg-gray-100'
+                }`}
+              >
+                {clinicProfileImage ? (
+                  <Image 
+                    source={{ uri: clinicProfileImage.uri }} 
+                    className="w-32 h-32 rounded-full" 
+                  />
+                ) : (
+                  <View className="items-center">
+                    <Upload size={24} color="#9ca3af" />
+                    <Text className="text-gray-500 text-xs mt-2 text-center">Upload Logo</Text>
+                  </View>
+                )}
+              </View>
+              <View className="absolute bottom-0 right-0 bg-blue-600 rounded-full p-2">
+                <Camera size={16} color="white" />
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          {/* Step Content */}
+          <View className="bg-white rounded-2xl p-6 shadow-lg mb-6">
+            {step === 1 && (
+              <View>
+                <View className="items-center mb-6">
+                  <Text className="text-2xl font-bold text-gray-900 mb-2">Owner Information</Text>
+                  <Text className="text-gray-600 text-center">Tell us about yourself</Text>
+                </View>
+                
+                <View className="space-y-4">
+                  <View>
+                    <View className="flex-row items-center mb-2">
+                      <UserIcon size={16} color="#6b7280" />
+                      <Text className="text-gray-700 font-medium ml-2">First Name</Text>
+                    </View>
+                    <TextInput
+                      className="bg-gray-50 border border-gray-200 p-4 rounded-xl text-gray-900"
+                      placeholder="John"
+                      value={ownerFirstName}
+                      onChangeText={setOwnerFirstName}
+                      placeholderTextColor="#9ca3af"
+                    />
+                  </View>
+
+                  <View>
+                    <View className="flex-row items-center mb-2">
+                      <UserIcon size={16} color="#6b7280" />
+                      <Text className="text-gray-700 font-medium ml-2">Last Name</Text>
+                    </View>
+                    <TextInput
+                      className="bg-gray-50 border border-gray-200 p-4 rounded-xl text-gray-900"
+                      placeholder="Doe"
+                      value={ownerLastName}
+                      onChangeText={setOwnerLastName}
+                      placeholderTextColor="#9ca3af"
+                    />
+                  </View>
+
+                  <View>
+                    <Text className="text-gray-700 font-medium mb-2">Email Address</Text>
+                    <TextInput
+                      className="bg-gray-100 border border-gray-200 p-4 rounded-xl text-gray-700"
+                      value={ownerEmail}
+                      editable={false}
+                    />
+                    <Text className="text-gray-500 text-xs mt-1">This email is from your account and cannot be changed</Text>
+                  </View>
+
+                  <View>
+                    <View className="flex-row items-center mb-2">
+                      <Phone size={16} color="#6b7280" />
+                      <Text className="text-gray-700 font-medium ml-2">Phone Number</Text>
+                    </View>
+                    <TextInput
+                      className="bg-gray-50 border border-gray-200 p-4 rounded-xl text-gray-900"
+                      placeholder="+1 (555) 123-4567"
+                      value={ownerPhoneNumber}
+                      onChangeText={setOwnerPhoneNumber}
+                      placeholderTextColor="#9ca3af"
+                    />
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {step === 2 && (
+              <View>
+                <View className="items-center mb-6">
+                  <Text className="text-2xl font-bold text-gray-900 mb-2">Clinic Details</Text>
+                  <Text className="text-gray-600 text-center">Setup your clinic information</Text>
+                </View>
+                
+                <View className="space-y-4">
+                  <View>
+                    <View className="flex-row items-center mb-2">
+                      <Building size={16} color="#6b7280" />
+                      <Text className="text-gray-700 font-medium ml-2">Clinic Name</Text>
+                    </View>
+                    <TextInput
+                      className="bg-gray-50 border border-gray-200 p-4 rounded-xl text-gray-900"
+                      placeholder="HealthCare Plus Medical Center"
+                      value={clinicName}
+                      onChangeText={setClinicName}
+                      placeholderTextColor="#9ca3af"
+                    />
+                  </View>
+
+                  <View>
+                    <View className="flex-row items-center mb-2">
+                      <Phone size={16} color="#6b7280" />
+                      <Text className="text-gray-700 font-medium ml-2">Clinic Phone Number</Text>
+                    </View>
+                    <TextInput
+                      className="bg-gray-50 border border-gray-200 p-4 rounded-xl text-gray-900"
+                      placeholder="+1 (555) 987-6543"
+                      value={clinicPhoneNumber}
+                      onChangeText={setClinicPhoneNumber}
+                      placeholderTextColor="#9ca3af"
+                    />
+                  </View>
+
+                  <View>
+                    <View className="flex-row items-center mb-2">
+                      <MapPin size={16} color="#6b7280" />
+                      <Text className="text-gray-700 font-medium ml-2">Clinic Address</Text>
+                    </View>
+                    <TextInput
+                      className="bg-gray-50 border border-gray-200 p-4 rounded-xl text-gray-900"
+                      placeholder="123 Main St, City, State, Country"
+                      value={clinicAddress}
+                      onChangeText={setClinicAddress}
+                      placeholderTextColor="#9ca3af"
+                    />
+                  </View>
+
+                  <View>
+                    <View className="flex-row items-center mb-2">
+                      <FileText size={16} color="#6b7280" />
+                      <Text className="text-gray-700 font-medium ml-2">Additional Details</Text>
+                    </View>
+                    <TextInput
+                      className="bg-gray-50 border border-gray-200 p-4 rounded-xl text-gray-900 h-24"
+                      placeholder="Describe your services, timings, specializations, or any other important information..."
+                      value={clinicAdditionalDetails}
+                      onChangeText={setClinicAdditionalDetails}
+                      multiline
+                      textAlignVertical="top"
+                      placeholderTextColor="#9ca3af"
+                    />
+                  </View>
+
+                  {/* Document Upload */}
+                  <View>
+                    <View className="flex-row items-center mb-2">
+                      <FileText size={16} color="#6b7280" />
+                      <Text className="text-gray-700 font-medium ml-2">Clinic Documents & Certifications</Text>
+                    </View>
+                    
+                    <TouchableOpacity 
+                      className="border-2 border-dashed border-gray-300 rounded-xl p-6 items-center justify-center bg-gray-50"
+                      onPress={handleChooseDocuments}
+                    >
+                      <Upload size={24} color="#9ca3af" />
+                      <Text className="text-gray-600 text-sm mt-2 text-center">Click to upload or drag and drop</Text>
+                      <Text className="text-gray-500 text-xs">PDF, JPG, PNG up to 10MB each</Text>
+                    </TouchableOpacity>
+
+                    {clinicDocuments.length > 0 && (
+                      <View className="mt-4 space-y-2">
+                        {clinicDocuments.map((doc, index) => (
+                          <View key={index} className="flex-row items-center justify-between bg-gray-100 p-3 rounded-lg">
+                            <View className="flex-row items-center flex-1">
+                              <FileText size={16} color="#6b7280" />
+                              <Text className="text-gray-700 ml-2 flex-1" numberOfLines={1}>
+                                {doc.fileName}
+                              </Text>
+                            </View>
+                            <TouchableOpacity 
+                              onPress={() => setClinicDocuments(clinicDocuments.filter((_, i) => i !== index))}
+                              className="ml-2 p-1"
+                            >
+                              <Trash2 size={16} color="#ef4444" />
+                            </TouchableOpacity>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {step === 3 && (
+              <View>
+                <View className="items-center mb-6">
+                  <View className="w-16 h-16 bg-blue-100 rounded-full items-center justify-center mb-4">
+                    <CreditCard size={32} color="#3b82f6" />
+                  </View>
+                  <Text className="text-2xl font-bold text-gray-900 mb-2">Complete Registration</Text>
+                  <Text className="text-gray-600 text-center">
+                    Secure your clinic account with a one-time registration fee
+                  </Text>
+                </View>
+
+                <View className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 mb-6">
+                  <Text className="text-lg font-semibold text-gray-900 mb-2">Registration Fee</Text>
+                  <Text className="text-3xl font-bold text-blue-600 mb-2">₹{onboardingAmount}</Text>
+                  <Text className="text-gray-600 text-sm">
+                    This one-time fee helps us maintain a secure and professional platform for healthcare providers.
+                  </Text>
+                </View>
+
+                {hasEmailPaid ? (
+                  <View className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
+                    <View className="flex-row items-center">
+                      <CheckCircle2 size={20} color="#10b981" />
+                      <Text className="text-green-800 font-medium ml-2">Payment Confirmed</Text>
+                    </View>
+                    <Text className="text-green-600 text-sm mt-1">
+                      Your payment has been processed successfully. You can now complete your registration.
+                    </Text>
+                  </View>
+                ) : (
+                  <View className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
+                    <View className="flex-row items-center">
+                      <Clock size={20} color="#f59e0b" />
+                      <Text className="text-yellow-800 font-medium ml-2">Payment Required</Text>
+                    </View>
+                    <Text className="text-yellow-600 text-sm mt-1">
+                      Please complete the payment to proceed with your clinic registration.
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+
+          {/* Navigation Buttons */}
+          <View className="flex-row justify-between items-center">
+            {step > 1 ? (
+              <TouchableOpacity 
+                onPress={handlePrev}
+                className="bg-gray-200 rounded-xl px-6 py-4 flex-row items-center"
+              >
+                <Text className="text-gray-700 font-medium">Previous</Text>
+              </TouchableOpacity>
+            ) : (
+              <View />
+            )}
+            
+            {step < 3 ? (
+              <TouchableOpacity 
+                onPress={handleNext}
+                className="bg-blue-600 rounded-xl px-8 py-4 flex-row items-center shadow-lg"
+              >
+                <Text className="text-white font-medium mr-2">Continue</Text>
+              </TouchableOpacity>
+            ) : (
+              <>
+                {hasEmailPaid ? (
+                  <TouchableOpacity 
+                    onPress={handleSubmit}
+                    disabled={loading}
+                    className={`rounded-xl px-8 py-4 flex-row items-center shadow-lg ${
+                      loading ? 'bg-gray-400' : 'bg-green-600'
+                    }`}
+                  >
+                    {loading ? (
+                      <Loader2 size={16} color="white" />
+                    ) : (
+                      <CheckCircle2 size={16} color="white" />
+                    )}
+                    <Text className="text-white font-medium ml-2">
+                      {loading ? 'Setting up...' : 'Complete Setup'}
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity 
+                    onPress={handlePayment}
+                    className="bg-blue-600 rounded-xl px-8 py-4 flex-row items-center shadow-lg"
+                  >
+                    <CreditCard size={16} color="white" />
+                    <Text className="text-white font-medium ml-2">Pay ₹{onboardingAmount}</Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
+          </View>
         </View>
-    </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }

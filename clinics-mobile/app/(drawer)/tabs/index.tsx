@@ -7,8 +7,14 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ScrollView,
+  Dimensions,
+  StatusBar,
+  SafeAreaView,
 } from "react-native";
 import { useEffect, useState, useCallback } from "react";
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 
 import { useUser } from "@clerk/clerk-expo";
 import { useRouter } from "expo-router";
@@ -18,10 +24,20 @@ import {
   Calendar,
   CheckCircle,
   MessageSquare,
+  TrendingUp,
+  Users,
+  FileText,
+  Activity,
+  Hospital,
+  Stethoscope,
+  Heart,
+  Bell,
 } from "lucide-react-native";
 import Chart from "../../../components/Chart";
 
 import { getDashboardOverview } from "../../../lib/utils";
+
+const { width, height } = Dimensions.get('window');
 
 interface Overview {
   totalRequirements: number;
@@ -98,18 +114,39 @@ export default function DashboardScreen() {
 
   if (loading) {
     return (
-      <View className="flex-1 justify-center items-center">
-        <ActivityIndicator size="large" />
-        <Text className="mt-2">Loading your dashboard...</Text>
-      </View>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }}>
+        <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
+        <View className="flex-1 justify-center items-center bg-gradient-to-br from-slate-50 to-blue-50">
+          <View className="bg-white rounded-full p-8 shadow-lg mb-4">
+            <ActivityIndicator size="large" color="#3b82f6" />
+          </View>
+          <Text className="text-lg font-semibold text-gray-800">Loading your dashboard...</Text>
+          <Text className="text-sm text-gray-500 mt-1">Please wait while we fetch your data</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   if (!overview) {
     return (
-      <View className="flex-1 justify-center items-center">
-        <Text>Could not load dashboard data.</Text>
-      </View>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }}>
+        <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
+        <View className="flex-1 justify-center items-center bg-gradient-to-br from-red-50 to-orange-50">
+          <View className="bg-white rounded-2xl p-8 mx-4 shadow-xl">
+            <View className="w-16 h-16 bg-red-100 rounded-full items-center justify-center mx-auto mb-4">
+              <Activity size={32} color="#dc2626" />
+            </View>
+            <Text className="text-xl font-semibold text-gray-900 text-center mb-2">Something went wrong</Text>
+            <Text className="text-gray-600 text-center">Could not load dashboard data. Please try again.</Text>
+            <TouchableOpacity 
+              onPress={() => fetchDashboardData()}
+              className="bg-red-600 rounded-lg py-3 px-6 mt-4"
+            >
+              <Text className="text-white font-medium text-center">Try Again</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -138,162 +175,322 @@ export default function DashboardScreen() {
     title: string,
     value: number,
     subtitle: string,
-    screen: string
+    screen: string,
+    gradientColors: string[] = ['#ffffff', '#f8fafc']
   ) => (
     <TouchableOpacity
       onPress={() => router.push(screen as any)}
-      className="bg-white rounded-lg p-4 flex-1 shadow-md"
+      className="rounded-2xl shadow-lg overflow-hidden"
+      style={{ 
+        elevation: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+      }}
     >
-      <View className="flex-row justify-between items-center">
-        {icon}
-        <Text className="text-2xl font-bold">{value}</Text>
-      </View>
-      <Text className="text-lg font-semibold mt-2">{title}</Text>
-      <Text className="text-gray-500">{subtitle}</Text>
+      <LinearGradient
+        colors={gradientColors}
+        style={{ padding: 20, minHeight: 120 }}
+      >
+        <View className="flex-row justify-between items-start mb-3">
+          <View className="bg-white/50 rounded-xl p-3 shadow-sm">
+            {icon}
+          </View>
+          <View className="bg-blue-100 rounded-full px-2 py-1">
+            <Text className="text-blue-800 text-xs font-medium">Active</Text>
+          </View>
+        </View>
+        <Text className="text-3xl font-bold text-gray-900 mb-1">{value}</Text>
+        <Text className="text-lg font-semibold text-gray-800 mb-1">{title}</Text>
+        <Text className="text-gray-600 text-sm">{subtitle}</Text>
+      </LinearGradient>
     </TouchableOpacity>
   );
 
   return (
-    <FlatList
-      data={overview.latestNews}
-      keyExtractor={(item) => item.id}
-      ListHeaderComponent={
-        <View className="p-4">
-          <View className="bg-blue-600 rounded-xl p-6 shadow-lg mb-6">
-            <Text className="text-3xl font-bold text-white">Welcome Back!</Text>
-            <Text className="text-white opacity-80 mt-1">
-              Here's what's happening with your clinic.
-            </Text>
-            <View className="flex-row justify-between mt-4">
-              <View className="items-center">
-                <Text className="text-white font-bold text-2xl">
-                  {overview.totalRequirements}
-                </Text>
-                <Text className="text-white opacity-80">Total Jobs</Text>
-              </View>
-              <View className="items-center">
-                <Text className="text-white font-bold text-2xl">
-                  {overview.totalPitches}
-                </Text>
-                <Text className="text-white opacity-80">Applications</Text>
-              </View>
-              <View className="items-center">
-                <Text className="text-white font-bold text-2xl">
-                  {overview.totalAccepted}
-                </Text>
-                <Text className="text-white opacity-80">Connections</Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }}>
+      <StatusBar barStyle="light-content" backgroundColor="#3b82f6" />
+      
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        style={{ flex: 1 }}
+      >
+        {/* Enhanced Header with Gradient */}
+        <LinearGradient
+          colors={['#3b82f6', '#8b5cf6', '#6366f1']}
+          style={{ 
+            paddingHorizontal: 20, 
+            paddingTop: 20, 
+            paddingBottom: 30,
+            borderBottomLeftRadius: 24,
+            borderBottomRightRadius: 24,
+          }}
+        >
+          <View className="flex-row justify-between items-center mb-6">
+            <View>
+              <Text className="text-3xl font-bold text-white">Welcome Back!</Text>
+              <Text className="text-blue-100 text-base mt-1">
+                Here's what's happening with your healthcare facility today
+              </Text>
+            </View>
+            <TouchableOpacity className="bg-white/20 rounded-full p-3">
+              <Bell size={24} color="white" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Quick Stats in Header */}
+          <View className="flex-row justify-between">
+            <View className="bg-white/10 rounded-2xl p-4 flex-1 mr-2">
+              <Text className="text-2xl font-bold text-white">{overview.totalRequirements}</Text>
+              <Text className="text-blue-100 text-sm">Total Jobs</Text>
+            </View>
+            <View className="bg-white/10 rounded-2xl p-4 flex-1 mx-1">
+              <Text className="text-2xl font-bold text-white">{overview.totalPitches}</Text>
+              <Text className="text-blue-100 text-sm">Applications</Text>
+            </View>
+            <View className="bg-white/10 rounded-2xl p-4 flex-1 ml-2">
+              <Text className="text-2xl font-bold text-white">{overview.totalAccepted}</Text>
+              <Text className="text-blue-100 text-sm">Connections</Text>
+            </View>
+          </View>
+        </LinearGradient>
+
+        <View style={{ padding: 20, paddingTop: 30 }}>
+          {/* Enhanced Statistics Cards */}
+          <View className="mb-8">
+            <Text className="text-2xl font-bold text-gray-900 mb-4">Overview</Text>
+            <View className="gap-4">
+              {renderStatCard(
+                <Briefcase color="#3b82f6" size={28} />,
+                "Job Requirements",
+                overview.totalRequirements,
+                "Total posted requirements",
+                "/(drawer)/tabs/requirements",
+                ['#ffffff', '#dbeafe']
+              )}
+              
+              <View className="flex-row gap-4">
+                <View style={{ flex: 1 }}>
+                  {renderStatCard(
+                    <MessageSquare color="#8b5cf6" size={24} />,
+                    "Applications",
+                    overview.totalPitches,
+                    "Doctor applications received",
+                    "/(drawer)/applications",
+                    ['#ffffff', '#f3e8ff']
+                  )}
+                </View>
+                <View style={{ flex: 1 }}>
+                  {renderStatCard(
+                    <CheckCircle color="#10b981" size={24} />,
+                    "Connections",
+                    overview.totalAccepted,
+                    "Successful doctor connections",
+                    "/(drawer)/connections",
+                    ['#ffffff', '#dcfce7']
+                  )}
+                </View>
               </View>
             </View>
           </View>
 
-          <View className="flex-row justify-between gap-4 mb-6">
-            {renderStatCard(
-              <Briefcase color="#3b82f6" size={24} />,
-              "Job Requirements",
-              overview.totalRequirements,
-              "Total posted jobs",
-              "/(drawer)/tabs/requirements"
-            )}
-            {renderStatCard(
-              <MessageSquare color="#8b5cf6" size={24} />,
-              "Applications",
-              overview.totalPitches,
-              "Applications received",
-              "/(drawer)/applications"
-            )}
-          </View>
-          <View className="mb-6">
-            {renderStatCard(
-              <CheckCircle color="#10b981" size={24} />,
-              "Connections",
-              overview.totalAccepted,
-              "Successful connections",
-              "/(drawer)/connections"
-            )}
-          </View>
-
-          <View className="flex-row justify-between gap-4 mb-6">
-            <Chart
-              data={requirementsChartData}
-              colors={requirementChartColors}
-              title="Requirements Overview"
-            />
-            <Chart
-              data={pitchesChartData}
-              colors={pitchChartColors}
-              title="Applications Status"
-            />
-          </View>
-
-          <View className="bg-white rounded-lg p-4 shadow-md mb-6">
-            <Text className="text-xl font-bold mb-2">Recent Applications</Text>
-            {overview.recentPitches.length > 0 ? (
-              overview.recentPitches.map((item) => (
-                <View key={item.id} className="flex-row items-center py-2 border-b border-gray-200">
-                  <Image
-                    source={{ uri: item.doctor.profileImage?.docUrl }}
-                    className="w-10 h-10 rounded-full"
-                  />
-                  <View className="ml-3 flex-1">
-                    <Text className="font-semibold">{item.doctor.fullName}</Text>
-                    <Text className="text-gray-500">
-                      Applied for {item.jobRequirement.title}
-                    </Text>
-                  </View>
-                  <Text className="text-gray-400 text-xs">
-                    {new Date(item.createdAt).toLocaleDateString()}
-                  </Text>
+          {/* Charts Section */}
+          <View className="mb-8">
+            <Text className="text-2xl font-bold text-gray-900 mb-4">Analytics</Text>
+            <View className="bg-white rounded-2xl p-6 shadow-lg mb-4">
+              <View className="flex-row items-center mb-4">
+                <View className="bg-blue-100 rounded-lg p-2 mr-3">
+                  <TrendingUp size={20} color="#3b82f6" />
                 </View>
-              ))
-            ) : (
-              <Text className="text-center py-5 text-gray-500">
-                No recent applications.
-              </Text>
-            )}
-          </View>
-        </View>
-      }
-      renderItem={({ item }) => (
-        <View className="px-4">
-          <View className="bg-white rounded-lg p-4 shadow-md">
-            <Text className="text-xl font-bold mb-2">Latest News</Text>
-            <TouchableOpacity
-              onPress={() => router.push(`/news/${item.id}`)}
-              className="flex-row items-center py-2 border-b border-gray-200"
-            >
-              {item.imageUrl && (
-                <Image
-                  source={{ uri: item.imageUrl }}
-                  className="w-16 h-16 rounded-md"
-                />
-              )}
-              <View className="ml-3 flex-1">
-                <Text className="font-semibold">{item.title}</Text>
-                <View className="flex-row items-center mt-1">
-                  <Calendar size={12} color="gray" />
-                  <Text className="text-gray-500 text-xs ml-1">
-                    {new Date(item.createdAt).toLocaleDateString()}
-                  </Text>
-                </View>
+                <Text className="text-xl font-semibold text-gray-900">Requirements Overview</Text>
               </View>
-              <ArrowRight color="gray" />
-            </TouchableOpacity>
+              <Chart
+                data={requirementsChartData}
+                colors={requirementChartColors}
+                title=""
+              />
+            </View>
+            
+            <View className="bg-white rounded-2xl p-6 shadow-lg">
+              <View className="flex-row items-center mb-4">
+                <View className="bg-purple-100 rounded-lg p-2 mr-3">
+                  <Activity size={20} color="#8b5cf6" />
+                </View>
+                <Text className="text-xl font-semibold text-gray-900">Applications Status</Text>
+              </View>
+              <Chart
+                data={pitchesChartData}
+                colors={pitchChartColors}
+                title=""
+              />
+            </View>
+          </View>
+
+          {/* Activity Sections */}
+          <View className="mb-8">
+            <Text className="text-2xl font-bold text-gray-900 mb-4">Recent Activity</Text>
+            
+            {/* Recent Applications */}
+            <View className="bg-white rounded-2xl p-6 shadow-lg mb-4">
+              <View className="flex-row items-center justify-between mb-4">
+                <View className="flex-row items-center">
+                  <View className="bg-blue-100 rounded-lg p-2 mr-3">
+                    <Users size={20} color="#3b82f6" />
+                  </View>
+                  <Text className="text-xl font-semibold text-gray-900">Recent Applications</Text>
+                </View>
+                <TouchableOpacity 
+                  onPress={() => router.push("/(drawer)/applications")}
+                  className="bg-blue-50 rounded-lg px-3 py-2"
+                >
+                  <Text className="text-blue-600 font-medium text-sm">View All</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {overview.recentPitches.length > 0 ? (
+                overview.recentPitches.map((item, index) => (
+                  <View key={item.id} className={`flex-row items-center py-4 ${index < overview.recentPitches.length - 1 ? 'border-b border-gray-100' : ''}`}>
+                    <View className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 items-center justify-center mr-4">
+                      {item.doctor.profileImage?.docUrl ? (
+                        <Image
+                          source={{ uri: item.doctor.profileImage.docUrl }}
+                          className="w-12 h-12 rounded-full"
+                        />
+                      ) : (
+                        <Text className="text-white font-bold">
+                          {item.doctor.fullName[0]}
+                        </Text>
+                      )}
+                    </View>
+                    <View className="flex-1">
+                      <Text className="font-semibold text-gray-900 text-base">{item.doctor.fullName}</Text>
+                      <Text className="text-gray-600 text-sm">
+                        Applied for {item.jobRequirement.title}
+                      </Text>
+                      <View className="flex-row items-center mt-1">
+                        <Calendar size={12} color="#6b7280" />
+                        <Text className="text-gray-500 text-xs ml-1">
+                          {new Date(item.createdAt).toLocaleDateString()}
+                        </Text>
+                      </View>
+                    </View>
+                    <ArrowRight size={20} color="#9ca3af" />
+                  </View>
+                ))
+              ) : (
+                <View className="items-center py-8">
+                  <View className="w-16 h-16 bg-gray-100 rounded-full items-center justify-center mb-3">
+                    <MessageSquare size={24} color="#9ca3af" />
+                  </View>
+                  <Text className="text-gray-500 text-center">No recent applications</Text>
+                  <Text className="text-gray-400 text-sm text-center mt-1">New applications will appear here</Text>
+                </View>
+              )}
+            </View>
+
+            {/* Latest News */}
+            <View className="bg-white rounded-2xl p-6 shadow-lg">
+              <View className="flex-row items-center justify-between mb-4">
+                <View className="flex-row items-center">
+                  <View className="bg-emerald-100 rounded-lg p-2 mr-3">
+                    <FileText size={20} color="#10b981" />
+                  </View>
+                  <Text className="text-xl font-semibold text-gray-900">Latest News</Text>
+                </View>
+                <TouchableOpacity 
+                  onPress={() => router.push("/(drawer)/news")}
+                  className="bg-emerald-50 rounded-lg px-3 py-2"
+                >
+                  <Text className="text-emerald-600 font-medium text-sm">Read More</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {overview.latestNews.length > 0 ? (
+                overview.latestNews.map((item, index) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    onPress={() => router.push(`/news/${item.id}`)}
+                    className={`flex-row items-center py-4 ${index < overview.latestNews.length - 1 ? 'border-b border-gray-100' : ''}`}
+                  >
+                    {item.imageUrl ? (
+                      <Image
+                        source={{ uri: item.imageUrl }}
+                        className="w-16 h-16 rounded-xl mr-4"
+                      />
+                    ) : (
+                      <View className="w-16 h-16 bg-gradient-to-br from-emerald-100 to-blue-100 rounded-xl items-center justify-center mr-4">
+                        <FileText size={24} color="#10b981" />
+                      </View>
+                    )}
+                    <View className="flex-1">
+                      <Text className="font-semibold text-gray-900 text-base" numberOfLines={2}>
+                        {item.title}
+                      </Text>
+                      <View className="flex-row items-center mt-2">
+                        <Calendar size={12} color="#6b7280" />
+                        <Text className="text-gray-500 text-xs ml-1">
+                          {new Date(item.createdAt).toLocaleDateString()}
+                        </Text>
+                      </View>
+                    </View>
+                    <ArrowRight size={20} color="#9ca3af" />
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <View className="items-center py-8">
+                  <View className="w-16 h-16 bg-gray-100 rounded-full items-center justify-center mb-3">
+                    <FileText size={24} color="#9ca3af" />
+                  </View>
+                  <Text className="text-gray-500 text-center">No recent news</Text>
+                  <Text className="text-gray-400 text-sm text-center mt-1">Stay tuned for the latest healthcare news</Text>
+                </View>
+              )}
+            </View>
+          </View>
+
+          {/* Quick Actions */}
+          <View className="mb-8">
+            <Text className="text-2xl font-bold text-gray-900 mb-4">Quick Actions</Text>
+            <View className="flex-row flex-wrap gap-3">
+              <TouchableOpacity 
+                onPress={() => router.push("/(drawer)/search-doctors")}
+                className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-4 flex-row items-center flex-1 min-w-[45%]"
+              >
+                <Stethoscope size={20} color="white" />
+                <Text className="text-white font-medium ml-2">Find Doctors</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                onPress={() => router.push("/(drawer)/tabs/requirements")}
+                className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-4 flex-row items-center flex-1 min-w-[45%]"
+              >
+                <Briefcase size={20} color="white" />
+                <Text className="text-white font-medium ml-2">Post Job</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                onPress={() => router.push("/(drawer)/chat")}
+                className="bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-xl p-4 flex-row items-center flex-1 min-w-[45%]"
+              >
+                <MessageSquare size={20} color="white" />
+                <Text className="text-white font-medium ml-2">Messages</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                onPress={() => router.push("/(drawer)/connections")}
+                className="bg-gradient-to-r from-pink-500 to-pink-600 rounded-xl p-4 flex-row items-center flex-1 min-w-[45%]"
+              >
+                <Heart size={20} color="white" />
+                <Text className="text-white font-medium ml-2">My Team</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      )}
-      ListEmptyComponent={
-        <View className="px-4">
-          <View className="bg-white rounded-lg p-4 shadow-md">
-            <Text className="text-xl font-bold mb-2">Latest News</Text>
-            <Text className="text-center py-5 text-gray-500">
-              No news to show.
-            </Text>
-          </View>
-        </View>
-      }
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-    />
+      </ScrollView>
+    </SafeAreaView>
   );
 }

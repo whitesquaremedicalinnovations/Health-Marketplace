@@ -1,387 +1,478 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, TextInput, Button, Image, TouchableOpacity, Modal } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  SafeAreaView,
+  RefreshControl,
+  TouchableOpacity,
+  Image,
+  StatusBar,
+  TextInput,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useUser } from '@clerk/clerk-expo';
-import { getClinic } from '../../lib/utils';
+import { useRouter } from 'expo-router';
+import {
+  User,
+  Building,
+  Phone,
+  Mail,
+  MapPin,
+  Edit3,
+  Save,
+  X,
+  Camera,
+  Shield,
+  Clock,
+  CheckCircle,
+  Settings,
+  Bell,
+  Lock,
+  HelpCircle,
+  LogOut,
+} from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { axiosInstance } from '../../lib/axios';
 import Toast from 'react-native-toast-message';
-import { Edit, Save, Camera, Building, Mail, Phone, MapPin, Briefcase, Users, Star, FileText, Upload, Trash2, Plus, Image as ImageIcon, UserIcon } from 'lucide-react-native';
-import * as ImagePicker from 'expo-image-picker';
-import GooglePlacesAutocomplete from '@/components/ui/google-places-autocomplete';
 
-interface Clinic {
+interface ClinicProfile {
   id: string;
-  email: string;
-  ownerName: string;
-  ownerPhoneNumber: string;
   clinicName: string;
-  clinicAddress: string;
+  ownerName: string;
+  email: string;
+  ownerPhoneNumber: string;
   clinicPhoneNumber: string;
-  clinicAdditionalDetails: string | null;
-  profileImage: { docUrl: string } | null;
-  documents?: Document[];
-  galleryImages?: GalleryImage[];
-  reviews?: Review[];
-}
-
-interface PlaceDetails {
-  formatted_address: string;
-}
-
-interface Document {
-  id: string;
-  docUrl: string;
-  name: string;
-  type: string;
-}
-
-interface GalleryImage {
-  id: string;
-  imageUrl: string;
-  caption: string | null;
-}
-
-interface Review {
-  id: string;
-  rating: number;
-  comment: string | null;
-  doctor: {
-    fullName: string;
-    profileImage: { docUrl: string } | null;
+  clinicAddress: string;
+  clinicAdditionalDetails: string;
+  profileImage?: {
+    docUrl: string;
   };
-}
-
-interface InfoRowProps {
-  icon: React.ReactNode;
-  label: string;
-  value: string | null | undefined;
-  editing: boolean;
-  onChange: (value: string) => void;
-  multiline?: boolean;
+  isVerified: boolean;
+  createdAt: string;
+  preferredRadius: number;
 }
 
 export default function ProfileScreen() {
   const { user } = useUser();
-  const [profile, setProfile] = useState<Clinic | null>(null);
+  const router = useRouter();
+  const [profile, setProfile] = useState<ClinicProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [editData, setEditData] = useState<Partial<Clinic>>({});
   const [saving, setSaving] = useState(false);
-  const [documentModalOpen, setDocumentModalOpen] = useState(false);
-  const [showDeleteDocDialog, setShowDeleteDocDialog] = useState(false);
-  const [selectedDoc, setSelectedDoc] = useState<Document | null>(null);
-  const [galleryModalOpen, setGalleryModalOpen] = useState(false);
-  const [showDeleteImageDialog, setShowDeleteImageDialog] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null);
 
-  useEffect(() => {
-    fetchProfile();
+  // Editable fields
+  const [clinicName, setClinicName] = useState('');
+  const [ownerName, setOwnerName] = useState('');
+  const [clinicPhoneNumber, setClinicPhoneNumber] = useState('');
+  const [clinicAddress, setClinicAddress] = useState('');
+  const [clinicAdditionalDetails, setClinicAdditionalDetails] = useState('');
+
+  const fetchProfile = useCallback(async () => {
+    if (user?.id) {
+      try {
+        const response = await axiosInstance.get(`/api/clinic/profile/${user.id}`);
+        const profileData = response.data.clinic;
+        setProfile(profileData);
+        
+        // Set editable fields
+        setClinicName(profileData.clinicName || '');
+        setOwnerName(profileData.ownerName || '');
+        setClinicPhoneNumber(profileData.clinicPhoneNumber || '');
+        setClinicAddress(profileData.clinicAddress || '');
+        setClinicAdditionalDetails(profileData.clinicAdditionalDetails || '');
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: 'Failed to load profile',
+        });
+      }
+    }
   }, [user]);
 
-  const fetchProfile = async () => {
-    if (!user?.id) return;
-    try {
-      const response = await getClinic(user.id);
-      const clinic = response.data?.success ? response.data.data : response.data.clinic;
-      setProfile(clinic || null);
-      setEditData(clinic || {});
-    } catch (error) {
-      console.error('Failed to fetch profile:', error);
-      setProfile(null);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    setLoading(true);
+    fetchProfile().finally(() => setLoading(false));
+  }, [fetchProfile]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchProfile().finally(() => setRefreshing(false));
+  }, [fetchProfile]);
 
   const handleSave = async () => {
-    if (!user?.id) return;
     setSaving(true);
     try {
-      const updateData = { ...editData, role: "CLINIC" };
-      await axiosInstance.post(`/api/user/profile/update/${user.id}`, updateData);
-      await fetchProfile();
+      const updatedData = {
+        clinicName,
+        ownerName,
+        clinicPhoneNumber,
+        clinicAddress,
+        clinicAdditionalDetails,
+      };
+
+      await axiosInstance.put(`/api/clinic/profile/${user?.id}`, updatedData);
+      
+      setProfile(prev => prev ? { ...prev, ...updatedData } : null);
       setEditing(false);
-      Toast.show({ type: 'success', text1: 'Profile updated!' });
+      
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'Profile updated successfully',
+      });
     } catch (error) {
-      console.error('Failed to update profile:', error);
-      Toast.show({ type: 'error', text1: 'Update failed.' });
+      console.error('Error updating profile:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to update profile',
+      });
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDocumentUpload = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.All,
-      allowsMultipleSelection: true,
-    });
-
-    if (!result.canceled && result.assets) {
-      const formData = new FormData();
-      result.assets.forEach((asset) => {
-        formData.append('files', {
-          uri: asset.uri,
-          name: asset.fileName,
-          type: asset.mimeType,
-        } as any);
-      });
-
-      try {
-        const uploadResponse = await axiosInstance.post('/api/upload', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
-
-        const documentsToCreate = uploadResponse.data.uploaded.map((uploadedFile: any, index: number) => ({
-          clinicId: profile?.id,
-          docUrl: uploadedFile.url,
-          name: result.assets![index].fileName,
-          type: result.assets![index].mimeType,
-        }));
-
-        for (const doc of documentsToCreate) {
-          await axiosInstance.post('/api/clinic/upload-document', doc);
-        }
-
-        await fetchProfile();
-        Toast.show({ type: 'success', text1: 'Documents uploaded!' });
-      } catch (error) {
-        console.error('Error uploading documents:', error);
-        Toast.show({ type: 'error', text1: 'Upload failed.' });
-      }
+  const handleCancel = () => {
+    if (profile) {
+      setClinicName(profile.clinicName);
+      setOwnerName(profile.ownerName);
+      setClinicPhoneNumber(profile.clinicPhoneNumber);
+      setClinicAddress(profile.clinicAddress);
+      setClinicAdditionalDetails(profile.clinicAdditionalDetails);
     }
+    setEditing(false);
   };
 
-  const handleDeleteDocument = async () => {
-    if (!selectedDoc) return;
-    try {
-      await axiosInstance.delete(`/api/clinic/delete-document/${selectedDoc.id}`);
-      await fetchProfile();
-      Toast.show({ type: 'success', text1: 'Document deleted.' });
-    } catch (error) {
-      Toast.show({ type: 'error', text1: 'Failed to delete document.' });
-    } finally {
-      setShowDeleteDocDialog(false);
-      setSelectedDoc(null);
-    }
-  };
-
-  const handleGalleryUpload = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
+  const handleImagePicker = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsMultipleSelection: true,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
     });
 
-    if (!result.canceled && result.assets) {
-      const formData = new FormData();
-      result.assets.forEach((asset) => {
-        formData.append('files', {
-          uri: asset.uri,
-          name: asset.fileName,
-          type: asset.mimeType,
-        } as any);
+    if (!result.canceled) {
+      // Handle image upload here
+      Toast.show({
+        type: 'info',
+        text1: 'Coming Soon',
+        text2: 'Image upload will be available in the next update',
       });
-
-      try {
-        const uploadResponse = await axiosInstance.post('/api/upload', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
-
-        const imagesToCreate = uploadResponse.data.uploaded.map((uploadedFile: any) => ({
-          clinicId: profile?.id,
-          imageUrl: uploadedFile.url,
-        }));
-
-        for (const image of imagesToCreate) {
-          await axiosInstance.post('/api/clinic/add-gallery-image', image);
-        }
-
-        await fetchProfile();
-        Toast.show({ type: 'success', text1: 'Images uploaded!' });
-      } catch (error) {
-        console.error('Error uploading images:', error);
-        Toast.show({ type: 'error', text1: 'Upload failed.' });
-      }
     }
   };
 
-  const handleDeleteGalleryImage = async () => {
-    if (!selectedImage) return;
-    try {
-      await axiosInstance.delete(`/api/clinic/delete-gallery-image/${selectedImage.id}`);
-      await fetchProfile();
-      Toast.show({ type: 'success', text1: 'Image deleted.' });
-    } catch (error) {
-      Toast.show({ type: 'error', text1: 'Failed to delete image.' });
-    } finally {
-      setShowDeleteImageDialog(false);
-      setSelectedImage(null);
-    }
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: () => {
+            // Handle logout logic here
+            router.replace('/(auth)/sign-in');
+          },
+        },
+      ]
+    );
   };
 
+  const renderInfoCard = (
+    icon: React.ReactNode,
+    title: string,
+    value: string,
+    editable: boolean = false,
+    onChangeText?: (text: string) => void,
+    multiline: boolean = false
+  ) => (
+    <View className="bg-white rounded-2xl p-4 shadow-sm mb-3">
+      <View className="flex-row items-center mb-2">
+        <View className="bg-blue-100 rounded-lg p-2 mr-3">
+          {icon}
+        </View>
+        <Text className="text-gray-700 font-medium flex-1">{title}</Text>
+      </View>
+      {editing && editable && onChangeText ? (
+        <TextInput
+          className="bg-gray-50 border border-gray-200 p-3 rounded-xl text-gray-900 mt-2"
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={`Enter ${title.toLowerCase()}`}
+          placeholderTextColor="#9ca3af"
+          multiline={multiline}
+          textAlignVertical={multiline ? 'top' : 'center'}
+          style={multiline ? { minHeight: 80 } : {}}
+        />
+      ) : (
+        <Text className="text-gray-900 text-base ml-12">
+          {value || 'Not provided'}
+        </Text>
+      )}
+    </View>
+  );
+
+  const renderMenuOption = (
+    icon: React.ReactNode,
+    title: string,
+    subtitle: string,
+    onPress: () => void,
+    showArrow: boolean = true
+  ) => (
+    <TouchableOpacity
+      onPress={onPress}
+      className="bg-white rounded-2xl p-4 shadow-sm mb-3 flex-row items-center"
+    >
+      <View className="bg-gray-100 rounded-lg p-3 mr-4">
+        {icon}
+      </View>
+      <View className="flex-1">
+        <Text className="text-gray-900 font-semibold text-base">{title}</Text>
+        <Text className="text-gray-600 text-sm mt-1">{subtitle}</Text>
+      </View>
+      {showArrow && (
+        <View className="w-6 h-6 bg-gray-200 rounded-full items-center justify-center">
+          <Text className="text-gray-600 font-bold">›</Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
 
   if (loading) {
-    return <ActivityIndicator style={{ flex: 1, justifyContent: 'center' }} size="large" />;
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }}>
+        <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color="#3b82f6" />
+          <Text className="text-lg font-semibold text-gray-800 mt-4">Loading profile...</Text>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   if (!profile) {
-    return <Text style={{ textAlign: 'center', marginTop: 20 }}>Could not load profile.</Text>;
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }}>
+        <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
+        <View className="flex-1 justify-center items-center p-4">
+          <Text className="text-xl font-semibold text-gray-900 mb-2">Profile Not Found</Text>
+          <Text className="text-gray-600 text-center">
+            Unable to load your profile information. Please try again.
+          </Text>
+          <TouchableOpacity
+            onPress={onRefresh}
+            className="bg-blue-600 rounded-xl px-6 py-3 mt-4"
+          >
+            <Text className="text-white font-medium">Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: '#f0f4f8' }}>
-      <View style={{ padding: 16 }}>
-        {/* Header */}
-        <View style={{ padding: 24, backgroundColor: '#3b82f6', borderRadius: 16, marginBottom: 16, alignItems: 'center' }}>
-          <Image source={{ uri: profile.profileImage?.docUrl }} style={{ width: 100, height: 100, borderRadius: 50, borderWidth: 3, borderColor: 'white' }} />
-          <Text style={{ fontSize: 24, fontWeight: 'bold', color: 'white', marginTop: 12 }}>{profile.clinicName}</Text>
-          <Text style={{ color: 'white', opacity: 0.8 }}>{profile.ownerName}</Text>
-          <TouchableOpacity onPress={() => editing ? handleSave() : setEditing(true)} style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20 }}>
-            {editing ? <Save size={16} color="#3b82f6" /> : <Edit size={16} color="#3b82f6" />}
-            <Text style={{ color: '#3b82f6', marginLeft: 8, fontWeight: 'bold' }}>{saving ? 'Saving...' : editing ? 'Save' : 'Edit'}</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Clinic Info */}
-        <View style={{ backgroundColor: 'white', borderRadius: 12, padding: 16, marginBottom: 16 }}>
-          <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 12 }}>Clinic Information</Text>
-          <InfoRow icon={<Building size={20} color="gray" />} label="Clinic Name" value={editData.clinicName} editing={editing} onChange={(val: string) => setEditData({...editData, clinicName: val})} />
-          {editing ? (
-            <View style={{ marginBottom: 12 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                <MapPin size={20} color="gray" />
-                <Text style={{ marginLeft: 8, color: 'gray' }}>Address</Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }}>
+      <StatusBar barStyle="light-content" backgroundColor="#3b82f6" />
+      
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        style={{ flex: 1 }}
+      >
+        {/* Header with Profile Image */}
+        <LinearGradient
+          colors={['#3b82f6', '#8b5cf6']}
+          style={{ 
+            paddingHorizontal: 20, 
+            paddingTop: 20, 
+            paddingBottom: 40,
+            borderBottomLeftRadius: 32,
+            borderBottomRightRadius: 32,
+          }}
+        >
+          <View className="items-center">
+            <TouchableOpacity 
+              onPress={handleImagePicker}
+              className="relative mb-4"
+            >
+              <View className="w-32 h-32 rounded-full bg-white/20 items-center justify-center">
+                {profile.profileImage?.docUrl ? (
+                  <Image
+                    source={{ uri: profile.profileImage.docUrl }}
+                    className="w-32 h-32 rounded-full"
+                  />
+                ) : (
+                  <Building size={40} color="white" />
+                )}
               </View>
-              <GooglePlacesAutocomplete
-                onPlaceSelect={(details: PlaceDetails) => {
-                  if (details?.formatted_address) {
-                    setEditData({ ...editData, clinicAddress: details.formatted_address });
-                  }
-                }}
-              />
-            </View>
-          ) : (
-            <InfoRow icon={<MapPin size={20} color="gray" />} label="Address" value={editData.clinicAddress} editing={editing} onChange={(val: string) => setEditData({...editData, clinicAddress: val})} multiline />
-          )}
-          <InfoRow icon={<Phone size={20} color="gray" />} label="Phone" value={editData.clinicPhoneNumber} editing={editing} onChange={(val: string) => setEditData({...editData, clinicPhoneNumber: val})} />
-          <InfoRow icon={<Building size={20} color="gray" />} label="About" value={editData.clinicAdditionalDetails} editing={editing} onChange={(val: string) => setEditData({...editData, clinicAdditionalDetails: val})} multiline />
-        </View>
-
-        {/* Owner Info */}
-        <View style={{ backgroundColor: 'white', borderRadius: 12, padding: 16, marginBottom: 16 }}>
-          <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 12 }}>Owner Information</Text>
-          <InfoRow icon={<UserIcon size={20} color="gray" />} label="Owner Name" value={editData.ownerName} editing={editing} onChange={(val: string) => setEditData({...editData, ownerName: val})} />
-          <InfoRow icon={<Mail size={20} color="gray" />} label="Email" value={profile.email} editing={false} onChange={() => {}} />
-          <InfoRow icon={<Phone size={20} color="gray" />} label="Owner Phone" value={editData.ownerPhoneNumber} editing={editing} onChange={(val: string) => setEditData({...editData, ownerPhoneNumber: val})} />
-        </View>
-
-        {/* Documents */}
-        <View style={{ backgroundColor: 'white', borderRadius: 12, padding: 16, marginBottom: 16 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={{ fontSize: 18, fontWeight: 'bold' }}>Documents</Text>
-            <TouchableOpacity onPress={handleDocumentUpload}>
-              <Upload size={22} color="#3b82f6" />
-            </TouchableOpacity>
-          </View>
-          {profile.documents?.map(doc => (
-            <View key={doc.id} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, padding: 8, borderWidth: 1, borderColor: '#eee', borderRadius: 6 }}>
-              <FileText size={20} color="gray" />
-              <Text style={{ flex: 1, marginLeft: 8 }}>{doc.name}</Text>
-              <TouchableOpacity onPress={() => { setSelectedDoc(doc); setShowDeleteDocDialog(true); }}>
-                <Trash2 size={20} color="red" />
-              </TouchableOpacity>
-            </View>
-          ))}
-        </View>
-
-        <Modal visible={showDeleteDocDialog} transparent>
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-            <View style={{ backgroundColor: 'white', padding: 20, borderRadius: 10, width: '80%' }}>
-              <Text style={{ fontSize: 18, fontWeight: 'bold' }}>Delete Document</Text>
-              <Text style={{ marginVertical: 10 }}>Are you sure you want to delete {selectedDoc?.name}?</Text>
-              <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 20 }}>
-                <Button title="Cancel" onPress={() => setShowDeleteDocDialog(false)} />
-                <View style={{width: 10}}/>
-                <Button title="Delete" color="red" onPress={handleDeleteDocument} />
+              <View className="absolute bottom-0 right-0 bg-white rounded-full p-2">
+                <Camera size={16} color="#3b82f6" />
               </View>
+            </TouchableOpacity>
+            
+            <Text className="text-2xl font-bold text-white mb-1">{profile.clinicName}</Text>
+            <Text className="text-blue-100 text-base mb-4">{profile.ownerName}</Text>
+            
+            <View className="flex-row items-center">
+              {profile.isVerified ? (
+                <View className="bg-green-500/20 rounded-full px-4 py-2 flex-row items-center">
+                  <CheckCircle size={16} color="#10b981" />
+                  <Text className="text-green-100 font-medium ml-2">Verified</Text>
+                </View>
+              ) : (
+                <View className="bg-yellow-500/20 rounded-full px-4 py-2 flex-row items-center">
+                  <Clock size={16} color="#f59e0b" />
+                  <Text className="text-yellow-100 font-medium ml-2">Pending Verification</Text>
+                </View>
+              )}
             </View>
           </View>
-        </Modal>
+        </LinearGradient>
 
-        {/* Gallery */}
-        <View style={{ backgroundColor: 'white', borderRadius: 12, padding: 16, marginBottom: 16 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={{ fontSize: 18, fontWeight: 'bold' }}>Gallery</Text>
-            <TouchableOpacity onPress={handleGalleryUpload}>
-              <Plus size={22} color="#3b82f6" />
-            </TouchableOpacity>
-          </View>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 12 }}>
-            {profile.galleryImages?.map(img => (
-              <View key={img.id} style={{ position: 'relative', width: '30%', margin: '1.66%' }}>
-                <Image source={{ uri: img.imageUrl }} style={{ width: '100%', height: 100, borderRadius: 8 }} />
-                <TouchableOpacity 
-                  style={{ position: 'absolute', top: 4, right: 4, backgroundColor: 'rgba(255,255,255,0.7)', borderRadius: 12, padding: 2 }}
-                  onPress={() => { setSelectedImage(img); setShowDeleteImageDialog(true); }}
+        <View style={{ padding: 20, paddingTop: 30 }}>
+          {/* Edit/Save Buttons */}
+          <View className="flex-row justify-end mb-6">
+            {editing ? (
+              <View className="flex-row gap-3">
+                <TouchableOpacity
+                  onPress={handleCancel}
+                  className="bg-gray-200 rounded-xl px-4 py-2 flex-row items-center"
                 >
-                  <Trash2 size={16} color="red" />
+                  <X size={16} color="#6b7280" />
+                  <Text className="text-gray-700 font-medium ml-2">Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleSave}
+                  disabled={saving}
+                  className="bg-blue-600 rounded-xl px-4 py-2 flex-row items-center"
+                >
+                  {saving ? (
+                    <ActivityIndicator size="small" color="white" />
+                  ) : (
+                    <Save size={16} color="white" />
+                  )}
+                  <Text className="text-white font-medium ml-2">
+                    {saving ? 'Saving...' : 'Save'}
+                  </Text>
                 </TouchableOpacity>
               </View>
-            ))}
+            ) : (
+              <TouchableOpacity
+                onPress={() => setEditing(true)}
+                className="bg-blue-600 rounded-xl px-4 py-2 flex-row items-center"
+              >
+                <Edit3 size={16} color="white" />
+                <Text className="text-white font-medium ml-2">Edit Profile</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Profile Information */}
+          <View className="mb-8">
+            <Text className="text-2xl font-bold text-gray-900 mb-4">Clinic Information</Text>
+            
+            {renderInfoCard(
+              <Building size={20} color="#3b82f6" />,
+              'Clinic Name',
+              clinicName,
+              true,
+              setClinicName
+            )}
+            
+            {renderInfoCard(
+              <User size={20} color="#3b82f6" />,
+              'Owner Name',
+              ownerName,
+              true,
+              setOwnerName
+            )}
+            
+            {renderInfoCard(
+              <Mail size={20} color="#3b82f6" />,
+              'Email Address',
+              profile.email
+            )}
+            
+            {renderInfoCard(
+              <Phone size={20} color="#3b82f6" />,
+              'Clinic Phone',
+              clinicPhoneNumber,
+              true,
+              setClinicPhoneNumber
+            )}
+            
+            {renderInfoCard(
+              <MapPin size={20} color="#3b82f6" />,
+              'Address',
+              clinicAddress,
+              true,
+              setClinicAddress
+            )}
+            
+            {renderInfoCard(
+              <Building size={20} color="#3b82f6" />,
+              'Additional Details',
+              clinicAdditionalDetails,
+              true,
+              setClinicAdditionalDetails,
+              true
+            )}
+          </View>
+
+          {/* Settings Menu */}
+          <View className="mb-8">
+            <Text className="text-2xl font-bold text-gray-900 mb-4">Settings & Support</Text>
+            
+            {renderMenuOption(
+              <Bell size={20} color="#6b7280" />,
+              'Notifications',
+              'Manage your notification preferences',
+              () => Toast.show({ type: 'info', text1: 'Coming Soon', text2: 'Notification settings' })
+            )}
+            
+            {renderMenuOption(
+              <Lock size={20} color="#6b7280" />,
+              'Privacy & Security',
+              'Account security and privacy settings',
+              () => Toast.show({ type: 'info', text1: 'Coming Soon', text2: 'Privacy settings' })
+            )}
+            
+            {renderMenuOption(
+              <HelpCircle size={20} color="#6b7280" />,
+              'Help & Support',
+              'Get help and contact support',
+              () => Toast.show({ type: 'info', text1: 'Coming Soon', text2: 'Help center' })
+            )}
+            
+            {renderMenuOption(
+              <LogOut size={20} color="#ef4444" />,
+              'Logout',
+              'Sign out of your account',
+              handleLogout,
+              false
+            )}
+          </View>
+
+          {/* Account Info */}
+          <View className="bg-gray-100 rounded-2xl p-4 mb-4">
+            <Text className="text-gray-600 text-sm text-center">
+              Member since {new Date(profile.createdAt).toLocaleDateString()}
+            </Text>
+            <Text className="text-gray-600 text-sm text-center mt-1">
+              Account ID: {profile.id.substring(0, 8)}...
+            </Text>
           </View>
         </View>
-
-        {/* Reviews */}
-        <View style={{ backgroundColor: 'white', borderRadius: 12, padding: 16, marginBottom: 16 }}>
-          <Text style={{ fontSize: 18, fontWeight: 'bold' }}>Reviews</Text>
-          {profile.reviews?.map(review => (
-            <View key={review.id} style={{ marginTop: 12, padding: 8, borderWidth: 1, borderColor: '#eee', borderRadius: 6 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Image source={{ uri: review.doctor.profileImage?.docUrl }} style={{ width: 40, height: 40, borderRadius: 20 }} />
-                <Text style={{ fontWeight: 'bold', marginLeft: 8 }}>{review.doctor.fullName}</Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 4 }}>
-                {[...Array(5)].map((_, i) => <Star key={i} size={16} color={i < review.rating ? 'gold' : 'gray'} />)}
-              </View>
-              <Text>{review.comment}</Text>
-            </View>
-          ))}
-        </View>
-
-        <Modal visible={showDeleteImageDialog} transparent>
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-            <View style={{ backgroundColor: 'white', padding: 20, borderRadius: 10, width: '80%' }}>
-              <Text style={{ fontSize: 18, fontWeight: 'bold' }}>Delete Image</Text>
-              <Text style={{ marginVertical: 10 }}>Are you sure you want to delete this image?</Text>
-              <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 20 }}>
-                <Button title="Cancel" onPress={() => setShowDeleteImageDialog(false)} />
-                <View style={{width: 10}}/>
-                <Button title="Delete" color="red" onPress={handleDeleteGalleryImage} />
-              </View>
-            </View>
-          </View>
-        </Modal>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
-
-const InfoRow = ({ icon, label, value, editing, onChange, multiline = false }: InfoRowProps) => (
-  <View style={{ marginBottom: 12 }}>
-    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-      {icon}
-      <Text style={{ marginLeft: 8, color: 'gray' }}>{label}</Text>
-    </View>
-    <TextInput
-      style={{
-        padding: 8,
-        borderWidth: editing ? 1 : 0,
-        borderColor: '#ddd',
-        borderRadius: 6,
-        backgroundColor: editing ? 'white' : '#f0f4f8',
-      }}
-      value={value || ''}
-      onChangeText={(text) => onChange(text)}
-      editable={editing}
-      multiline={multiline}
-    />
-  </View>
-); 
