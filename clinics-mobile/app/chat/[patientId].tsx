@@ -11,8 +11,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Alert,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useUser } from '@clerk/clerk-expo';
@@ -30,6 +30,7 @@ import {
   Camera,
   Image as ImageIcon,
   FileText,
+  Smile,
 } from 'lucide-react-native';
 import { axiosInstance } from '../../lib/axios';
 import { getChatMessages, sendMessage, getOrCreateChat } from '../../lib/utils';
@@ -129,9 +130,26 @@ export default function ChatScreen() {
     const tempMessage = newMessage.trim();
     setNewMessage('');
 
+    // Optimistically add message to UI
+    const optimisticMessage: ChatMessage = {
+      id: `temp-${Date.now()}`,
+      content: tempMessage,
+      senderId: user?.id || '',
+      senderType: 'clinic',
+      timestamp: new Date().toISOString(),
+      read: false,
+    };
+    setMessages(prev => [...prev, optimisticMessage]);
+
     try {
       const sentMessage = await sendMessage(chatId, user?.id || '', 'clinic', tempMessage);
-      setMessages(prev => [...prev, sentMessage]);
+      
+      // Replace optimistic message with real one
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id === optimisticMessage.id ? sentMessage : msg
+        )
+      );
       
       // Scroll to bottom
       setTimeout(() => {
@@ -139,7 +157,9 @@ export default function ChatScreen() {
       }, 100);
     } catch (error) {
       console.error('Error sending message:', error);
-      setNewMessage(tempMessage); // Restore message on error
+      // Remove optimistic message on error
+      setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
+      setNewMessage(tempMessage); // Restore message
       Toast.show({
         type: 'error',
         text1: 'Error',
@@ -151,6 +171,34 @@ export default function ChatScreen() {
   };
 
   const handleImagePicker = async () => {
+    Alert.alert(
+      'Add Attachment',
+      'Choose an option',
+      [
+        { text: 'Camera', onPress: () => openCamera() },
+        { text: 'Gallery', onPress: () => openGallery() },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
+  const openCamera = async () => {
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      // Handle image upload
+      Toast.show({
+        type: 'info',
+        text1: 'Coming Soon',
+        text2: 'Image sharing will be available in the next update',
+      });
+    }
+  };
+
+  const openGallery = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
@@ -158,6 +206,7 @@ export default function ChatScreen() {
     });
 
     if (!result.canceled) {
+      // Handle image upload
       Toast.show({
         type: 'info',
         text1: 'Coming Soon',
@@ -236,6 +285,8 @@ export default function ChatScreen() {
             shadowOpacity: 0.1,
             shadowRadius: 2,
             elevation: 2,
+            borderWidth: isMyMessage ? 0 : 1,
+            borderColor: '#e5e7eb',
           }}>
             <Text style={{
               color: isMyMessage ? 'white' : '#111827',
@@ -408,6 +459,7 @@ export default function ChatScreen() {
               onChangeText={setNewMessage}
               multiline
               textAlignVertical="center"
+              onSubmitEditing={handleSendMessage}
             />
 
             <TouchableOpacity
