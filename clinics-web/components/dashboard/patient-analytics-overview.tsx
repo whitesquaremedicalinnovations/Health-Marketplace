@@ -59,7 +59,7 @@ interface PatientAnalytics {
 }
 
 interface PatientAnalyticsOverviewProps {
-  userId: string | null;
+  userId: string | null | undefined;
 }
 
 const COLORS = ['#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
@@ -132,7 +132,7 @@ export default function PatientAnalyticsOverview({ userId }: PatientAnalyticsOve
             fullName: doc.fullName,
             patientCount: doctorPatients.length
           };
-        }).sort((a, b) => b.patientCount - a.patientCount).slice(0, 3),
+        }).sort((a:any, b:any) => b.patientCount - a.patientCount).slice(0, 3),
         dailyActivity: Array.from({ length: 7 }, (_, i) => ({
           date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { weekday: 'short' }),
           newPatients: Math.floor(Math.random() * 5) + 1,

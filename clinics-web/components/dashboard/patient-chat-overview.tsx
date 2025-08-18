@@ -25,7 +25,7 @@ interface OngoingPatient {
 }
 
 interface PatientChatOverviewProps {
-  userId: string | null;
+  userId: string | null | undefined;
   onPatientClick: (patientId: string) => void;
 }
 
@@ -100,7 +100,6 @@ export default function PatientChatOverview({ userId, onPatientClick }: PatientC
             fallback={patient.name[0]}
             size="md"
             profileId={patient.id}
-            profileType="patient"
             className="shadow-sm"
           />
           
