@@ -25,6 +25,7 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
+  Briefcase,
 } from 'lucide-react-native';
 import Chart from '../../../components/Chart';
 import { getDashboardOverview } from '../../../lib/utils';
@@ -116,7 +117,7 @@ export default function AnalyticsScreen() {
     value: string | number,
     change: string,
     changeType: 'positive' | 'negative' | 'neutral',
-    gradientColors: string[]
+    gradientColors: [string, string]
   ) => (
     <View className="rounded-2xl shadow-lg overflow-hidden mb-4">
       <LinearGradient colors={gradientColors} style={{ padding: 20 }}>
@@ -340,7 +341,7 @@ export default function AnalyticsScreen() {
                     {analytics.pitchesByStatus.find(p => p.status === 'PENDING')?._count.status || 0}
                   </Text>
                 </View>
-              </div>
+              </View>
             </View>
           </View>
 
@@ -354,14 +355,6 @@ export default function AnalyticsScreen() {
               >
                 <TrendingUp size={20} color="white" />
                 <Text className="text-white font-medium mt-2">View Jobs</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                onPress={() => router.push('/(drawer)/applications')}
-                className="bg-purple-600 rounded-xl p-4 flex-1"
-              >
-                <Users size={20} color="white" />
-                <Text className="text-white font-medium mt-2">Applications</Text>
               </TouchableOpacity>
             </View>
           </View>

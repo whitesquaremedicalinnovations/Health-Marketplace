@@ -14,9 +14,10 @@ export default function Chart({ data, colors, title }: Props) {
       {data.length > 0 ? (
         <PieChart
           widthAndHeight={100}
-          series={data}
-          sliceColor={colors}
-          coverRadius={0.6}
+          series={data.map((item, index) => ({
+            value: item,
+            color: colors[index]
+          }))}
         />
       ) : (
         <Text>No data</Text>

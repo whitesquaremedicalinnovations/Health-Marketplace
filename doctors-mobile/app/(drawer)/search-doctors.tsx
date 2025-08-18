@@ -21,7 +21,7 @@ import {
   User as UserIcon,
 } from "lucide-react-native";
 
-import GooglePlacesAutocomplete from "@/components/ui/google-places-autocomplete";
+import GooglePlacesAutocomplete from "../../components/ui/google-places-autocomplete";
 import { getClinic } from "../../lib/utils";
 import { getDoctorsByLocation } from "../../lib/utils";
 import { useRouter } from "expo-router";

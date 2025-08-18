@@ -22,6 +22,7 @@ interface Clinic {
   documents?: Document[];
   galleryImages?: GalleryImage[];
   reviews?: Review[];
+  isVerified: boolean;
 }
 
 interface Document {
@@ -86,8 +87,9 @@ export function CustomDrawerContent(props: any) {
           style={{ 
             paddingTop: top + 20,
             paddingBottom: 24,
-            paddingHorizontal: 20,
+            paddingHorizontal: 0,
             marginBottom: 8,
+            marginHorizontal: 0,
           }}
         >
           <Link href="/(drawer)/profile" asChild>

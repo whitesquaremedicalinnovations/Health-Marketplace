@@ -176,7 +176,7 @@ export default function DashboardScreen() {
     value: number,
     subtitle: string,
     screen: string,
-    gradientColors: string[] = ['#ffffff', '#f8fafc']
+    gradientColors: [string, string] = ['#ffffff', '#f8fafc']
   ) => (
     <TouchableOpacity
       onPress={() => router.push(screen as any)}
@@ -364,12 +364,6 @@ export default function DashboardScreen() {
                   </View>
                   <Text className="text-xl font-semibold text-gray-900">Recent Applications</Text>
                 </View>
-                <TouchableOpacity 
-                  onPress={() => router.push("/(drawer)/applications")}
-                  className="bg-blue-50 rounded-lg px-3 py-2"
-                >
-                  <Text className="text-blue-600 font-medium text-sm">View All</Text>
-                </TouchableOpacity>
               </View>
               
               {overview.recentPitches.length > 0 ? (
@@ -512,6 +506,6 @@ export default function DashboardScreen() {
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

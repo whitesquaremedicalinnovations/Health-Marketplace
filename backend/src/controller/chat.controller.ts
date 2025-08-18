@@ -14,6 +14,9 @@ export const setSocketInstance = (io: any) => {
 
 export const getOrCreateChat = asyncHandler(async (req: Request, res: Response) => {
   const { patientId, doctorId, clinicId } = req.body;
+  console.log("patientId", patientId);
+  console.log("doctorId", doctorId);
+  console.log("clinicId", clinicId);
 
   if (!doctorId || !clinicId || !patientId) {
     throw new AppError(ErrorCode.VALIDATION_ERROR, "Doctor ID, Clinic ID, and Patient ID are required", 400);

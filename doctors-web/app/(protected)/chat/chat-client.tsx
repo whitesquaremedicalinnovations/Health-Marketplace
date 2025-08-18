@@ -333,7 +333,7 @@ export default function ChatClient() {
         content: messageContent,
         senderId: userId,
         senderType: 'doctor',
-        attachments
+        attachments: attachments || []
       };
 
       const response = await axiosInstance.post('/api/chat/send-message', messageData);

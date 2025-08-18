@@ -23,14 +23,14 @@ export default function DrawerLayout() {
         headerTintColor: '#374151',
         drawerStyle: {
           backgroundColor: '#ffffff',
-          width: 280,
+          width: 300,
         },
         drawerActiveTintColor: '#3b82f6',
         drawerInactiveTintColor: '#6b7280',
         drawerLabelStyle: {
           fontSize: 16,
           fontWeight: '600',
-          marginLeft: -20,
+          marginLeft: -10,
         },
       }}
     >
@@ -48,14 +48,6 @@ export default function DrawerLayout() {
           title: 'Find Doctors',
           drawerLabel: 'Find Doctors',
           headerTitle: 'Search & Connect with Doctors'
-        }} 
-      />
-      <Drawer.Screen 
-        name="applications" 
-        options={{ 
-          title: 'Applications',
-          drawerLabel: 'Applications',
-          headerTitle: 'Doctor Applications'
         }} 
       />
       <Drawer.Screen 

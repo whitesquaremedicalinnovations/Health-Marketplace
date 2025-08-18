@@ -23,7 +23,7 @@ export const onboardingClinic = async (data: any) => {
 export const getDashboardOverview = async (clinicId: string) => {
   try {
     const response = await axiosInstance.get(`/api/clinic/get-dashboard-overview/${clinicId}`);
-    return response.data;
+    return response.data.data;
   } catch (error) {
     console.error("Error fetching dashboard overview:", error);
     throw error;
@@ -111,23 +111,33 @@ export const getChatMessages = async (chatId: string) => {
   }
 };
 
-export const sendMessage = async (chatId: string, senderId: string, senderType: 'clinic' | 'doctor', content: string) => {
+export const sendMessage = async (
+  chatId: string,
+  senderId: string,
+  senderType: "clinic" | "doctor",
+  content: string,
+  attachments?: any[]
+) => {
   try {
-    const response = await axiosInstance.post('/api/chat/send-message', {
+    const response = await axiosInstance.post("/api/chat/send-message", {
       chatId,
       senderId,
       senderType,
       content,
-      attachments: [],
+      attachments: attachments || [],
     });
-    return response.data.message;
+    return response.data.data;
   } catch (error) {
-    console.error('Error sending message:', error);
+    console.error("Error sending message:", error);
     throw error;
   }
 };
 
-export const getOrCreateChat = async (clinicId: string, doctorId: string, patientId: string) => {
+export const getOrCreateChat = async (
+  clinicId: string,
+  doctorId: string,
+  patientId: string
+) => {
   try {
     const response = await axiosInstance.post('/api/chat/get-or-create-chat', {
       clinicId,

@@ -6,13 +6,8 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  ScrollView,
-  SafeAreaView,
-  StatusBar,
-  Modal,
 } from "react-native";
 import { useCallback, useEffect, useState } from "react";
-import { LinearGradient } from 'expo-linear-gradient';
 
 import { useUser } from "@clerk/clerk-expo";
 import { Picker } from "@react-native-picker/picker";
@@ -24,20 +19,12 @@ import {
   Search,
   SlidersHorizontal,
   User as UserIcon,
-  Stethoscope,
-  Award,
-  Star,
-  MessageSquare,
-  Phone,
-  Mail,
-  Filter,
-  X,
 } from "lucide-react-native";
 
 import { getClinic } from "../../lib/utils";
 import { getDoctorsByLocation } from "../../lib/utils";
 import { useRouter } from "expo-router";
-import Toast from 'react-native-toast-message';
+import GooglePlacesAutocomplete from "@/components/ui/google-places-autocomplete";
 
 interface Doctor {
   id: string;

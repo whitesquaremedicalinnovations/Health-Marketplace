@@ -13,7 +13,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useUser } from '@clerk/clerk-expo';
+import { useAuth, useUser } from '@clerk/clerk-expo';
 import { useRouter } from 'expo-router';
 import {
   User,
@@ -37,6 +37,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { axiosInstance } from '../../lib/axios';
 import Toast from 'react-native-toast-message';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface ClinicProfile {
   id: string;
@@ -57,6 +58,7 @@ interface ClinicProfile {
 
 export default function ProfileScreen() {
   const { user } = useUser();
+  const { signOut } = useAuth();
   const router = useRouter();
   const [profile, setProfile] = useState<ClinicProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -74,8 +76,8 @@ export default function ProfileScreen() {
   const fetchProfile = useCallback(async () => {
     if (user?.id) {
       try {
-        const response = await axiosInstance.get(`/api/clinic/profile/${user.id}`);
-        const profileData = response.data.clinic;
+        const response = await axiosInstance.get(`/api/clinic/get-clinic/${user.id}`);
+        const profileData = response.data.data;
         setProfile(profileData);
         
         // Set editable fields
@@ -178,6 +180,8 @@ export default function ProfileScreen() {
           style: 'destructive',
           onPress: () => {
             // Handle logout logic here
+            signOut()
+            AsyncStorage.removeItem('hasOnboarded');
             router.replace('/(auth)/sign-in');
           },
         },
