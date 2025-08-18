@@ -29,6 +29,8 @@ import {
   Heart,
 } from "lucide-react";
 import { Loading } from "@/components/ui/loading";
+import PatientChatOverview from "@/components/dashboard/patient-chat-overview";
+import DoctorPatientAnalyticsOverview from "@/components/dashboard/patient-analytics-overview";
 
 interface Overview {
   totalApplications: number;
@@ -294,7 +296,30 @@ export default function Dashboard() {
         </div>
 
         {/* Activity Sections */}
-        <div className="grid lg:grid-cols-2 gap-8">
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Patient Chat Overview */}
+          <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-green-100 to-blue-100 rounded-lg">
+                  <MessageSquare className="h-5 w-5 text-green-600" />
+                </div>
+                <CardTitle className="text-xl text-gray-900">Patient Chats</CardTitle>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => router.push("/chat")}
+                className="border-green-200 text-green-600 hover:bg-green-50"
+              >
+                View All <ArrowRight className="h-4 w-4 ml-1" />
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <PatientChatOverview userId={userId} onPatientClick={(patientId) => router.push(`/chat?patient=${patientId}`)} />
+            </CardContent>
+          </Card>
+
           <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
             <CardHeader className="flex flex-row items-center justify-between">
               <div className="flex items-center gap-3">
@@ -414,6 +439,23 @@ export default function Dashboard() {
                   ))
                 )}
               </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Doctor Analytics Section */}
+        <div className="mt-12">
+          <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-lg">
+                  <TrendingUp className="h-5 w-5 text-indigo-600" />
+                </div>
+                <CardTitle className="text-xl text-gray-900">My Practice Analytics</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <DoctorPatientAnalyticsOverview userId={userId} />
             </CardContent>
           </Card>
         </div>
