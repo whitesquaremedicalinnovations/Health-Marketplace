@@ -67,7 +67,7 @@ export default function TabLayout() {
         options={{
           title: 'Dashboard',
           tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
-          headerShown: false, // We handle the header in the dashboard component
+          headerTitle: 'Clinic Dashboard',
         }}
       />
       <Tabs.Screen

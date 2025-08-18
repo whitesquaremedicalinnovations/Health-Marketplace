@@ -90,15 +90,15 @@ export default function AnalyticsScreen() {
     );
   }
 
-  const requirementsChartData = analytics.requirementsByStatus.map(
+  const requirementsChartData = (analytics?.requirementsByStatus || []).map(
     (item) => item._count.requirementStatus
   );
-  const requirementChartColors = analytics.requirementsByStatus.map((item) =>
+  const requirementChartColors = (analytics?.requirementsByStatus || []).map((item) =>
     item.requirementStatus === 'POSTED' ? '#10b981' : '#3b82f6'
   );
 
-  const pitchesChartData = analytics.pitchesByStatus.map((item) => item._count.status);
-  const pitchChartColors = analytics.pitchesByStatus.map((item) =>
+  const pitchesChartData = (analytics?.pitchesByStatus || []).map((item) => item._count.status);
+  const pitchChartColors = (analytics?.pitchesByStatus || []).map((item) =>
     item.status === 'ACCEPTED'
       ? '#10b981'
       : item.status === 'REJECTED'
@@ -106,8 +106,8 @@ export default function AnalyticsScreen() {
       : '#f97316'
   );
 
-  const acceptanceRate = analytics.totalPitches > 0 
-    ? ((analytics.totalAccepted / analytics.totalPitches) * 100).toFixed(1)
+  const acceptanceRate = (analytics?.totalPitches || 0) > 0 
+    ? (((analytics?.totalAccepted || 0) / (analytics?.totalPitches || 1)) * 100).toFixed(1)
     : '0.0';
 
   const renderMetricCard = (

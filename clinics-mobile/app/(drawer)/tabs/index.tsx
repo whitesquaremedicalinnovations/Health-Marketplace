@@ -209,8 +209,8 @@ export default function DashboardScreen() {
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }}>
-      <StatusBar barStyle="light-content" backgroundColor="#3b82f6" />
+    <View style={{ flex: 1, backgroundColor: '#f8fafc' }}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -218,67 +218,78 @@ export default function DashboardScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         style={{ flex: 1 }}
+        contentContainerStyle={{ flexGrow: 1 }}
       >
         {/* Enhanced Header with Gradient */}
         <LinearGradient
           colors={['#3b82f6', '#8b5cf6', '#6366f1']}
           style={{ 
-            paddingHorizontal: 20, 
-            paddingTop: 20, 
-            paddingBottom: 30,
-            borderBottomLeftRadius: 24,
-            borderBottomRightRadius: 24,
+            paddingHorizontal: 16, 
+            paddingTop: 16, 
+            paddingBottom: 24,
+            borderBottomLeftRadius: 20,
+            borderBottomRightRadius: 20,
           }}
         >
-          <View className="flex-row justify-between items-center mb-6">
-            <View>
-              <Text className="text-3xl font-bold text-white">Welcome Back!</Text>
-              <Text className="text-blue-100 text-base mt-1">
-                Here's what's happening with your healthcare facility today
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+            <View style={{ flex: 1, paddingRight: 16 }}>
+              <Text style={{ fontSize: 24, fontWeight: 'bold', color: 'white', marginBottom: 4 }}>
+                Welcome Back!
+              </Text>
+              <Text style={{ fontSize: 14, color: '#bfdbfe', lineHeight: 20 }}>
+                Here's what's happening with your healthcare facility
               </Text>
             </View>
-            <TouchableOpacity className="bg-white/20 rounded-full p-3">
-              <Bell size={24} color="white" />
+            <TouchableOpacity style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 20, padding: 8 }}>
+              <Bell size={20} color="white" />
             </TouchableOpacity>
           </View>
 
           {/* Quick Stats in Header */}
-          <View className="flex-row justify-between">
-            <View className="bg-white/10 rounded-2xl p-4 flex-1 mr-2">
-              <Text className="text-2xl font-bold text-white">{overview.totalRequirements}</Text>
-              <Text className="text-blue-100 text-sm">Total Jobs</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
+            <View style={{ backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 16, padding: 12, flex: 1 }}>
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: 'white' }}>
+                {overview?.totalRequirements || 0}
+              </Text>
+              <Text style={{ fontSize: 11, color: '#bfdbfe' }}>Total Jobs</Text>
             </View>
-            <View className="bg-white/10 rounded-2xl p-4 flex-1 mx-1">
-              <Text className="text-2xl font-bold text-white">{overview.totalPitches}</Text>
-              <Text className="text-blue-100 text-sm">Applications</Text>
+            <View style={{ backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 16, padding: 12, flex: 1 }}>
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: 'white' }}>
+                {overview?.totalPitches || 0}
+              </Text>
+              <Text style={{ fontSize: 11, color: '#bfdbfe' }}>Applications</Text>
             </View>
-            <View className="bg-white/10 rounded-2xl p-4 flex-1 ml-2">
-              <Text className="text-2xl font-bold text-white">{overview.totalAccepted}</Text>
-              <Text className="text-blue-100 text-sm">Connections</Text>
+            <View style={{ backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 16, padding: 12, flex: 1 }}>
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: 'white' }}>
+                {overview?.totalAccepted || 0}
+              </Text>
+              <Text style={{ fontSize: 11, color: '#bfdbfe' }}>Connections</Text>
             </View>
           </View>
         </LinearGradient>
 
-        <View style={{ padding: 20, paddingTop: 30 }}>
+        <View style={{ padding: 16, paddingTop: 24 }}>
           {/* Enhanced Statistics Cards */}
-          <View className="mb-8">
-            <Text className="text-2xl font-bold text-gray-900 mb-4">Overview</Text>
-            <View className="gap-4">
+          <View style={{ marginBottom: 24 }}>
+            <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#111827', marginBottom: 16 }}>
+              Overview
+            </Text>
+            <View style={{ gap: 16 }}>
               {renderStatCard(
-                <Briefcase color="#3b82f6" size={28} />,
+                <Briefcase color="#3b82f6" size={24} />,
                 "Job Requirements",
-                overview.totalRequirements,
+                overview?.totalRequirements || 0,
                 "Total posted requirements",
                 "/(drawer)/tabs/requirements",
                 ['#ffffff', '#dbeafe']
               )}
               
-              <View className="flex-row gap-4">
+              <View style={{ flexDirection: 'row', gap: 16 }}>
                 <View style={{ flex: 1 }}>
                   {renderStatCard(
-                    <MessageSquare color="#8b5cf6" size={24} />,
+                    <MessageSquare color="#8b5cf6" size={20} />,
                     "Applications",
-                    overview.totalPitches,
+                    overview?.totalPitches || 0,
                     "Doctor applications received",
                     "/(drawer)/applications",
                     ['#ffffff', '#f3e8ff']
@@ -286,9 +297,9 @@ export default function DashboardScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   {renderStatCard(
-                    <CheckCircle color="#10b981" size={24} />,
+                    <CheckCircle color="#10b981" size={20} />,
                     "Connections",
-                    overview.totalAccepted,
+                    overview?.totalAccepted || 0,
                     "Successful doctor connections",
                     "/(drawer)/connections",
                     ['#ffffff', '#dcfce7']
@@ -299,35 +310,45 @@ export default function DashboardScreen() {
           </View>
 
           {/* Charts Section */}
-          <View className="mb-8">
-            <Text className="text-2xl font-bold text-gray-900 mb-4">Analytics</Text>
-            <View className="bg-white rounded-2xl p-6 shadow-lg mb-4">
-              <View className="flex-row items-center mb-4">
-                <View className="bg-blue-100 rounded-lg p-2 mr-3">
-                  <TrendingUp size={20} color="#3b82f6" />
+          <View style={{ marginBottom: 24 }}>
+            <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#111827', marginBottom: 16 }}>
+              Analytics
+            </Text>
+            {requirementsChartData && requirementsChartData.length > 0 && (
+              <View style={{ backgroundColor: 'white', borderRadius: 16, padding: 20, marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+                  <View style={{ backgroundColor: '#dbeafe', borderRadius: 8, padding: 8, marginRight: 12 }}>
+                    <TrendingUp size={16} color="#3b82f6" />
+                  </View>
+                  <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>
+                    Requirements Overview
+                  </Text>
                 </View>
-                <Text className="text-xl font-semibold text-gray-900">Requirements Overview</Text>
+                <Chart
+                  data={requirementsChartData}
+                  colors={requirementChartColors}
+                  title=""
+                />
               </View>
-              <Chart
-                data={requirementsChartData}
-                colors={requirementChartColors}
-                title=""
-              />
-            </View>
+            )}
             
-            <View className="bg-white rounded-2xl p-6 shadow-lg">
-              <View className="flex-row items-center mb-4">
-                <View className="bg-purple-100 rounded-lg p-2 mr-3">
-                  <Activity size={20} color="#8b5cf6" />
+            {pitchesChartData && pitchesChartData.length > 0 && (
+              <View style={{ backgroundColor: 'white', borderRadius: 16, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+                  <View style={{ backgroundColor: '#f3e8ff', borderRadius: 8, padding: 8, marginRight: 12 }}>
+                    <Activity size={16} color="#8b5cf6" />
+                  </View>
+                  <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>
+                    Applications Status
+                  </Text>
                 </View>
-                <Text className="text-xl font-semibold text-gray-900">Applications Status</Text>
+                <Chart
+                  data={pitchesChartData}
+                  colors={pitchChartColors}
+                  title=""
+                />
               </View>
-              <Chart
-                data={pitchesChartData}
-                colors={pitchChartColors}
-                title=""
-              />
-            </View>
+            )}
           </View>
 
           {/* Activity Sections */}
