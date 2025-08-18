@@ -10,6 +10,7 @@ import messageRoutes from "./routes/messages.routes.ts";
 import { errorHandler } from "./middlewares/error-handler.ts";
 import { logger } from "./utils/logger.ts";
 import paymentsRoutes from "./routes/payments.routes.ts";
+import uploadRoutes from "./routes/upload.routes.ts";
 
 const app: Express = express();
 
@@ -28,12 +29,7 @@ app.use((req, res, next) => {
 });
 
 app.use(cors({
-  origin: [
-    "http://localhost:3000",
-    "http://localhost:3001",
-    "http://localhost:3002",
-    "http://localhost:3003"
-  ],
+  origin: "*",
   credentials: true,
 }));
 
@@ -58,6 +54,7 @@ app.use("/api/patient", patientRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/payments", paymentsRoutes);
+app.use("/api/upload", uploadRoutes);
 
 // 404
 app.use("*", (req, res) => {

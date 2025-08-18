@@ -166,6 +166,10 @@ export const updateProfile = async (req, res) => {
                 updateData.about = about;
             if (certifications !== undefined)
                 updateData.certifications = certifications;
+            if (latitude !== undefined)
+                updateData.latitude = Number(latitude);
+            if (longitude !== undefined)
+                updateData.longitude = Number(longitude);
             if (profileImageId) {
                 updateData.profileImage = {
                     connect: { id: profileImageId },

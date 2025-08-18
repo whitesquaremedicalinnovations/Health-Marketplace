@@ -87,7 +87,7 @@ const OnboardingMapSection: React.FC<OnboardingMapSectionProps> = ({
             <Button type="button" variant="outline" onClick={handleSetCurrentLocation} className="mt-2">
                 Use Current Location
             </Button>
-            <div className="space-y-2 mt-4">
+            <div className="space-y-2 mt-4 ">
                 <ReusableMap
                     places={clinicLocation ? [clinicLocation] : []}
                     center={mapCenter}

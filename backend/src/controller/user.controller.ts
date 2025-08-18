@@ -160,7 +160,7 @@ export const updateProfile = async (req: Request, res: Response) => {
         });
       }
   
-            if (role === "DOCTOR") {
+      if (role === "DOCTOR") {
         // Upload profile image as Document and connect
         let profileImageId: string | undefined;
         if (profileImage) {
@@ -190,6 +190,8 @@ export const updateProfile = async (req: Request, res: Response) => {
         if (experience !== undefined) updateData.experience = Number(experience);
         if (about !== undefined) updateData.about = about;
         if (certifications !== undefined) updateData.certifications = certifications;
+        if(latitude !== undefined) updateData.latitude = Number(latitude);
+        if(longitude !== undefined) updateData.longitude = Number(longitude);
         
         if (profileImageId) {
           updateData.profileImage = {

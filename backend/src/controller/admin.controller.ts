@@ -1,7 +1,19 @@
 import type { Request, Response } from "express";
 import { prisma } from "../utils/prisma.ts";
+import { asyncHandler, ResponseHelper } from "../utils/response.ts";
+import { QueryBuilder } from "../utils/query-builder.ts";
+import { AppError } from "../utils/app-error.ts";
 
-export const getOverview = async (req: Request, res: Response) => {
+export const getNewsById = asyncHandler(async (req: Request, res: Response) => {
+    const { newsId } = req.params;
+    const news = await prisma.news.findUnique({ where: { id: newsId } });
+    if (!news) {
+        throw AppError.notFound("News");
+    }
+    ResponseHelper.success(res, news, "News retrieved successfully");
+});
+
+export const getOverview = asyncHandler(async (req: Request, res: Response) => {
 
     const totalDoctors = await prisma.doctor.count();
     const totalClinics = await prisma.clinic.count();
@@ -12,8 +24,8 @@ export const getOverview = async (req: Request, res: Response) => {
     const totalNews = await prisma.news.count();
     const totalLikes = await prisma.newsLike.count();
     const totalComments = await prisma.newsComment.count();
-    res.status(200).json({ totalDoctors, totalClinics, totalPitches, totalRequirements, totalPayments, totalAmount, totalNews, totalLikes, totalComments });
-}
+    ResponseHelper.success(res, { totalDoctors, totalClinics, totalPitches, totalRequirements, totalPayments, totalAmount, totalNews, totalLikes, totalComments }, "Overview retrieved successfully");
+});
 
 export const getAllUsers = async (req: Request, res: Response) => {
     const doctors = await prisma.doctor.findMany();

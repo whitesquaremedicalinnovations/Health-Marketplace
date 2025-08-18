@@ -10,6 +10,7 @@ import messageRoutes from "./routes/messages.routes.js";
 import { errorHandler } from "./middlewares/error-handler.js";
 import { logger } from "./utils/logger.js";
 import paymentsRoutes from "./routes/payments.routes.js";
+import uploadRoutes from "./routes/upload.routes.js";
 const app = express();
 app.set("trust proxy", 1);
 app.use((req, res, next) => {
@@ -24,12 +25,7 @@ app.use((req, res, next) => {
     next();
 });
 app.use(cors({
-    origin: [
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://localhost:3002",
-        "http://localhost:3003"
-    ],
+    origin: "*",
     credentials: true,
 }));
 app.use(express.json({ limit: "10mb" }));
@@ -51,6 +47,7 @@ app.use("/api/patient", patientRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/payments", paymentsRoutes);
+app.use("/api/upload", uploadRoutes);
 // 404
 app.use("*", (req, res) => {
     res.status(404).json({
