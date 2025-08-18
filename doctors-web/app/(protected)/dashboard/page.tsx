@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { Loading } from "@/components/ui/loading";
 import PatientChatOverview from "@/components/dashboard/patient-chat-overview";
+import DoctorPatientAnalyticsOverview from "@/components/dashboard/patient-analytics-overview";
 
 interface Overview {
   totalApplications: number;
@@ -438,6 +439,23 @@ export default function Dashboard() {
                   ))
                 )}
               </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Doctor Analytics Section */}
+        <div className="mt-12">
+          <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-lg">
+                  <TrendingUp className="h-5 w-5 text-indigo-600" />
+                </div>
+                <CardTitle className="text-xl text-gray-900">My Practice Analytics</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <DoctorPatientAnalyticsOverview userId={userId} />
             </CardContent>
           </Card>
         </div>
