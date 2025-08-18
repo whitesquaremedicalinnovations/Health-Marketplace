@@ -1,8 +1,16 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { Home, Compass, User, Briefcase, Menu } from 'lucide-react-native';
+import { 
+  Home, 
+  User, 
+  Briefcase, 
+  Menu, 
+  MessageSquare,
+  Activity,
+  FileText 
+} from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
-import { TouchableOpacity } from 'react-native';
+import { TouchableOpacity, Platform } from 'react-native';
 import { DrawerActions } from '@react-navigation/native';
 
 export default function TabLayout() {
@@ -16,30 +24,74 @@ export default function TabLayout() {
             onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
             style={{ marginLeft: 15 }}
           >
-            <Menu />
+            <Menu size={24} color="#374151" />
           </TouchableOpacity>
         ),
+        tabBarStyle: {
+          backgroundColor: '#ffffff',
+          borderTopWidth: 1,
+          borderTopColor: '#e5e7eb',
+          paddingBottom: Platform.OS === 'ios' ? 20 : 10,
+          paddingTop: 10,
+          height: Platform.OS === 'ios' ? 90 : 70,
+          elevation: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 8,
+        },
+        tabBarActiveTintColor: '#3b82f6',
+        tabBarInactiveTintColor: '#9ca3af',
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '600',
+          marginTop: 4,
+        },
+        headerStyle: {
+          backgroundColor: '#ffffff',
+          elevation: 4,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+        },
+        headerTitleStyle: {
+          fontSize: 18,
+          fontWeight: '700',
+          color: '#1f2937',
+        },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <Home color={color} />,
+          title: 'Dashboard',
+          tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
+          headerShown: false, // We handle the header in the dashboard component
         }}
       />
       <Tabs.Screen
-        name="requirements"
+        name="jobs"
         options={{
-          title: 'Requirements',
-          tabBarIcon: ({ color }) => <Briefcase color={color} />,
+          title: 'Find Jobs',
+          tabBarIcon: ({ color, size }) => <Briefcase color={color} size={size} />,
+          headerTitle: 'Available Opportunities',
+        }}
+      />
+      <Tabs.Screen
+        name="applications"
+        options={{
+          title: 'Applications',
+          tabBarIcon: ({ color, size }) => <FileText color={color} size={size} />,
+          headerTitle: 'My Applications',
         }}
       />
       <Tabs.Screen
         name="patients"
         options={{
           title: 'Patients',
-          tabBarIcon: ({ color }) => <User color={color} />,
+          tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
+          headerTitle: 'Patient Management',
         }}
       />
     </Tabs>

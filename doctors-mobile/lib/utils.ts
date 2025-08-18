@@ -20,9 +20,22 @@ export const onboardingClinic = async (data: any) => {
   }
 };
 
-export const getDashboardOverview = async (clinicId: string) => {
+export const onboardingDoctor = async (data: any) => {
   try {
-    const response = await axiosInstance.get(`/api/clinic/get-dashboard-overview/${clinicId}`);
+    const response = await axiosInstance.post("/api/user/onboarding/doctor", data);
+    return response;
+  } catch (error) {
+    console.error("Error during doctor onboarding:", error);
+    throw error;
+  }
+};
+
+export const getDashboardOverview = async (userId: string, userType: 'doctor' | 'clinic' = 'clinic') => {
+  try {
+    const endpoint = userType === 'doctor' 
+      ? `/api/doctor/get-dashboard-overview/${userId}`
+      : `/api/clinic/get-dashboard-overview/${userId}`;
+    const response = await axiosInstance.get(endpoint);
     return response.data;
   } catch (error) {
     console.error("Error fetching dashboard overview:", error);
