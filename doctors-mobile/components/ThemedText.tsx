@@ -1,11 +1,10 @@
 import { StyleSheet, Text, type TextProps } from 'react-native';
-
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export type ThemedTextProps = TextProps & {
   lightColor?: string;
   darkColor?: string;
-  type?: 'default' | 'title' | 'defaultSemiBold' | 'subtitle' | 'link';
+  type?: 'default' | 'title' | 'defaultSemiBold' | 'subtitle' | 'link' | 'primary' | 'secondary' | 'muted';
 };
 
 export function ThemedText({
@@ -15,7 +14,33 @@ export function ThemedText({
   type = 'default',
   ...rest
 }: ThemedTextProps) {
-  const color = useThemeColor({ light: lightColor, dark: darkColor }, 'text');
+  const { colors, isDark } = useTheme();
+  
+  let color: string;
+  
+  if (lightColor && darkColor) {
+    color = isDark ? darkColor : lightColor;
+  } else if (lightColor || darkColor) {
+    color = (lightColor || darkColor) as string;
+  } else {
+    switch (type) {
+      case 'primary':
+        color = colors.primary;
+        break;
+      case 'secondary':
+        color = colors.secondary;
+        break;
+      case 'muted':
+        color = colors.muted;
+        break;
+      case 'link':
+        color = colors.primary;
+        break;
+      default:
+        color = colors.text;
+        break;
+    }
+  }
 
   return (
     <Text
@@ -26,6 +51,9 @@ export function ThemedText({
         type === 'defaultSemiBold' ? styles.defaultSemiBold : undefined,
         type === 'subtitle' ? styles.subtitle : undefined,
         type === 'link' ? styles.link : undefined,
+        type === 'primary' ? styles.primary : undefined,
+        type === 'secondary' ? styles.secondary : undefined,
+        type === 'muted' ? styles.muted : undefined,
         style,
       ]}
       {...rest}
@@ -55,6 +83,15 @@ const styles = StyleSheet.create({
   link: {
     lineHeight: 30,
     fontSize: 16,
-    color: '#0a7ea4',
+    fontWeight: '500',
+  },
+  primary: {
+    fontWeight: '600',
+  },
+  secondary: {
+    fontWeight: '600',
+  },
+  muted: {
+    fontSize: 14,
   },
 });

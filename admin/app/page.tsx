@@ -18,7 +18,12 @@ import {
   Eye,
   CheckCircle,
   Clock,
-  AlertCircle
+  AlertCircle,
+  UserCheck,
+  UserX,
+  Wallet,
+  Globe,
+  RefreshCw
 } from "lucide-react";
 import {
   Card,
@@ -29,31 +34,126 @@ import {
 } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
+import { Progress } from "../components/ui/progress";
+import { Separator } from "../components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import { toast } from "sonner";
 
-// Mock data - in real app, this would come from API
-const mockData = {
-  totalUsers: 1248,
-  totalClinics: 342,
-  totalDoctors: 906,
-  totalRevenue: 125400,
-  monthlyGrowth: 12.5,
-  pendingVerifications: 23,
-  recentUsers: [
-    { id: 1, name: "Dr. Sarah Johnson", type: "Doctor", status: "pending", date: "2024-01-15" },
-    { id: 2, name: "City Medical Center", type: "Clinic", status: "verified", date: "2024-01-14" },
-    { id: 3, name: "Dr. Michael Chen", type: "Doctor", status: "verified", date: "2024-01-13" },
-    { id: 4, name: "HealthCare Plus", type: "Clinic", status: "pending", date: "2024-01-12" },
-  ],
-  recentPayments: [
-    { id: 1, user: "Dr. Sarah Johnson", amount: 500, type: "Onboarding", date: "2024-01-15" },
-    { id: 2, user: "City Medical Center", amount: 500, type: "Onboarding", date: "2024-01-14" },
-    { id: 3, user: "Dr. Michael Chen", amount: 500, type: "Onboarding", date: "2024-01-13" },
-  ]
-};
+// Dynamic data interface
+interface DashboardData {
+  totalUsers: number;
+  totalClinics: number;
+  totalDoctors: number;
+  totalRevenue: number;
+  monthlyGrowth: number;
+  pendingVerifications: number;
+  verifiedUsers: number;
+  rejectedUsers: number;
+  activeConnections: number;
+  totalRequirements: number;
+  completedRequirements: number;
+  recentUsers: Array<{
+    id: number;
+    name: string;
+    type: "Doctor" | "Clinic";
+    status: "pending" | "verified" | "rejected";
+    date: string;
+    avatar?: string;
+  }>;
+  recentPayments: Array<{
+    id: number;
+    user: string;
+    amount: number;
+    type: "Onboarding" | "Subscription" | "Commission";
+    date: string;
+    status: "completed" | "pending" | "failed";
+  }>;
+  systemHealth: {
+    uptime: number;
+    responseTime: number;
+    errorRate: number;
+  };
+}
 
 export default function AdminDashboard() {
-  const [data, setData] = useState(mockData);
-  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Simulate API data fetching
+  const fetchDashboardData = async (): Promise<DashboardData> => {
+    // In real app, this would be an actual API call
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({
+          totalUsers: 1248 + Math.floor(Math.random() * 50),
+          totalClinics: 342 + Math.floor(Math.random() * 10),
+          totalDoctors: 906 + Math.floor(Math.random() * 20),
+          totalRevenue: 125400 + Math.floor(Math.random() * 5000),
+          monthlyGrowth: 12.5 + (Math.random() * 5 - 2.5),
+          pendingVerifications: 23 + Math.floor(Math.random() * 10),
+          verifiedUsers: 1180 + Math.floor(Math.random() * 30),
+          rejectedUsers: 45 + Math.floor(Math.random() * 5),
+          activeConnections: 456 + Math.floor(Math.random() * 20),
+          totalRequirements: 89 + Math.floor(Math.random() * 10),
+          completedRequirements: 67 + Math.floor(Math.random() * 5),
+          recentUsers: [
+            { id: 1, name: "Dr. Sarah Johnson", type: "Doctor", status: "pending", date: "2024-01-15", avatar: "/avatars/01.png" },
+            { id: 2, name: "City Medical Center", type: "Clinic", status: "verified", date: "2024-01-14" },
+            { id: 3, name: "Dr. Michael Chen", type: "Doctor", status: "verified", date: "2024-01-13" },
+            { id: 4, name: "HealthCare Plus", type: "Clinic", status: "pending", date: "2024-01-12" },
+            { id: 5, name: "Dr. Emily Davis", type: "Doctor", status: "rejected", date: "2024-01-11" },
+          ],
+          recentPayments: [
+            { id: 1, user: "Dr. Sarah Johnson", amount: 500, type: "Onboarding", date: "2024-01-15", status: "completed" },
+            { id: 2, user: "City Medical Center", amount: 500, type: "Onboarding", date: "2024-01-14", status: "completed" },
+            { id: 3, user: "Dr. Michael Chen", amount: 500, type: "Onboarding", date: "2024-01-13", status: "pending" },
+            { id: 4, user: "HealthCare Plus", amount: 1200, type: "Subscription", date: "2024-01-12", status: "completed" },
+          ],
+          systemHealth: {
+            uptime: 99.8 + (Math.random() * 0.2),
+            responseTime: 120 + Math.floor(Math.random() * 50),
+            errorRate: 0.1 + (Math.random() * 0.1),
+          },
+        });
+      }, 1000);
+    });
+  };
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const dashboardData = await fetchDashboardData();
+      setData(dashboardData);
+    } catch (error) {
+      toast.error("Failed to load dashboard data");
+      console.error("Dashboard data fetch error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const refreshData = async () => {
+    try {
+      setRefreshing(true);
+      const dashboardData = await fetchDashboardData();
+      setData(dashboardData);
+      toast.success("Dashboard data refreshed");
+    } catch (error) {
+      toast.error("Failed to refresh data");
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+    
+    // Auto-refresh every 5 minutes
+    const interval = setInterval(loadData, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const StatCard = ({ 
     title, 
