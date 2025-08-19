@@ -156,7 +156,7 @@ export default function DashboardScreen() {
     ) || [];
   const requirementChartColors =
     overview.requirementsByStatus.map((item) =>
-      item.requirementStatus === "POSTED" ? "#10b981" : "#3b82f6"
+              item.requirementStatus === "POSTED" ? "#3b82f6" : "#06B6D4"
     ) || [];
 
   const pitchesChartData =
@@ -164,7 +164,7 @@ export default function DashboardScreen() {
   const pitchChartColors =
     overview.pitchesByStatus.map((item) =>
       item.status === "ACCEPTED"
-        ? "#10b981"
+        ? "#3b82f6"
         : item.status === "REJECTED"
         ? "#ef4444"
         : "#f97316"
@@ -222,7 +222,7 @@ export default function DashboardScreen() {
       >
         {/* Enhanced Header with Gradient */}
         <LinearGradient
-          colors={['#3b82f6', '#8b5cf6', '#6366f1']}
+          colors={['#2563EB', "#06B6D4"]}
           style={{ 
             paddingHorizontal: 16, 
             paddingTop: 16, 
@@ -287,7 +287,7 @@ export default function DashboardScreen() {
               <View style={{ flexDirection: 'row', gap: 16 }}>
                 <View style={{ flex: 1 }}>
                   {renderStatCard(
-                    <MessageSquare color="#8b5cf6" size={20} />,
+                    <MessageSquare color="#3b82f6" size={20} />,
                     "Applications",
                     overview?.totalPitches || 0,
                     "Doctor applications received",
@@ -297,7 +297,7 @@ export default function DashboardScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   {renderStatCard(
-                    <CheckCircle color="#10b981" size={20} />,
+                    <CheckCircle color="#3b82f6" size={20} />,
                     "Connections",
                     overview?.totalAccepted || 0,
                     "Successful doctor connections",
@@ -309,46 +309,71 @@ export default function DashboardScreen() {
             </View>
           </View>
 
-          {/* Charts Section */}
+          {/* Analytics Section */}
           <View style={{ marginBottom: 24 }}>
             <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#111827', marginBottom: 16 }}>
-              Analytics
+              Analytics at a Glance
             </Text>
-            {requirementsChartData && requirementsChartData.length > 0 && (
-              <View style={{ backgroundColor: 'white', borderRadius: 16, padding: 20, marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-                  <View style={{ backgroundColor: '#dbeafe', borderRadius: 8, padding: 8, marginRight: 12 }}>
-                    <TrendingUp size={16} color="#3b82f6" />
-                  </View>
-                  <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>
-                    Requirements Overview
-                  </Text>
-                </View>
-                <Chart
-                  data={requirementsChartData}
-                  colors={requirementChartColors}
-                  title=""
-                />
-              </View>
-            )}
             
-            {pitchesChartData && pitchesChartData.length > 0 && (
-              <View style={{ backgroundColor: 'white', borderRadius: 16, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-                  <View style={{ backgroundColor: '#f3e8ff', borderRadius: 8, padding: 8, marginRight: 12 }}>
-                    <Activity size={16} color="#8b5cf6" />
-                  </View>
-                  <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>
-                    Applications Status
-                  </Text>
+            <View style={{
+              backgroundColor: 'white',
+              borderRadius: 20,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.1,
+              shadowRadius: 12,
+              elevation: 8,
+              overflow: 'hidden',
+            }}>
+              <LinearGradient
+                colors={['#f8fafc', '#ffffff']}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 20, paddingHorizontal: 10 }}>
+                  
+                  {requirementsChartData && requirementsChartData.length > 0 && (
+                    <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 8, borderRightWidth: pitchesChartData && pitchesChartData.length > 0 ? 1 : 0, borderRightColor: '#e5e7eb' }}>
+                       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                        <View style={{ backgroundColor: '#dbeafe', borderRadius: 8, padding: 6, marginRight: 8 }}>
+                          <TrendingUp size={16} color="#3b82f6" />
+                        </View>
+                        <Text style={{ fontSize: 14, fontWeight: '600', color: '#111827' }}>
+                          Requirements
+                        </Text>
+                      </View>
+                      <Chart
+                        data={requirementsChartData}
+                        colors={requirementChartColors}
+                        title=""
+                      />
+                    </View>
+                  )}
+                  
+                  {pitchesChartData && pitchesChartData.length > 0 && (
+                      <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 8 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                          <View style={{ backgroundColor: '#f3e8ff', borderRadius: 8, padding: 6, marginRight: 8 }}>
+                            <Activity size={16} color="#3b82f6" />
+                          </View>
+                          <Text style={{ fontSize: 14, fontWeight: '600', color: '#111827' }}>
+                            Applications
+                          </Text>
+                        </View>
+                        <Chart
+                          data={pitchesChartData}
+                          colors={pitchChartColors}
+                          title=""
+                        />
+                      </View>
+                  )}
                 </View>
-                <Chart
-                  data={pitchesChartData}
-                  colors={pitchChartColors}
-                  title=""
-                />
-              </View>
-            )}
+                
+                <TouchableOpacity onPress={() => router.push('/(drawer)/tabs/analytics')} style={{ paddingVertical: 12, paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(59, 130, 246, 0.05)', borderTopWidth: 1, borderTopColor: '#e5e7eb' }}>
+                  <Text style={{ color: '#2563eb', fontWeight: '600', marginRight: 8 }}>View Detailed Analytics</Text>
+                  <ArrowRight size={16} color="#2563eb" />
+                </TouchableOpacity>
+
+              </LinearGradient>
+            </View>
           </View>
 
           {/* Activity Sections */}
@@ -412,7 +437,7 @@ export default function DashboardScreen() {
               <View className="flex-row items-center justify-between mb-4">
                 <View className="flex-row items-center">
                   <View className="bg-emerald-100 rounded-lg p-2 mr-3">
-                    <FileText size={20} color="#10b981" />
+                    <FileText size={20} color="#3b82f6" />
                   </View>
                   <Text className="text-xl font-semibold text-gray-900">Latest News</Text>
                 </View>
@@ -438,7 +463,7 @@ export default function DashboardScreen() {
                       />
                     ) : (
                       <View className="w-16 h-16 bg-gradient-to-br from-emerald-100 to-blue-100 rounded-xl items-center justify-center mr-4">
-                        <FileText size={24} color="#10b981" />
+                        <FileText size={24} color="#3b82f6" />
                       </View>
                     )}
                     <View className="flex-1">
@@ -473,7 +498,7 @@ export default function DashboardScreen() {
             <View className="flex-row flex-wrap gap-3">
               <TouchableOpacity 
                 onPress={() => router.push("/(drawer)/search-doctors")}
-                className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-4 flex-row items-center flex-1 min-w-[45%]"
+                className="bg-blue-500 rounded-xl p-4 flex-row items-center flex-1 min-w-[45%]"
               >
                 <Stethoscope size={20} color="white" />
                 <Text className="text-white font-medium ml-2">Find Doctors</Text>
@@ -481,7 +506,7 @@ export default function DashboardScreen() {
               
               <TouchableOpacity 
                 onPress={() => router.push("/(drawer)/tabs/requirements")}
-                className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-4 flex-row items-center flex-1 min-w-[45%]"
+                className="bg-purple-500 rounded-xl p-4 flex-row items-center flex-1 min-w-[45%]"
               >
                 <Briefcase size={20} color="white" />
                 <Text className="text-white font-medium ml-2">Post Job</Text>
@@ -489,7 +514,7 @@ export default function DashboardScreen() {
               
               <TouchableOpacity 
                 onPress={() => router.push("/(drawer)/chat")}
-                className="bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-xl p-4 flex-row items-center flex-1 min-w-[45%]"
+                className="bg-emerald-500 rounded-xl p-4 flex-row items-center flex-1 min-w-[45%]"
               >
                 <MessageSquare size={20} color="white" />
                 <Text className="text-white font-medium ml-2">Messages</Text>
@@ -497,7 +522,7 @@ export default function DashboardScreen() {
               
               <TouchableOpacity 
                 onPress={() => router.push("/(drawer)/connections")}
-                className="bg-gradient-to-r from-pink-500 to-pink-600 rounded-xl p-4 flex-row items-center flex-1 min-w-[45%]"
+                className="bg-pink-500 rounded-xl p-4 flex-row items-center flex-1 min-w-[45%]"
               >
                 <Heart size={20} color="white" />
                 <Text className="text-white font-medium ml-2">My Team</Text>

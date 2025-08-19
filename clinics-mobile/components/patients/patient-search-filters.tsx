@@ -13,7 +13,6 @@ interface Props {
   setSortBy: (sort: string) => void;
   filteredCount: number;
   totalCount: number;
-  onCreatePatient: () => void;
   onClearFilters: () => void;
 }
 
@@ -28,7 +27,6 @@ export default function PatientSearchFilters({
   setSortBy,
   filteredCount,
   totalCount,
-  onCreatePatient,
   onClearFilters,
 }: Props) {
   return (
@@ -82,15 +80,6 @@ export default function PatientSearchFilters({
           <Text className="text-blue-600">Clear Filters</Text>
         </TouchableOpacity>
       </View>
-
-      <TouchableOpacity
-        onPress={onCreatePatient}
-        className="bg-blue-600 p-3 rounded-md mt-4"
-      >
-        <Text className="text-white text-center font-bold">
-          Create New Patient
-        </Text>
-      </TouchableOpacity>
     </View>
   );
 } 

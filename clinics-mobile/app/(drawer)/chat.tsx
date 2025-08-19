@@ -110,7 +110,7 @@ export default function ChatScreen() {
       >
         {/* Header */}
         <LinearGradient
-          colors={['#3b82f6', '#8b5cf6']}
+          colors={['#2563EB', '#06B6D4']}
           style={{ 
             paddingHorizontal: 20, 
             paddingTop: 20, 
@@ -217,8 +217,8 @@ export default function ChatScreen() {
                         {item.doctor.specialization.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
                       </Text>
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <CheckCircle size={12} color="#10b981" />
-                        <Text style={{ fontSize: 12, color: '#10b981', marginLeft: 4 }}>
+                                        <CheckCircle size={12} color="#2563EB" />
+                <Text style={{ fontSize: 12, color: '#2563EB', marginLeft: 4 }}>
                           Connected
                         </Text>
                       </View>
@@ -246,7 +246,7 @@ export default function ChatScreen() {
                             marginBottom: 4,
                           }}
                         >
-                          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: patient.status === 'ACTIVE' ? '#10b981' : '#6b7280', marginRight: 8 }} />
+                          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: patient.status === 'ACTIVE' ? '#2563EB' : '#6b7280', marginRight: 8 }} />
                           <Text style={{ flex: 1, fontSize: 14, color: '#374151' }}>
                             {patient.name}
                           </Text>

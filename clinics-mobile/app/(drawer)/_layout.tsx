@@ -8,7 +8,7 @@ export default function DrawerLayout() {
       drawerContent={(props) => <CustomDrawerContent {...props} />}
       screenOptions={{
         headerStyle: {
-          backgroundColor: '#ffffff',
+          backgroundColor: '#2563EB',
           elevation: 4,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 2 },
@@ -18,14 +18,14 @@ export default function DrawerLayout() {
         headerTitleStyle: {
           fontSize: 18,
           fontWeight: '700',
-          color: '#1f2937',
+          color: '#ffffff',
         },
-        headerTintColor: '#374151',
+        headerTintColor: '#ffffff',
         drawerStyle: {
           backgroundColor: '#ffffff',
           width: 300,
         },
-        drawerActiveTintColor: '#3b82f6',
+        drawerActiveTintColor: '#2563EB',
         drawerInactiveTintColor: '#6b7280',
         drawerLabelStyle: {
           fontSize: 16,
@@ -78,8 +78,8 @@ export default function DrawerLayout() {
         name="profile" 
         options={{ 
           title: 'Profile',
-          drawerLabel: 'Profile Settings',
-          headerTitle: 'Clinic Profile'
+          drawerLabel: 'Profile',
+          headerTitle: 'Your Profile'
         }} 
       />
     </Drawer>

@@ -1,14 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, TextInput, FlatList, Text, TouchableOpacity } from 'react-native';
 import { axiosInstance } from '@/lib/axios';
 
 interface GooglePlacesAutocompleteProps {
   onPlaceSelect: (place: any) => void;
+  initialAddress?: string;
 }
 
-export default function GooglePlacesAutocomplete({ onPlaceSelect }: GooglePlacesAutocompleteProps) {
-  const [query, setQuery] = useState('');
+export default function GooglePlacesAutocomplete({ onPlaceSelect, initialAddress }: GooglePlacesAutocompleteProps) {
+  const [query, setQuery] = useState(initialAddress || '');
   const [predictions, setPredictions] = useState([]);
+
+  useEffect(() => {
+    if (initialAddress) {
+      setQuery(initialAddress);
+    }
+  }, [initialAddress]);
 
   const handleInputChange = async (text: string) => {
     setQuery(text);

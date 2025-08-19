@@ -4,23 +4,20 @@ import { useEffect, useState, useCallback } from "react";
 import { axiosInstance } from "@/lib/axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   TrendingUp, 
-  TrendingDown, 
   Users, 
   CheckCircle, 
   Clock, 
   Calendar,
-  BarChart3,
   Activity,
   Target,
   Timer,
   Building2,
   Stethoscope
 } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line, AreaChart, Area } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line, AreaChart, Area } from 'recharts';
 
 interface DoctorPatientAnalytics {
   totalPatients: number;
@@ -466,7 +463,7 @@ export default function DoctorPatientAnalyticsOverview({ userId }: DoctorPatient
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {analytics.patientsByClinic.map((clinic, index) => (
+            {analytics.patientsByClinic.map((clinic) => (
               <div key={clinic.clinicId} className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">

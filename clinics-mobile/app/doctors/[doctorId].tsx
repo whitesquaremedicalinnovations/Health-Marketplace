@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { useEffect, useState } from "react";
 
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import {
   ArrowLeft,
   FileText,
@@ -71,10 +71,17 @@ export default function DoctorProfile() {
 
   if (loading) {
     return (
+      <>
+      <Stack.Screen
+        options={{
+          title: `Loading Doctor Details...`,
+        }}
+      />
       <View className="flex-1 justify-center items-center">
         <ActivityIndicator size="large" />
         <Text>Loading doctor's profile...</Text>
       </View>
+      </>
     );
   }
 
@@ -83,6 +90,12 @@ export default function DoctorProfile() {
   }
 
   return (
+    <>
+    <Stack.Screen
+        options={{
+          title: `Dr. ${doctor.fullName}`,
+        }}
+      />
     <ScrollView className="flex-1 bg-gray-50">
       <View className="p-4">
         <TouchableOpacity onPress={() => router.back()} className="mb-4">
@@ -161,5 +174,6 @@ export default function DoctorProfile() {
         </View>
       </View>
     </ScrollView>
+    </>
   );
 } 

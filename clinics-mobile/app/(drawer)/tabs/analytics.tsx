@@ -95,13 +95,13 @@ export default function AnalyticsScreen() {
     (item) => item._count.requirementStatus
   );
   const requirementChartColors = (analytics?.requirementsByStatus || []).map((item) =>
-    item.requirementStatus === 'POSTED' ? '#10b981' : '#3b82f6'
+            item.requirementStatus === 'POSTED' ? '#2563EB' : '#06B6D4'
   );
 
   const pitchesChartData = (analytics?.pitchesByStatus || []).map((item) => item._count.status);
   const pitchChartColors = (analytics?.pitchesByStatus || []).map((item) =>
     item.status === 'ACCEPTED'
-      ? '#10b981'
+              ? '#2563EB'
       : item.status === 'REJECTED'
       ? '#ef4444'
       : '#f97316'
@@ -126,7 +126,7 @@ export default function AnalyticsScreen() {
             {icon}
           </View>
           <View className="flex-row items-center">
-            {changeType === 'positive' && <ArrowUp size={16} color="#10b981" />}
+            {changeType === 'positive' && <ArrowUp size={16} color="#2563EB" />}
             {changeType === 'negative' && <ArrowDown size={16} color="#ef4444" />}
             <Text
               className={`text-sm font-medium ml-1 ${
@@ -214,7 +214,7 @@ export default function AnalyticsScreen() {
                   analytics.totalPitches,
                   '+8%',
                   'positive',
-                  ['#8b5cf6', '#7c3aed']
+                  ['#2563EB', '#06B6D4']
                 )}
               </View>
               <View style={{ flex: 1 }}>
@@ -224,7 +224,7 @@ export default function AnalyticsScreen() {
                   `${acceptanceRate}%`,
                   '+5%',
                   'positive',
-                  ['#10b981', '#059669']
+                  ['#06B6D4', '#0891B2']
                 )}
               </View>
             </View>
@@ -267,7 +267,7 @@ export default function AnalyticsScreen() {
             <View className="bg-white rounded-2xl p-6 shadow-lg">
               <View className="flex-row items-center mb-4">
                 <View className="bg-purple-100 rounded-lg p-2 mr-3">
-                  <BarChart3 size={20} color="#8b5cf6" />
+                  <BarChart3 size={20} color="#3b82f6" />
                 </View>
                 <Text className="text-xl font-semibold text-gray-900">Application Status</Text>
               </View>
@@ -304,7 +304,7 @@ export default function AnalyticsScreen() {
                 <View className="flex-row items-center justify-between py-3 border-b border-gray-100">
                   <View className="flex-row items-center">
                     <View className="bg-green-100 rounded-lg p-2 mr-3">
-                      <CheckCircle size={20} color="#10b981" />
+                      <CheckCircle size={20} color="#3b82f6" />
                     </View>
                     <View>
                       <Text className="font-semibold text-gray-900">Acceptance Rate</Text>

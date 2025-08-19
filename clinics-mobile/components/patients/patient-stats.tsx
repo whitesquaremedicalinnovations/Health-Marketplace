@@ -29,12 +29,12 @@ export default function PatientStats({ patients, connectedDoctors }: Props) {
           value={totalPatients}
         />
         <StatCard
-          icon={<UserCheck color="#10b981" size={24} />}
+          icon={<UserCheck color="#3b82f6" size={24} />}
           label="Active Cases"
           value={activePatients}
         />
         <StatCard
-          icon={<UserPlus color="#8b5cf6" size={24} />}
+          icon={<UserPlus color="#06B6D4" size={24} />}
           label="Doctors Available"
           value={doctorsAvailable}
         />

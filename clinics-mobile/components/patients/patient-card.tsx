@@ -18,7 +18,10 @@ interface Patient {
   gender: string;
   dateOfBirth: string;
   address: string;
-  status: "ACTIVE" | "COMPLETED";
+  latitude?: number;
+  longitude?: number;
+  status: 'ACTIVE' | 'COMPLETED';
+  clinicId: string;
   profileImage?: {
     docUrl: string;
   };
@@ -26,6 +29,13 @@ interface Patient {
     id: string;
     fullName: string;
   }[];
+  feedbacks: {
+    id: string;
+    feedback: string;
+    createdAt: string;
+  }[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface Props {
@@ -100,7 +110,7 @@ export default function PatientCard({
 
       <View className="flex-row justify-end mt-4">
         <ActionButton
-          icon={<UserPlus size={20} color="#8b5cf6" />}
+          icon={<UserPlus size={20} color="#3b82f6" />}
           onPress={() => onAssignDoctor(patient)}
         />
         <ActionButton

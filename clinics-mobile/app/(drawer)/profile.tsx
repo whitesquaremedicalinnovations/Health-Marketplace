@@ -38,6 +38,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { axiosInstance } from '../../lib/axios';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import GooglePlacesAutocomplete from '@/components/ui/google-places-autocomplete';
 
 interface ClinicProfile {
   id: string;
@@ -47,6 +48,8 @@ interface ClinicProfile {
   ownerPhoneNumber: string;
   clinicPhoneNumber: string;
   clinicAddress: string;
+  latitude: number;
+  longitude: number;
   clinicAdditionalDetails: string;
   profileImage?: {
     docUrl: string;
@@ -71,6 +74,8 @@ export default function ProfileScreen() {
   const [ownerName, setOwnerName] = useState('');
   const [clinicPhoneNumber, setClinicPhoneNumber] = useState('');
   const [clinicAddress, setClinicAddress] = useState('');
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
   const [clinicAdditionalDetails, setClinicAdditionalDetails] = useState('');
 
   const fetchProfile = useCallback(async () => {
@@ -85,6 +90,8 @@ export default function ProfileScreen() {
         setOwnerName(profileData.ownerName || '');
         setClinicPhoneNumber(profileData.clinicPhoneNumber || '');
         setClinicAddress(profileData.clinicAddress || '');
+        setLatitude(profileData.latitude || null);
+        setLongitude(profileData.longitude || null);
         setClinicAdditionalDetails(profileData.clinicAdditionalDetails || '');
       } catch (error) {
         console.error('Error fetching profile:', error);
@@ -115,10 +122,13 @@ export default function ProfileScreen() {
         ownerName,
         clinicPhoneNumber,
         clinicAddress,
+        latitude: latitude || 0,
+        longitude: longitude || 0,
         clinicAdditionalDetails,
+        role: 'CLINIC',
       };
 
-      await axiosInstance.put(`/api/clinic/profile/${user?.id}`, updatedData);
+      await axiosInstance.post(`/api/user/profile/update/${user?.id}`, updatedData);
       
       setProfile(prev => prev ? { ...prev, ...updatedData } : null);
       setEditing(false);
@@ -146,9 +156,19 @@ export default function ProfileScreen() {
       setOwnerName(profile.ownerName);
       setClinicPhoneNumber(profile.clinicPhoneNumber);
       setClinicAddress(profile.clinicAddress);
+      setLatitude(profile.latitude);
+      setLongitude(profile.longitude);
       setClinicAdditionalDetails(profile.clinicAdditionalDetails);
     }
     setEditing(false);
+  };
+
+  const handlePlaceSelect = (details: any) => {
+    if (details) {
+      setClinicAddress(details.formatted_address);
+      setLatitude(details.geometry.location.lat);
+      setLongitude(details.geometry.location.lng);
+    }
   };
 
   const handleImagePicker = async () => {
@@ -283,7 +303,7 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }}>
-      <StatusBar barStyle="light-content" backgroundColor="#3b82f6" />
+              <StatusBar barStyle="light-content" backgroundColor="#2563EB" />
       
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -294,7 +314,7 @@ export default function ProfileScreen() {
       >
         {/* Header with Profile Image */}
         <LinearGradient
-          colors={['#3b82f6', '#8b5cf6']}
+          colors={['#2563EB', '#06B6D4']}
           style={{ 
             paddingHorizontal: 20, 
             paddingTop: 20, 
@@ -328,9 +348,9 @@ export default function ProfileScreen() {
             
             <View className="flex-row items-center">
               {profile.isVerified ? (
-                <View className="bg-green-500/20 rounded-full px-4 py-2 flex-row items-center">
-                  <CheckCircle size={16} color="#10b981" />
-                  <Text className="text-green-100 font-medium ml-2">Verified</Text>
+                <View className="bg-blue-500/20 rounded-full px-4 py-2 flex-row items-center">
+                  <CheckCircle size={16} color="#2563EB" />
+                  <Text className="text-blue-100 font-medium ml-2">Verified</Text>
                 </View>
               ) : (
                 <View className="bg-yellow-500/20 rounded-full px-4 py-2 flex-row items-center">
@@ -414,13 +434,13 @@ export default function ProfileScreen() {
               setClinicPhoneNumber
             )}
             
-            {renderInfoCard(
-              <MapPin size={20} color="#3b82f6" />,
-              'Address',
-              clinicAddress,
-              true,
-              setClinicAddress
-            )}
+            {!editing ? (
+              renderInfoCard(
+                <MapPin size={20} color="#3b82f6" />,
+                'Address',
+                clinicAddress
+              )
+            ) : null}
             
             {renderInfoCard(
               <Building size={20} color="#3b82f6" />,
@@ -429,6 +449,20 @@ export default function ProfileScreen() {
               true,
               setClinicAdditionalDetails,
               true
+            )}
+            {editing && (
+              <View className="bg-white rounded-2xl p-4 shadow-sm mb-3">
+                <View className="flex-row items-center mb-2">
+                  <View className="bg-blue-100 rounded-lg p-2 mr-3">
+                    <MapPin size={20} color="#3b82f6" />
+                  </View>
+                  <Text className="text-gray-700 font-medium flex-1">Address</Text>
+                </View>
+                <GooglePlacesAutocomplete
+                  onPlaceSelect={handlePlaceSelect}
+                  initialAddress={clinicAddress}
+                />
+              </View>
             )}
           </View>
 

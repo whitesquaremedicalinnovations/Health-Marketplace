@@ -316,7 +316,7 @@ export default function Dashboard() {
               </Button>
             </CardHeader>
             <CardContent>
-              <PatientChatOverview userId={userId} onPatientClick={(patientId) => router.push(`/chat?patient=${patientId}`)} />
+              <PatientChatOverview userId={userId || ""} onPatientClick={(patientId) => router.push(`/chat?patient=${patientId}`)} />
             </CardContent>
           </Card>
 
@@ -455,7 +455,7 @@ export default function Dashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <DoctorPatientAnalyticsOverview userId={userId} />
+              <DoctorPatientAnalyticsOverview userId={userId || ""} />
             </CardContent>
           </Card>
         </div>

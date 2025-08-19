@@ -82,21 +82,11 @@ export function CustomDrawerContent(props: any) {
         style={{ backgroundColor: '#ffffff' }}
       >
         {/* Header Section */}
-        <LinearGradient
-          colors={['#3b82f6', '#8b5cf6']}
-          style={{ 
-            paddingTop: top + 20,
-            paddingBottom: 24,
-            paddingHorizontal: 0,
-            marginBottom: 8,
-            marginHorizontal: 0,
-          }}
-        >
           <Link href="/(drawer)/profile" asChild>
-            <TouchableOpacity style={{ alignItems: 'center' }}>
+            <TouchableOpacity style={{ alignItems: 'center', paddingTop: top + 20 }}>
               <View style={{ 
-                width: 80, 
-                height: 80, 
+                width: 100, 
+                height: 100, 
                 borderRadius: 40, 
                 backgroundColor: 'rgba(255,255,255,0.2)',
                 alignItems: 'center',
@@ -118,7 +108,7 @@ export function CustomDrawerContent(props: any) {
               <Text style={{ 
                 fontSize: 18, 
                 fontWeight: 'bold', 
-                color: 'white',
+                color: 'black',
                 textAlign: 'center',
                 marginBottom: 4
               }} numberOfLines={1}>
@@ -127,7 +117,7 @@ export function CustomDrawerContent(props: any) {
               
               <Text style={{ 
                 fontSize: 14, 
-                color: '#bfdbfe',
+                color: 'black',
                 textAlign: 'center',
                 marginBottom: 8
               }} numberOfLines={1}>
@@ -138,18 +128,19 @@ export function CustomDrawerContent(props: any) {
               <View style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                backgroundColor: profile?.isVerified ? 'rgba(16,185,129,0.2)' : 'rgba(245,158,11,0.2)',
+                backgroundColor: profile?.isVerified ? 'rgba(59,130,246,0.2)' : 'rgba(245,158,11,0.2)',
                 paddingHorizontal: 12,
                 paddingVertical: 4,
                 borderRadius: 12,
+                marginBottom: 10
               }}>
                 {profile?.isVerified ? (
-                  <Shield size={12} color="#10b981" />
+                  <Shield size={12} color="#3b82f6" />
                 ) : (
                   <Clock size={12} color="#f59e0b" />
                 )}
                 <Text style={{ 
-                  color: profile?.isVerified ? '#10b981' : '#f59e0b',
+                  color: profile?.isVerified ? '#3b82f6' : '#f59e0b',
                   fontSize: 12,
                   fontWeight: '600',
                   marginLeft: 4
@@ -159,7 +150,6 @@ export function CustomDrawerContent(props: any) {
               </View>
             </TouchableOpacity>
           </Link>
-        </LinearGradient>
         
         {/* Navigation Items */}
         <View style={{ paddingHorizontal: 8 }}>

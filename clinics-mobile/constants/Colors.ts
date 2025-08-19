@@ -1,13 +1,13 @@
 /**
  * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * Primary color: oklch(0.623 0.214 259.815) - converted to hex #6366F1
- * Secondary color: Green variations
+ * Primary color: Blue variations
+ * Secondary color: Teal/Cyan variations
  */
 
-const primaryColor = '#6366F1'; // oklch(0.623 0.214 259.815)
-const primaryColorDark = '#8B5CF6'; // Lighter variant for dark mode
-const secondaryColor = '#10B981'; // Emerald green
-const secondaryColorDark = '#34D399'; // Lighter green for dark mode
+const primaryColor = '#2563EB'; // Blue-600 (darker)
+const primaryColorDark = '#3B82F6'; // Blue-500 for dark mode
+const secondaryColor = '#06B6D4'; // Cyan-500
+const secondaryColorDark = '#22D3EE'; // Cyan-400 for dark mode
 
 export const Colors = {
   light: {

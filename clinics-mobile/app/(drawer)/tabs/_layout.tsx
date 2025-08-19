@@ -24,31 +24,31 @@ export default function TabLayout() {
             onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
             style={{ marginLeft: 15 }}
           >
-            <Menu size={24} color="#374151" />
+            <Menu size={24} color="#ffffff" />
           </TouchableOpacity>
         ),
         tabBarStyle: {
-          backgroundColor: '#ffffff',
-          borderTopWidth: 1,
-          borderTopColor: '#e5e7eb',
-          paddingBottom: Platform.OS === 'ios' ? 20 : 10,
-          paddingTop: 10,
-          height: Platform.OS === 'ios' ? 90 : 70,
-          elevation: 8,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 8,
+          backgroundColor: '#f0f9ff',
+          borderTopWidth: 0,
+          paddingBottom: Platform.OS === 'ios' ? 20 : 0,
+          paddingTop: 0,
+          height: Platform.OS === 'ios' ? 90 : 80,
         },
-        tabBarActiveTintColor: '#3b82f6',
-        tabBarInactiveTintColor: '#9ca3af',
+        tabBarActiveTintColor: '#2563EB',
+        tabBarInactiveTintColor: '#64748b',
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '600',
           marginTop: 4,
         },
+        tabBarItemStyle: {
+          paddingVertical: 4,
+        },
+
+        tabBarShowLabel: true,
+        tabBarHideOnKeyboard: true,
         headerStyle: {
-          backgroundColor: '#ffffff',
+          backgroundColor: '#2563EB',
           elevation: 4,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 2 },
@@ -58,7 +58,7 @@ export default function TabLayout() {
         headerTitleStyle: {
           fontSize: 18,
           fontWeight: '700',
-          color: '#1f2937',
+          color: '#ffffff',
         },
       }}
     >
@@ -66,7 +66,9 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Dashboard',
-          tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <Home color={color} size={size} />
+          ),
           headerTitle: 'Clinic Dashboard',
         }}
       />
@@ -74,7 +76,9 @@ export default function TabLayout() {
         name="requirements"
         options={{
           title: 'Jobs',
-          tabBarIcon: ({ color, size }) => <Briefcase color={color} size={size} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <Briefcase color={color} size={size} />
+          ),
           headerTitle: 'Job Requirements',
         }}
       />
@@ -82,7 +86,9 @@ export default function TabLayout() {
         name="patients"
         options={{
           title: 'Patients',
-          tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <User color={color} size={size} />
+          ),
           headerTitle: 'Patient Management',
         }}
       />
@@ -90,7 +96,9 @@ export default function TabLayout() {
         name="analytics"
         options={{
           title: 'Analytics',
-          tabBarIcon: ({ color, size }) => <Activity color={color} size={size} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <Activity color={color} size={size} />
+          ),
           headerTitle: 'Analytics & Reports',
         }}
       />

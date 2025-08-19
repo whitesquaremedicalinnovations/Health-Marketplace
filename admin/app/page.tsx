@@ -237,7 +237,7 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatCard
             title="Total Users"
-            value={data.totalUsers.toLocaleString()}
+            value={data?.totalUsers.toLocaleString() || 0}
             description="Registered users on platform"
             icon={Users}
             trend="+12% from last month"
@@ -245,7 +245,7 @@ export default function AdminDashboard() {
           />
           <StatCard
             title="Clinics"
-            value={data.totalClinics.toLocaleString()}
+            value={data?.totalClinics.toLocaleString() || 0}
             description="Active healthcare facilities"
             icon={Building}
             trend="+8% from last month"
@@ -253,7 +253,7 @@ export default function AdminDashboard() {
           />
           <StatCard
             title="Doctors"
-            value={data.totalDoctors.toLocaleString()}
+            value={data?.totalDoctors.toLocaleString() || 0}
             description="Verified medical professionals"
             icon={Stethoscope}
             trend="+15% from last month"
@@ -261,7 +261,7 @@ export default function AdminDashboard() {
           />
           <StatCard
             title="Revenue"
-            value={`$${data.totalRevenue.toLocaleString()}`}
+            value={`$${data?.totalRevenue.toLocaleString()}`}
             description="Total platform revenue"
             icon={DollarSign}
             trend="+23% from last month"
@@ -283,7 +283,7 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-orange-600 mb-4">
-                {data.pendingVerifications}
+                {data?.pendingVerifications}
               </div>
               <Link href="/users?status=pending">
                 <Button className="w-full">
@@ -342,7 +342,7 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {data.recentUsers.map((user) => (
+                {data?.recentUsers.map((user) => (
                   <div key={user.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center space-x-3">
                       <div className={`w-2 h-2 rounded-full ${
@@ -380,7 +380,7 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {data.recentPayments.map((payment) => (
+                {data?.recentPayments.map((payment) => (
                   <div key={payment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center space-x-3">
                       <div className="w-2 h-2 rounded-full bg-green-500" />

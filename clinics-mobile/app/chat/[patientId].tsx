@@ -16,7 +16,7 @@ import {
   StyleSheet
 } from 'react-native';
 import { useUser } from '@clerk/clerk-expo';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import {
   ArrowLeft,
   Send,
@@ -392,6 +392,12 @@ export default function ChatScreen() {
 
   if (loading) {
     return (
+      <>
+        <Stack.Screen
+          options={{
+            headerShown: false,
+          }}
+        />
       <SafeAreaView style={{ flex: 1, backgroundColor: '#f9fafb' }}>
         <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -401,10 +407,17 @@ export default function ChatScreen() {
           </Text>
         </View>
       </SafeAreaView>
+      </>
     );
   }
 
   return (
+    <>
+    <Stack.Screen
+        options={{
+          headerShown: false,
+        }}
+      />
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       
@@ -448,7 +461,7 @@ export default function ChatScreen() {
       <KeyboardAvoidingView 
         style={{ flex: 1 }} 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 65 : 0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 80}
       >
         <ScrollView
           ref={scrollViewRef}
@@ -522,6 +535,7 @@ export default function ChatScreen() {
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
+    </>
   );
 }
 

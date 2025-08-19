@@ -1,24 +1,22 @@
 import {
   ActivityIndicator,
   FlatList,
-  Modal,
   RefreshControl,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { useCallback, useEffect, useState } from "react";
-
 import { useUser } from "@clerk/clerk-expo";
 import Toast from "react-native-toast-message";
-
 import PatientAssignmentDialog from "../../../components/patients/patient-assignment-dialog";
 import PatientCard from "../../../components/patients/patient-card";
 import PatientDeleteDialog from "../../../components/patients/patient-delete-dialog";
 import PatientFeedbackDialog from "../../../components/patients/patient-feedback-dialog";
-import PatientForm from "../../../components/patients/patient-form";
 import PatientSearchFilters from "../../../components/patients/patient-search-filters";
-import PatientStats from "../../../components/patients/patient-stats";
 import { axiosInstance } from "../../../lib/axios";
+import { Filter, Plus } from "lucide-react-native";
+import { useRouter } from "expo-router";
 
 interface Patient {
   id: string;
@@ -64,6 +62,7 @@ interface PatientFormData {
 
 export default function PatientsScreen() {
   const { user } = useUser();
+  const router = useRouter();
 
   const [patients, setPatients] = useState<Patient[]>([]);
   const [connectedDoctors, setConnectedDoctors] = useState<ConnectedDoctor[]>([]);
@@ -73,9 +72,8 @@ export default function PatientsScreen() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [genderFilter, setGenderFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
+  const [showFilters, setShowFilters] = useState(false);
 
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
@@ -84,16 +82,6 @@ export default function PatientsScreen() {
   const [feedbackText, setFeedbackText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   
-  const [formData, setFormData] = useState<PatientFormData>({
-    name: "",
-    phoneNumber: "",
-    gender: "MALE",
-    dateOfBirth: "",
-    address: "",
-    latitude: "",
-    longitude: ""
-  });
-
   const fetchPatients = useCallback(async () => {
     if (!user?.id) return;
     try {
@@ -149,64 +137,6 @@ export default function PatientsScreen() {
     }
   });
   
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleLocationSelect = (place: any) => {
-    if (place) {
-      setFormData(prev => ({
-        ...prev,
-        address: place.formatted_address || "",
-        latitude: place.geometry?.location?.lat()?.toString() || "",
-        longitude: place.geometry?.location?.lng()?.toString() || ""
-      }));
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      phoneNumber: "",
-      gender: "MALE",
-      dateOfBirth: "",
-      address: "",
-      latitude: "",
-      longitude: ""
-    });
-  };
-
-  const handleCreatePatient = async () => {
-    setSubmitting(true);
-    try {
-      await axiosInstance.post("/api/patient/create-patient", { ...formData, clinicId: user?.id });
-      fetchPatients();
-      setShowCreateDialog(false);
-      resetForm();
-      Toast.show({ type: 'success', text1: 'Patient created successfully' });
-    } catch (error) {
-      Toast.show({ type: 'error', text1: 'Failed to create patient' });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleEditPatient = async () => {
-    if (!selectedPatient) return;
-    setSubmitting(true);
-    try {
-      await axiosInstance.put(`/api/patient/update-patient/${selectedPatient.id}`, formData);
-      fetchPatients();
-      setShowEditDialog(false);
-      resetForm();
-      Toast.show({ type: 'success', text1: 'Patient updated successfully' });
-    } catch (error) {
-      Toast.show({ type: 'error', text1: 'Failed to update patient' });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const handleDeletePatient = async () => {
     if (!selectedPatient) return;
     setSubmitting(true);
@@ -266,18 +196,8 @@ export default function PatientsScreen() {
     }
   };
   
-  const openEditDialog = (patient: Patient) => {
-    setSelectedPatient(patient);
-    setFormData({
-      name: patient.name,
-      phoneNumber: patient.phoneNumber,
-      gender: patient.gender,
-      dateOfBirth: patient.dateOfBirth.split('T')[0],
-      address: patient.address,
-      latitude: patient.latitude?.toString() || "",
-      longitude: patient.longitude?.toString() || ""
-    });
-    setShowEditDialog(true);
+  const openEditPage = (patient: Patient) => {
+    router.push(`/patients/edit/${patient.id}`);
   };
   
   const openAssignDialog = (patient: Patient) => {
@@ -306,26 +226,39 @@ export default function PatientsScreen() {
 
   return (
     <View className="flex-1 bg-gray-50 p-4">
-      <PatientStats patients={patients} connectedDoctors={connectedDoctors} />
-      <PatientSearchFilters
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        statusFilter={statusFilter}
-        setStatusFilter={setStatusFilter}
-        genderFilter={genderFilter}
-        setGenderFilter={setGenderFilter}
-        sortBy={sortBy}
-        setSortBy={setSortBy}
-        filteredCount={filteredPatients.length}
-        totalCount={patients.length}
-        onCreatePatient={() => setShowCreateDialog(true)}
-        onClearFilters={() => {
-            setSearchTerm("");
-            setStatusFilter("all");
-            setGenderFilter("all");
-            setSortBy("newest");
-        }}
-      />
+      <View className="flex-row justify-between items-center mb-4">
+        <Text className="text-2xl font-bold">Patients</Text>
+        <View className="flex-row">
+          <TouchableOpacity onPress={() => router.push('/create-patient')} className="p-2">
+            <Plus size={24} color="gray" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowFilters(!showFilters)} className="p-2">
+            <Filter size={24} color="gray" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {showFilters && (
+        <PatientSearchFilters
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
+          genderFilter={genderFilter}
+          setGenderFilter={setGenderFilter}
+          sortBy={sortBy}
+          setSortBy={setSortBy}
+          filteredCount={filteredPatients.length}
+          totalCount={patients.length}
+          onClearFilters={() => {
+              setSearchTerm("");
+              setStatusFilter("all");
+              setGenderFilter("all");
+              setSortBy("newest");
+          }}
+        />
+      )}
+      
       <FlatList
         data={filteredPatients}
         keyExtractor={(item) => item.id}
@@ -334,35 +267,13 @@ export default function PatientsScreen() {
             patient={item}
             onAssignDoctor={openAssignDialog}
             onAddFeedback={openFeedbackDialog}
-            onEditPatient={openEditDialog}
+            onEditPatient={openEditPage}
             onDeletePatient={openDeleteDialog}
             onDeassignDoctor={handleDeassignDoctor}
           />
         )}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       />
-      
-      <Modal visible={showCreateDialog} transparent>
-          <PatientForm
-            formData={formData}
-            onFormDataChange={handleInputChange}
-            onLocationSelect={handleLocationSelect}
-            onSubmit={handleCreatePatient}
-            submitting={submitting}
-            mode="create"
-          />
-      </Modal>
-
-      <Modal visible={showEditDialog} transparent>
-          <PatientForm
-            formData={formData}
-            onFormDataChange={handleInputChange}
-            onLocationSelect={handleLocationSelect}
-            onSubmit={handleEditPatient}
-            submitting={submitting}
-            mode="edit"
-          />
-      </Modal>
       
       <PatientAssignmentDialog
         open={showAssignDialog}

@@ -162,7 +162,7 @@ export default function ConnectionsScreen() {
                 value={item.connectionCount}
               />
               <Stat
-                icon={<Clock size={20} color="#10b981" />}
+                icon={<Clock size={20} color="#3b82f6" />}
                 label="Experience"
                 value={`${item.doctor.experience}y`}
               />

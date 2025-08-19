@@ -299,7 +299,7 @@ export default function OnboardingScreen() {
             right: -100,
             width: 200,
             height: 200,
-            backgroundColor: '#3b82f6',
+            backgroundColor: '#2563EB',
             opacity: 0.1,
             borderRadius: 100,
           }}
@@ -311,7 +311,7 @@ export default function OnboardingScreen() {
             left: -80,
             width: 160,
             height: 160,
-            backgroundColor: '#8b5cf6',
+            backgroundColor: '#2563EB',
             opacity: 0.1,
             borderRadius: 80,
           }}
@@ -325,7 +325,7 @@ export default function OnboardingScreen() {
       >
         {/* Header */}
         <LinearGradient
-          colors={['#3b82f6', '#8b5cf6']}
+          colors={['#2563EB', '#06B6D4']}
           style={{ 
             paddingHorizontal: 24, 
             paddingTop: Platform.OS === 'ios' ? 40 : 60, 
@@ -351,9 +351,9 @@ export default function OnboardingScreen() {
             <View className="flex-row items-center">
               <View className={`w-10 h-10 rounded-full items-center justify-center ${step >= 1 ? 'bg-white' : 'bg-white/30'}`}>
                 {step > 1 ? (
-                  <CheckCircle2 size={20} color="#3b82f6" />
+                  <CheckCircle2 size={20} color="#2563EB" />
                 ) : (
-                  <UserIcon size={20} color={step >= 1 ? "#3b82f6" : "white"} />
+                  <UserIcon size={20} color={step >= 1 ? "#2563EB" : "white"} />
                 )}
               </View>
               <Text className="text-white text-xs font-medium ml-2 mr-4">Owner Info</Text>
@@ -363,9 +363,9 @@ export default function OnboardingScreen() {
               <Text className="text-white text-xs font-medium mr-2 ml-4">Clinic Details</Text>
               <View className={`w-10 h-10 rounded-full items-center justify-center ${step >= 2 ? 'bg-white' : 'bg-white/30'}`}>
                 {step > 2 ? (
-                  <CheckCircle2 size={20} color="#3b82f6" />
+                  <CheckCircle2 size={20} color="#2563EB" />
                 ) : (
-                  <Building size={20} color={step >= 2 ? "#3b82f6" : "white"} />
+                  <Building size={20} color={step >= 2 ? "#2563EB" : "white"} />
                 )}
               </View>
             </View>
@@ -373,7 +373,7 @@ export default function OnboardingScreen() {
             <View className="flex-row items-center">
               <Text className="text-white text-xs font-medium mr-2 ml-4">Payment</Text>
               <View className={`w-10 h-10 rounded-full items-center justify-center ${step >= 3 ? 'bg-white' : 'bg-white/30'}`}>
-                <CreditCard size={20} color={step >= 3 ? "#3b82f6" : "white"} />
+                <CreditCard size={20} color={step >= 3 ? "#2563EB" : "white"} />
               </View>
             </View>
           </View>
@@ -604,7 +604,7 @@ export default function OnboardingScreen() {
                 {hasEmailPaid ? (
                   <View className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
                     <View className="flex-row items-center">
-                      <CheckCircle2 size={20} color="#10b981" />
+                      <CheckCircle2 size={20} color="#2563EB" />
                       <Text className="text-green-800 font-medium ml-2">Payment Confirmed</Text>
                     </View>
                     <Text className="text-green-600 text-sm mt-1">

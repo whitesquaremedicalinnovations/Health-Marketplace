@@ -50,7 +50,7 @@ export default function NewsScreen() {
       keyExtractor={(item) => item.id}
       ListHeaderComponent={
         <View style={{ padding: 16 }}>
-          <View style={{ padding: 24, backgroundColor: '#10b981', borderRadius: 16, marginBottom: 16 }}>
+          <View style={{ padding: 24, backgroundColor: '#3b82f6', borderRadius: 16, marginBottom: 16 }}>
             <Text style={{ fontSize: 28, fontWeight: 'bold', color: 'white' }}>Healthcare News</Text>
             <Text style={{ fontSize: 16, color: 'white', opacity: 0.8, marginTop: 4 }}>Stay updated with the latest insights</Text>
           </View>
