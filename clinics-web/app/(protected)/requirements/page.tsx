@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loading } from "@/components/ui/loading";
 import { toast } from "sonner";
+import RequirementTypeModal from "@/components/requirement-type-modal";
 
 interface Requirement {
   id: string;
@@ -47,6 +48,7 @@ export default function Requirements() {
   const [requirementToComplete, setRequirementToComplete] = useState<
     string | null
   >(null);
+  const [showTypeModal, setShowTypeModal] = useState(false);
 
   useEffect(() => {
     const fetchRequirements = async () => {
@@ -169,7 +171,7 @@ export default function Requirements() {
                 </div>
               </div>
               <Button 
-                onClick={() => router.push("/requirements/new")}
+                onClick={() => setShowTypeModal(true)}
                 size="lg"
                 className="bg-white text-blue-600 hover:bg-blue-50 shadow-lg hover:shadow-xl transition-all duration-300 border-0"
               >
@@ -195,7 +197,7 @@ export default function Requirements() {
                 Start by posting your first job requirement to connect with qualified healthcare professionals.
               </p>
               <Button 
-                onClick={() => router.push("/requirements/new")}
+                onClick={() => setShowTypeModal(true)}
                 size="lg"
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg"
               >
@@ -304,6 +306,12 @@ export default function Requirements() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      {/* Requirement Type Selection Modal */}
+      <RequirementTypeModal 
+        isOpen={showTypeModal} 
+        onClose={() => setShowTypeModal(false)} 
+      />
     </div>
   );
 }

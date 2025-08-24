@@ -8,9 +8,9 @@ export default function DrawerLayout() {
       drawerContent={(props) => <CustomDrawerContent {...props} />}
       screenOptions={{
         headerStyle: {
-          backgroundColor: '#ffffff',
+          backgroundColor: '#3b82f6',
           elevation: 4,
-          shadowColor: '#000',
+          shadowColor: 'none',
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.1,
           shadowRadius: 4,
@@ -18,9 +18,9 @@ export default function DrawerLayout() {
         headerTitleStyle: {
           fontSize: 18,
           fontWeight: '700',
-          color: '#1f2937',
+          color: '#ffffff',
         },
-        headerTintColor: '#374151',
+        headerTintColor: '#ffffff',
         drawerStyle: {
           backgroundColor: '#ffffff',
           width: 280,
@@ -30,7 +30,7 @@ export default function DrawerLayout() {
         drawerLabelStyle: {
           fontSize: 16,
           fontWeight: '600',
-          marginLeft: -20,
+          marginLeft: -10,
         },
       }}
     >

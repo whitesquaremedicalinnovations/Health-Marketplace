@@ -11,12 +11,14 @@ import {
   Dimensions,
   Alert,
   Platform,
+  PermissionsAndroid,
 } from "react-native";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useUser } from "@clerk/clerk-expo";
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import * as Location from 'expo-location';
 import { 
   Trash2, 
   Upload, 
@@ -31,11 +33,13 @@ import {
   Shield,
   Clock,
   Loader2,
+  Navigation,
 } from "lucide-react-native";
 import { axiosInstance } from "../../lib/axios";
 import { onboardingClinic } from "../../lib/utils";
 import Toast from 'react-native-toast-message';
 import * as ImagePicker from 'expo-image-picker';
+import RazorpayWebView from "../../components/razorpay-webview";
 
 const { width, height } = Dimensions.get('window');
 
@@ -67,9 +71,136 @@ export default function OnboardingScreen() {
   const [onboardingAmount, setOnboardingAmount] = useState(0);
   const [hasEmailPaid, setHasEmailPaid] = useState(false);
   const [isCheckingUser, setIsCheckingUser] = useState(true);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [locationAttempted, setLocationAttempted] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  
+  // Automatic location fetching
+  const getLocation = async () => {
+    setIsGettingLocation(true);
+    setLocationAttempted(true);
+    setLocationError(null);
+    
+    try {
+      // Request permissions
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        setLocationError("Permission to access location was denied");
+        setIsGettingLocation(false);
+        return;
+      }
 
-  const handleNext = () => setStep((s) => s + 1);
+      // Get current location
+      let currentLocation = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+        timeInterval: 15000,
+        distanceInterval: 50,
+      });
+      
+      const { latitude, longitude } = currentLocation.coords;
+      
+      // Set location coordinates
+      setClinicLocation({ lat: latitude, lng: longitude });
+
+      // Try to get address from coordinates
+      try {
+        const reverseGeocode = await Location.reverseGeocodeAsync({
+          latitude,
+          longitude,
+        });
+
+        if (reverseGeocode.length > 0) {
+          const address = reverseGeocode[0];
+          const formattedAddress = [
+            address.street,
+            address.district,
+            address.city,
+            address.region,
+            address.country,
+          ].filter(Boolean).join(', ');
+          
+          setClinicAddress(formattedAddress);
+          
+          Toast.show({
+            type: 'success',
+            text1: 'Location Found',
+            text2: 'Your address has been automatically filled.',
+          });
+        }
+      } catch (geocodeError) {
+        console.log('Reverse geocoding failed, but coordinates saved');
+      }
+
+    } catch (error: any) {
+      console.error('Error getting location:', error);
+      setLocationError('Could not get your current location. Please enter address manually.');
+    } finally {
+      setIsGettingLocation(false);
+    }
+  };
+  
+  // Razorpay payment states
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentOrderId, setPaymentOrderId] = useState("");
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
+  const handleNext = () => {
+    if (step === 1) {
+      // Validate owner information
+      if (!ownerFirstName.trim() || !ownerLastName.trim() || !ownerPhoneNumber.trim()) {
+        Toast.show({
+          type: 'error',
+          text1: 'Missing Information',
+          text2: 'Please fill in all required owner information fields.',
+        });
+        return;
+      }
+    }
+    
+    if (step === 2) {
+      // Validate clinic details
+      if (!clinicName.trim()) {
+        Toast.show({
+          type: 'error',
+          text1: 'Clinic Name Required',
+          text2: 'Please enter your clinic name.',
+        });
+        return;
+      }
+      
+      if (!clinicPhoneNumber.trim()) {
+        Toast.show({
+          type: 'error',
+          text1: 'Phone Number Required',
+          text2: 'Please enter your clinic phone number.',
+        });
+        return;
+      }
+      
+      if (!clinicAddress.trim()) {
+        Toast.show({
+          type: 'error',
+          text1: 'Address Required',
+          text2: 'Please enter your clinic address or use current location.',
+        });
+        return;
+      }
+      
+      if (!clinicLocation) {
+        Toast.show({
+          type: 'error',
+          text1: 'Location Required',
+          text2: 'Please use the "Use Current" button to get your location coordinates.',
+        });
+        return;
+      }
+    }
+    
+    setStep((s) => s + 1);
+  };
   const handlePrev = () => setStep((s) => s - 1);
+
+  
 
   useEffect(() => {
     const fetchOnboardingAmount = async () => {
@@ -118,6 +249,13 @@ export default function OnboardingScreen() {
     initializeOnboarding();
   }, [user]);
 
+  // Automatically get location when component mounts
+  useEffect(() => {
+    if (!isCheckingUser && step === 2) {
+      getLocation();
+    }
+  }, [isCheckingUser, step]);
+
   const handleChooseProfileImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -144,31 +282,79 @@ export default function OnboardingScreen() {
 
 
   const handlePayment = async () => {
-    Alert.alert(
-      'Payment Required',
-      `Complete your clinic registration with a one-time fee of ₹${onboardingAmount}`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Pay Now',
-          onPress: () => {
-            // In a real app, integrate with Razorpay or other payment gateway
-            // For now, we'll simulate payment success
-            setTimeout(() => {
-              setHasEmailPaid(true);
-              Toast.show({
-                type: 'success',
-                text1: 'Payment Successful',
-                text2: 'You can now complete your registration',
-              });
-            }, 2000);
-          },
-        },
-      ]
-    );
+    try {
+      setIsProcessingPayment(true);
+      
+      // Create order on backend
+      const orderResponse = await axiosInstance.post("/api/payments", {
+        amount: onboardingAmount,
+        currency: "INR",
+        receipt: `clinic_onboarding_${Date.now()}`,
+        email: ownerEmail,
+        userType: "CLINIC",
+      });
+
+      const orderData = orderResponse.data.data;
+      
+      if (!orderData || !orderData.id) {
+        throw new Error('Invalid order response from server');
+      }
+      
+      setPaymentOrderId(orderData.id);
+      setShowPaymentModal(true);
+      
+    } catch (error: any) {
+      console.error("Error creating payment order:", error);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to initialize payment';
+      Toast.show({
+        type: 'error',
+        text1: 'Payment Error',
+        text2: errorMessage,
+      });
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
+
+  const handlePaymentSuccess = async (paymentId: string, signature: string) => {
+    try {
+      // Verify payment on backend
+      await axiosInstance.post("/api/payments/verify", {
+        razorpay_order_id: paymentOrderId,
+        razorpay_payment_id: paymentId,
+        razorpay_signature: signature,
+      });
+
+      setShowPaymentModal(false);
+      setHasEmailPaid(true);
+      
+      Toast.show({
+        type: 'success',
+        text1: 'Payment Successful',
+        text2: 'Your payment has been processed successfully.',
+      });
+      
+    } catch (error) {
+      console.error("Error verifying payment:", error);
+      Toast.show({
+        type: 'error',
+        text1: 'Payment Verification Failed',
+        text2: 'Please contact support if payment was deducted.',
+      });
+    }
+  };
+
+  const handlePaymentError = (error: string) => {
+    setShowPaymentModal(false);
+    Toast.show({
+      type: 'error',
+      text1: 'Payment Failed',
+      text2: error,
+    });
+  };
+
+  const handlePaymentClose = () => {
+    setShowPaymentModal(false);
   };
 
   const handleSubmit = async () => {
@@ -244,9 +430,9 @@ export default function OnboardingScreen() {
         Toast.show({
           type: 'success',
           text1: 'Registration Complete!',
-          text2: 'Welcome to HealthCare Platform',
+          text2: 'Your clinic is now under verification. You will be notified once verified.',
         });
-        router.replace("/(drawer)/tabs");
+        router.replace("/verification-status");
       } else {
         Toast.show({
           type: 'error',
@@ -422,7 +608,7 @@ export default function OnboardingScreen() {
                   <View>
                     <View className="flex-row items-center mb-2">
                       <UserIcon size={16} color="#6b7280" />
-                      <Text className="text-gray-700 font-medium ml-2">First Name</Text>
+                      <Text className="text-gray-700 font-medium ml-2">First Name *</Text>
                     </View>
                     <TextInput
                       className="bg-gray-50 border border-gray-200 p-4 rounded-xl text-gray-900"
@@ -436,7 +622,7 @@ export default function OnboardingScreen() {
                   <View>
                     <View className="flex-row items-center mb-2">
                       <UserIcon size={16} color="#6b7280" />
-                      <Text className="text-gray-700 font-medium ml-2">Last Name</Text>
+                      <Text className="text-gray-700 font-medium ml-2">Last Name *</Text>
                     </View>
                     <TextInput
                       className="bg-gray-50 border border-gray-200 p-4 rounded-xl text-gray-900"
@@ -460,7 +646,7 @@ export default function OnboardingScreen() {
                   <View>
                     <View className="flex-row items-center mb-2">
                       <Phone size={16} color="#6b7280" />
-                      <Text className="text-gray-700 font-medium ml-2">Phone Number</Text>
+                      <Text className="text-gray-700 font-medium ml-2">Phone Number *</Text>
                     </View>
                     <TextInput
                       className="bg-gray-50 border border-gray-200 p-4 rounded-xl text-gray-900"
@@ -485,7 +671,7 @@ export default function OnboardingScreen() {
                   <View>
                     <View className="flex-row items-center mb-2">
                       <Building size={16} color="#6b7280" />
-                      <Text className="text-gray-700 font-medium ml-2">Clinic Name</Text>
+                      <Text className="text-gray-700 font-medium ml-2">Clinic Name *</Text>
                     </View>
                     <TextInput
                       className="bg-gray-50 border border-gray-200 p-4 rounded-xl text-gray-900"
@@ -514,7 +700,17 @@ export default function OnboardingScreen() {
                     <View className="flex-row items-center mb-2">
                       <MapPin size={16} color="#6b7280" />
                       <Text className="text-gray-700 font-medium ml-2">Clinic Address</Text>
+                      {isGettingLocation && (
+                        <View className="ml-2 flex-row items-center">
+                          <Loader2 size={14} color="#3b82f6" />
+                          <Text className="text-blue-600 text-xs ml-1">Getting location...</Text>
+                        </View>
+                      )}
                     </View>
+                    
+                    <Text className="text-gray-500 text-xs mb-2">
+                      💡 Location will be automatically detected when you reach this step
+                    </Text>
                     <TextInput
                       className="bg-gray-50 border border-gray-200 p-4 rounded-xl text-gray-900"
                       placeholder="123 Main St, City, State, Country"
@@ -522,6 +718,55 @@ export default function OnboardingScreen() {
                       onChangeText={setClinicAddress}
                       placeholderTextColor="#9ca3af"
                     />
+                    {clinicLocation && (
+                      <View className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <View className="flex-row items-center">
+                          <CheckCircle2 size={12} color="#10b981" />
+                          <Text className="text-green-800 text-xs ml-1 font-medium">
+                            Location detected successfully
+                          </Text>
+                        </View>
+                        <Text className="text-green-600 text-xs mt-1">
+                          Coordinates: {clinicLocation.lat.toFixed(6)}, {clinicLocation.lng.toFixed(6)}
+                        </Text>
+                      </View>
+                    )}
+                    
+                    {locationError && (
+                      <View className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <Text className="text-red-800 text-xs">
+                          {locationError}
+                        </Text>
+                        <TouchableOpacity 
+                          onPress={getLocation}
+                          disabled={isGettingLocation}
+                          className="mt-2 flex-row items-center"
+                        >
+                          <Navigation size={12} color="#ef4444" />
+                          <Text className="text-red-700 text-xs ml-1 font-medium">
+                            {isGettingLocation ? 'Trying again...' : 'Try Again'}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                    
+                    {locationAttempted && !clinicLocation && !locationError && (
+                      <View className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <Text className="text-yellow-800 text-xs">
+                          Location couldn't be automatically detected. Please enter your address manually or try again.
+                        </Text>
+                        <TouchableOpacity 
+                          onPress={getLocation}
+                          disabled={isGettingLocation}
+                          className="mt-2 flex-row items-center"
+                        >
+                          <Navigation size={12} color="#f59e0b" />
+                          <Text className="text-yellow-700 text-xs ml-1 font-medium">
+                            {isGettingLocation ? 'Trying again...' : 'Try Again'}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
                   </View>
 
                   <View>
@@ -668,10 +913,19 @@ export default function OnboardingScreen() {
                 ) : (
                   <TouchableOpacity 
                     onPress={handlePayment}
-                    className="bg-blue-600 rounded-xl px-8 py-4 flex-row items-center shadow-lg"
+                    disabled={isProcessingPayment}
+                    className={`rounded-xl px-8 py-4 flex-row items-center shadow-lg ${
+                      isProcessingPayment ? 'bg-gray-400' : 'bg-blue-600'
+                    }`}
                   >
-                    <CreditCard size={16} color="white" />
-                    <Text className="text-white font-medium ml-2">Pay ₹{onboardingAmount}</Text>
+                    {isProcessingPayment ? (
+                      <Loader2 size={16} color="white" />
+                    ) : (
+                      <CreditCard size={16} color="white" />
+                    )}
+                    <Text className="text-white font-medium ml-2">
+                      {isProcessingPayment ? 'Processing...' : `Pay ₹${onboardingAmount}`}
+                    </Text>
                   </TouchableOpacity>
                 )}
               </>
@@ -679,6 +933,23 @@ export default function OnboardingScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Razorpay Payment Modal */}
+      {paymentOrderId && (
+        <RazorpayWebView
+          visible={showPaymentModal}
+          onClose={handlePaymentClose}
+          onPaymentSuccess={handlePaymentSuccess}
+          onPaymentError={handlePaymentError}
+          orderId={paymentOrderId}
+          amount={onboardingAmount}
+          currency="INR"
+          customerName={`${ownerFirstName} ${ownerLastName}`}
+          customerEmail={ownerEmail}
+          customerPhone={ownerPhoneNumber}
+          description="Clinic Onboarding Registration Fee"
+        />
+      )}
     </SafeAreaView>
   );
 }

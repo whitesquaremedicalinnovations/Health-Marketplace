@@ -427,7 +427,7 @@ export default function ChatScreen() {
           onPress={() => router.back()}
           style={{ padding: 8, marginLeft: -8 }}
         >
-          <ArrowLeft size={24} color="#374151" />
+          <ArrowLeft size={24} color="white" />
         </TouchableOpacity>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginLeft: 12 }}>
@@ -551,7 +551,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
-    backgroundColor: 'white',
+    backgroundColor: '#2563EB',
   },
   headerAvatar: {
     width: 40,
@@ -561,11 +561,11 @@ const styles = StyleSheet.create({
   headerName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
+    color: 'white',
   },
   headerSubtitle: {
     fontSize: 12,
-    color: '#6b7280',
+    color: 'white',
   },
   dateSeparator: {
     flexDirection: 'row',

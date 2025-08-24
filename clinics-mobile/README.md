@@ -1,50 +1,55 @@
-# Welcome to your Expo app 👋
+# Clinics Mobile App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+## Environment Variables Setup
 
-## Get started
+To use the Razorpay payment integration, you need to set up the following environment variables:
 
-1. Install dependencies
+### Required Environment Variables
 
-   ```bash
-   npm install
+1. **EXPO_PUBLIC_API_URL**: Your backend API URL
+   ```
+   EXPO_PUBLIC_API_URL=http://localhost:3000
    ```
 
-2. Start the app
-
-   ```bash
-   npx expo start
+2. **EXPO_PUBLIC_RAZORPAY_KEY_ID**: Your Razorpay public key ID
+   ```
+   EXPO_PUBLIC_RAZORPAY_KEY_ID=rzp_test_YOUR_KEY_HERE
    ```
 
-In the output, you'll find options to open the app in a
+### Setting up Environment Variables
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+1. Create a `.env` file in the root directory of the clinics-mobile project
+2. Add the environment variables above
+3. For production, use your live Razorpay keys instead of test keys
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+### Backend Environment Variables
 
-## Get a fresh project
+Make sure your backend has these environment variables set:
+- `NEXT_PUBLIC_RAZORPAY_KEY_ID`: Razorpay public key ID
+- `RAZORPAY_KEY_SECRET`: Razorpay secret key
+- `RAZORPAY_WEBHOOK_SECRET`: Razorpay webhook secret (for webhook verification)
 
-When you're ready, run:
+## Payment Flow
+
+The app now includes a complete Razorpay payment integration for clinic onboarding:
+
+1. User fills clinic details in onboarding
+2. Clicks "Pay" button to initiate payment
+3. Razorpay WebView opens with payment form
+4. User completes payment
+5. Payment is verified on backend
+6. User can complete registration
+
+## Development
 
 ```bash
-npm run reset-project
+npm install
+npx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Building
 
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```bash
+npx expo build:android
+npx expo build:ios
+```

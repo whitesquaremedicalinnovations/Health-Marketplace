@@ -25,7 +25,10 @@ import {
   FilterX,
   TrendingUp,
   Target,
-  Zap
+  Zap,
+  ChevronDown,
+  ChevronUp,
+  X
 } from "lucide-react";
 import { Loading } from "@/components/ui/loading";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -78,9 +81,9 @@ export default function JobRequirements() {
   const [sortBy, setSortBy] = useState("newest");
   const [locationRange, setLocationRange] = useState([50]);
   const [showFilters, setShowFilters] = useState(false);
-  const [verifiedOnly, setVerifiedOnly] = useState(false);
+
   const [datePostedFilter, setDatePostedFilter] = useState("all");
-  const [applicationCountRange, setApplicationCountRange] = useState([0, 100]);
+
   const [customLocation, setCustomLocation] = useState("");
   const [selectedPlace, setSelectedPlace] = useState<google.maps.places.PlaceResult | null>(null);
   const [useCustomLocation, setUseCustomLocation] = useState(false);
@@ -146,8 +149,8 @@ export default function JobRequirements() {
       // Job type filter
       const matchesType = typeFilter === "all" || req.type === typeFilter;
       
-      // Verified clinics only
-      const matchesVerification = !verifiedOnly || req.clinic.isVerified;
+      // Verified clinics only - removed filter
+      const matchesVerification = true;
       
       // Date posted filter
       const matchesDatePosted = (() => {
@@ -164,12 +167,8 @@ export default function JobRequirements() {
         }
       })();
       
-      // Application count range
-      const matchesApplicationCount = req.applicationsCount >= applicationCountRange[0] && 
-                                     req.applicationsCount <= applicationCountRange[1];
-      
       return matchesSearch && matchesSpecialization && matchesType && 
-             matchesVerification && matchesDatePosted && matchesApplicationCount;
+             matchesVerification && matchesDatePosted;
     });
 
     // Sort filtered results
@@ -201,13 +200,20 @@ export default function JobRequirements() {
       }
     });
     setFilteredRequirements(filtered);
-  }, [requirements, searchTerm, specializationFilter, typeFilter, sortBy, verifiedOnly, datePostedFilter, applicationCountRange]);
+  }, [requirements, searchTerm, specializationFilter, typeFilter, sortBy, datePostedFilter]);
 
   useEffect(() => {
     if (userId) {
       fetchRequirements(true);
     }
-  }, [userId, locationRange, useCustomLocation, selectedPlace, fetchRequirements]);
+  }, [userId, fetchRequirements]);
+
+  // Separate effect for location-based fetching
+  useEffect(() => {
+    if (userId && (locationRange[0] !== 50 || useCustomLocation)) {
+      fetchRequirements(false);
+    }
+  }, [locationRange, useCustomLocation, selectedPlace]);
 
   useEffect(() => {
     filterAndSortRequirements();
@@ -217,9 +223,7 @@ export default function JobRequirements() {
     setSearchTerm("");
     setSpecializationFilter("all");
     setTypeFilter("all");
-    setVerifiedOnly(false);
     setDatePostedFilter("all");
-    setApplicationCountRange([0, 100]);
     setLocationRange([50]);
     setUseCustomLocation(false);
     setSelectedPlace(null);
@@ -231,9 +235,7 @@ export default function JobRequirements() {
     if (searchTerm) count++;
     if (specializationFilter !== "all") count++;
     if (typeFilter !== "all") count++;
-    if (verifiedOnly) count++;
     if (datePostedFilter !== "all") count++;
-    if (applicationCountRange[0] > 0 || applicationCountRange[1] < 100) count++;
     if (locationRange[0] !== 50) count++;
     if (useCustomLocation) count++;
     return count;
@@ -309,30 +311,29 @@ export default function JobRequirements() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
             Job Opportunities
-                </h1>
+          </h1>
           <p className="text-gray-600 dark:text-gray-400">
             Discover and apply for medical positions at top clinics
           </p>
         </div>
 
-        {/* Search and Filters Bar */}
+        {/* Consolidated Search and Filters */}
         <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm mb-8">
           <CardContent className="p-6">
-            <div className="flex flex-col lg:flex-row gap-4">
-              {/* Search Input */}
+            {/* Main Search Bar */}
+            <div className="flex flex-col lg:flex-row gap-4 mb-6">
               <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Search jobs, clinics, locations..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    placeholder="Search jobs, clinics, locations..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10 pr-4 py-3 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                />
+                  />
                 </div>
               </div>
 
-              {/* Quick Filters */}
               <div className="flex flex-wrap gap-2">
                 <Select value={sortBy} onValueChange={setSortBy}>
                   <SelectTrigger className="w-[180px]">
@@ -382,6 +383,11 @@ export default function JobRequirements() {
                       {getActiveFilterCount()}
                     </span>
                   )}
+                  {showFilters ? (
+                    <ChevronUp className="h-4 w-4 ml-2" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 ml-2" />
+                  )}
                 </Button>
 
                 {getActiveFilterCount() > 0 && (
@@ -393,85 +399,70 @@ export default function JobRequirements() {
               </div>
             </div>
 
-            {/* Advanced Filters Panel */}
+                        {/* Advanced Filters Panel */}
             {showFilters && (
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {/* Specialization Filter */}
+              <div className="border-t border-gray-200 pt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Specialization */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Specialization
                     </label>
-              <Select value={specializationFilter} onValueChange={setSpecializationFilter}>
-                      <SelectTrigger>
+                    <Select value={specializationFilter} onValueChange={setSpecializationFilter}>
+                      <SelectTrigger className="bg-white">
                         <SelectValue placeholder="Any specialization" />
-                </SelectTrigger>
-                <SelectContent>
+                      </SelectTrigger>
+                      <SelectContent>
                         <SelectItem value="all">Any Specialization</SelectItem>
                         {specializations.map(spec => (
-                    <SelectItem key={spec} value={spec}>
-                      {formatSpecialization(spec)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                          <SelectItem key={spec} value={spec}>
+                            {formatSpecialization(spec)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
-              {/* Job Type Filter */}
+                  {/* Job Type */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Job Type
                     </label>
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                      <SelectTrigger>
+                    <Select value={typeFilter} onValueChange={setTypeFilter}>
+                      <SelectTrigger className="bg-white">
                         <SelectValue placeholder="Any type" />
-                </SelectTrigger>
-                <SelectContent>
+                      </SelectTrigger>
+                      <SelectContent>
                         <SelectItem value="all">Any Type</SelectItem>
-                  <SelectItem value="FULLTIME">Full-time</SelectItem>
-                  <SelectItem value="PARTTIME">Part-time</SelectItem>
-                  <SelectItem value="ONETIME">One-time</SelectItem>
-                </SelectContent>
-              </Select>
+                        <SelectItem value="FULLTIME">Full-time</SelectItem>
+                        <SelectItem value="PARTTIME">Part-time</SelectItem>
+                        <SelectItem value="ONETIME">One-time</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
-                  {/* Date Posted Filter */}
+                  {/* Posted Within */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Posted
+                      Posted Within
                     </label>
                     <Select value={datePostedFilter} onValueChange={setDatePostedFilter}>
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-white">
                         <SelectValue placeholder="Any time" />
-                </SelectTrigger>
-                <SelectContent>
+                      </SelectTrigger>
+                      <SelectContent>
                         <SelectItem value="all">Any Time</SelectItem>
                         <SelectItem value="today">Today</SelectItem>
                         <SelectItem value="week">This Week</SelectItem>
                         <SelectItem value="month">This Month</SelectItem>
-                </SelectContent>
-              </Select>
+                      </SelectContent>
+                    </Select>
                   </div>
 
-                  {/* Verified Clinics Only */}
+                  {/* Location Range */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Clinic Status
-                    </label>
-                <Button
-                      variant={verifiedOnly ? "default" : "outline"}
-                      onClick={() => setVerifiedOnly(!verifiedOnly)}
-                      className="w-full justify-start"
-                    >
-                      <Zap className="h-4 w-4 mr-2" />
-                      Verified Only
-                </Button>
-              </div>
-
-                  {/* Location Range */}
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Search Radius: {locationRange[0]} km
+                      Radius: {locationRange[0]} km
                     </label>
                     <Slider
                       value={locationRange}
@@ -482,51 +473,116 @@ export default function JobRequirements() {
                       className="w-full"
                     />
                   </div>
+                </div>
 
-                  {/* Application Count Range */}
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Applications: {applicationCountRange[0]} - {applicationCountRange[1]}
-                    </label>
-                    <Slider
-                      value={applicationCountRange}
-                      onValueChange={setApplicationCountRange}
-                      max={100}
-                      min={0}
-                      step={1}
-                      className="w-full"
-                    />
-            </div>
-
-                  {/* Custom Location */}
-                  <div className="md:col-span-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <input
-                        type="checkbox"
-                        id="customLocation"
-                        checked={useCustomLocation}
-                        onChange={(e) => setUseCustomLocation(e.target.checked)}
-                        className="rounded"
-                      />
-                      <label htmlFor="customLocation" className="text-sm font-medium text-gray-700">
-                        Search from custom location
-                      </label>
-                    </div>
-                    {useCustomLocation && (
-                      <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}>  
+                {/* Custom Location */}
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Custom Location (Optional)
+                  </label>
+                  <div className="bg-white rounded-lg border">
+                    <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}>  
                       <LocationSearch
                         onPlaceSelect={(place: google.maps.places.PlaceResult | null) => {
                           setSelectedPlace(place);
                           setCustomLocation(place?.formatted_address || '');
+                          setUseCustomLocation(!!place);
                         }}
                         value={customLocation}
-                        onChange={setCustomLocation}  
+                        onChange={(value) => {
+                          setCustomLocation(value);
+                          if (!value) {
+                            setUseCustomLocation(false);
+                            setSelectedPlace(null);
+                          }
+                        }}
                       />
-                      </APIProvider>
-                    )}
+                    </APIProvider>
                   </div>
                 </div>
-            </div>
+
+                {/* Active Filters Display */}
+                {getActiveFilterCount() > 0 && (
+                  <div className="mt-8 pt-6 border-t border-gray-200">
+                    <div className="bg-blue-50/50 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="p-1 bg-blue-100 rounded">
+                          <FilterX className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <span className="text-sm font-semibold text-gray-900">Active Filters ({getActiveFilterCount()})</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {searchTerm && (
+                          <Badge variant="secondary" className="flex items-center gap-1 bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200">
+                            <Search className="h-3 w-3" />
+                            "{searchTerm}"
+                            <X 
+                              className="h-3 w-3 cursor-pointer hover:text-blue-600" 
+                              onClick={() => setSearchTerm("")}
+                            />
+                          </Badge>
+                        )}
+                        {specializationFilter !== "all" && (
+                          <Badge variant="secondary" className="flex items-center gap-1 bg-green-100 text-green-800 border-green-200 hover:bg-green-200">
+                            <Briefcase className="h-3 w-3" />
+                            {formatSpecialization(specializationFilter)}
+                            <X 
+                              className="h-3 w-3 cursor-pointer hover:text-green-600" 
+                              onClick={() => setSpecializationFilter("all")}
+                            />
+                          </Badge>
+                        )}
+                        {typeFilter !== "all" && (
+                          <Badge variant="secondary" className="flex items-center gap-1 bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200">
+                            <Clock className="h-3 w-3" />
+                            {formatJobType(typeFilter)}
+                            <X 
+                              className="h-3 w-3 cursor-pointer hover:text-purple-600" 
+                              onClick={() => setTypeFilter("all")}
+                            />
+                          </Badge>
+                        )}
+                        {datePostedFilter !== "all" && (
+                          <Badge variant="secondary" className="flex items-center gap-1 bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-200">
+                            <Clock className="h-3 w-3" />
+                            {datePostedFilter === "today" ? "Today" : 
+                             datePostedFilter === "week" ? "This Week" : "This Month"}
+                            <X 
+                              className="h-3 w-3 cursor-pointer hover:text-orange-600" 
+                              onClick={() => setDatePostedFilter("all")}
+                            />
+                          </Badge>
+                        )}
+                        {locationRange[0] !== 50 && (
+                          <Badge variant="secondary" className="flex items-center gap-1 bg-indigo-100 text-indigo-800 border-indigo-200 hover:bg-indigo-200">
+                            <MapPin className="h-3 w-3" />
+                            {locationRange[0]}km radius
+                            <X 
+                              className="h-3 w-3 cursor-pointer hover:text-indigo-600" 
+                              onClick={() => setLocationRange([50])}
+                            />
+                          </Badge>
+                        )}
+                        {useCustomLocation && (
+                          <Badge variant="secondary" className="flex items-center gap-1 bg-teal-100 text-teal-800 border-teal-200 hover:bg-teal-200">
+                            <MapPin className="h-3 w-3" />
+                            Custom Location
+                            <X 
+                              className="h-3 w-3 cursor-pointer hover:text-teal-600" 
+                              onClick={() => {
+                                setUseCustomLocation(false);
+                                setSelectedPlace(null);
+                                setCustomLocation("");
+                              }}
+                            />
+                          </Badge>
+                        )}
+
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </CardContent>
         </Card>
@@ -545,9 +601,9 @@ export default function JobRequirements() {
                   {filteredRequirements.filter(req => !req.hasApplied).length} Available
                 </Badge>
               )}
-                        </div>
-                      </div>
-                    </div>
+            </div>
+          </div>
+        </div>
 
         {/* Main Content - Two Column Layout */}
         <div className="flex gap-6 h-[calc(100vh-320px)]">
@@ -561,9 +617,9 @@ export default function JobRequirements() {
                 </h2>
                 <div className="text-sm text-gray-500">
                   {useCustomLocation && customLocation ? `Near ${customLocation}` : 'Near your location'}
-                      </div>
-                    </div>
-                  </div>
+                </div>
+              </div>
+            </div>
 
             {/* Scrollable Requirements List */}
             <div className="flex-1 overflow-y-auto space-y-4 pr-2">
@@ -633,26 +689,26 @@ export default function JobRequirements() {
                                 <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
                                   {formatJobType(requirement.type)}
                                 </Badge>
-                    {requirement.specialization && (
+                                {requirement.specialization && (
                                   <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs">
-                        {formatSpecialization(requirement.specialization)}
-                      </Badge>
-                    )}
-                  </div>
+                                    {formatSpecialization(requirement.specialization)}
+                                  </Badge>
+                                )}
+                              </div>
                               <p className="text-gray-600 text-xs leading-relaxed mb-2 line-clamp-2">
-                    {requirement.description}
-                  </p>
+                                {requirement.description}
+                              </p>
                               <div className="flex items-center gap-3 text-xs text-gray-500">
                                 <div className="flex items-center gap-1">
                                   <Users className="h-3 w-3" />
                                   <span>{requirement.applicationsCount} applied</span>
                                 </div>
                                 <div className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
+                                  <Clock className="h-3 w-3" />
                                   <span>{timeAgo(requirement.createdAt)}</span>
                                 </div>
                               </div>
-                    </div>
+                            </div>
                             <div className="flex flex-col gap-2 flex-shrink-0">
                               {requirement.hasApplied ? (
                                 <Badge className="bg-green-100 text-green-800 border-green-200 text-xs">
@@ -671,15 +727,15 @@ export default function JobRequirements() {
                                   Apply
                                 </Button>
                               )}
-                      <Button
-                        variant="outline"
-                        size="sm"
+                              <Button
+                                variant="outline"
+                                size="sm"
                                 onClick={() => router.push(`/requirements/view/${requirement.id}`)}
                               >
                                 Details
-                      </Button>
-                    </div>
-                  </div>
+                              </Button>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </CardContent>
@@ -714,7 +770,7 @@ export default function JobRequirements() {
                     </div>
                   </div>
                 </div>
-                </div>
+              </div>
 
               {/* Map Content */}
               <div className="flex-1">
@@ -738,10 +794,10 @@ export default function JobRequirements() {
                       <h3 className="text-lg font-semibold text-gray-600 mb-2">Map Unavailable</h3>
                       <p className="text-gray-500">Google Maps API key not configured</p>
                     </div>
-                    </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
+            </div>
           </div>
         </div>
 
@@ -795,7 +851,7 @@ export default function JobRequirements() {
                   </>
                 ) : (
                   <>
-                <Send className="h-4 w-4 mr-2" />
+                    <Send className="h-4 w-4 mr-2" />
                     Submit Application
                   </>
                 )}

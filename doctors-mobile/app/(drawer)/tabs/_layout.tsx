@@ -24,12 +24,12 @@ export default function TabLayout() {
             onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
             style={{ marginLeft: 15 }}
           >
-            <Menu size={24} color="#374151" />
+            <Menu size={24} color="#ffffff" />
           </TouchableOpacity>
         ),
         tabBarStyle: {
-          backgroundColor: '#ffffff',
-          borderTopWidth: 1,
+          backgroundColor: '#f0f9ff',
+          borderTopWidth: 0,
           borderTopColor: '#e5e7eb',
           paddingBottom: Platform.OS === 'ios' ? 20 : 10,
           paddingTop: 10,
@@ -48,9 +48,9 @@ export default function TabLayout() {
           marginTop: 4,
         },
         headerStyle: {
-          backgroundColor: '#ffffff',
+          backgroundColor: '#3b82f6',
           elevation: 4,
-          shadowColor: '#000',
+          shadowColor: '#3b82f6',
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.1,
           shadowRadius: 4,
@@ -58,7 +58,7 @@ export default function TabLayout() {
         headerTitleStyle: {
           fontSize: 18,
           fontWeight: '700',
-          color: '#1f2937',
+          color: '#ffffff',
         },
       }}
     >

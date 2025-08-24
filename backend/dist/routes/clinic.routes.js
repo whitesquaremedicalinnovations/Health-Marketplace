@@ -1,11 +1,12 @@
 import { Router } from "express";
-import { getClinics, getClinicById, getRequirementsByClinic, postRequirement, updateRequirement, deleteRequirement, getPitchesByRequirement, acceptPitch, rejectPitch, getRequirementById, getDashboardOverview, getConnections, getConnectedDoctors, uploadDocument, deleteDocument, addGalleryImage, updateGalleryImage, deleteGalleryImage, } from "../controller/clinic.controller.js";
+import { getClinics, getClinicById, getRequirementsByClinic, postRequirement, updateRequirement, deleteRequirement, getPitchesByRequirement, acceptPitch, rejectPitch, getRequirementById, getDashboardOverview, getConnections, getConnectedDoctors, uploadDocument, deleteDocument, addGalleryImage, updateGalleryImage, deleteGalleryImage, getMeetingsByClinic, } from "../controller/clinic.controller.js";
 import { getDoctorsByLocationForClinic } from "../controller/doctor.controller.js";
 const router = Router();
 router.get("/get-doctors-by-location", getDoctorsByLocationForClinic);
 router.get("/get-clinics", getClinics);
 router.get("/get-clinic/:clinicId", getClinicById);
 router.get("/get-requirements-by-clinic/:clinicId", getRequirementsByClinic);
+router.get("/get-meetings/:clinicId", getMeetingsByClinic);
 router.get("/get-requirement/:requirementId", getRequirementById);
 router.post("/post-requirement", postRequirement);
 router.patch("/update-requirement/:requirementId", updateRequirement);

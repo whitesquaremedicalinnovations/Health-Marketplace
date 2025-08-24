@@ -36,7 +36,6 @@ const navLinks = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/requirements', label: 'Find Jobs', icon: Hospital },
   { href: '/applications', label: 'My Applications', icon: FileText },
-  { href: '/search-clinics', label: 'Search Clinics', icon: Stethoscope },
   { href: '/connections', label: 'Active Positions', icon: Users },
   { href: '/patients', label: 'Patients', icon: Users },
   { href: '/chat', label: 'Chat', icon: MessageCircle },

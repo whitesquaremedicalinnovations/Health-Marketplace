@@ -10,7 +10,8 @@ import {
 } from "react-native";
 import { useState } from "react";
 import { useRouter } from "expo-router";
-import { useUser } from "@clerk/clerk-expo";
+import { useUser, useAuth } from "@clerk/clerk-expo";
+import { Redirect } from "expo-router";
 import { Picker } from "@react-native-picker/picker";
 import { Briefcase } from "lucide-react-native";
 import Toast from "react-native-toast-message";
@@ -51,6 +52,7 @@ enum DoctorSpecialization {
 
 export default function CreateRequirementScreen() {
   const { user } = useUser();
+  const { isSignedIn, isLoaded } = useAuth();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -92,6 +94,20 @@ export default function CreateRequirementScreen() {
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  // Show loading indicator while Clerk is initializing
+  if (!isLoaded) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC' }}>
+        <ActivityIndicator size="large" color="#2563EB" />
+      </View>
+    );
+  }
+
+  // Redirect to home if not signed in
+  if (!isSignedIn) {
+    return <Redirect href="/(auth)/home" />;
   }
 
   return (

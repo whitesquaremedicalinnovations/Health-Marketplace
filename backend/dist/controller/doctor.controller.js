@@ -150,7 +150,7 @@ export const getClinicsByLocation = async (req, res) => {
 };
 export const getRequirementsByLocation = async (req, res) => {
     try {
-        const { lat, lng, radius, sortBy, specialization, type, search, doctorId } = req.query;
+        const { lat, lng, radius, sortBy, specialization, type, search, doctorId, experienceLevel } = req.query;
         let requirements = await prisma.jobRequirement.findMany({
             where: {
                 requirementStatus: 'POSTED'
@@ -177,9 +177,10 @@ export const getRequirementsByLocation = async (req, res) => {
         if (doctorId) {
             requirements = requirements.filter(req => req.pitches.length === 0);
         }
-        // Filter by specialization
+        // Filter by specialization (support multiple specializations)
         if (specialization && specialization !== 'all') {
-            requirements = requirements.filter(req => req.specialization === specialization);
+            const specializations = specialization.split(',');
+            requirements = requirements.filter(req => req.specialization && specializations.includes(req.specialization));
         }
         // Filter by type
         if (type && type !== 'all') {
@@ -424,16 +425,22 @@ export const getMyAcceptedPitches = asyncHandler(async (req, res) => {
             connectedAt: 'desc'
         }
     });
-    const connectionsData = acceptedWork.map(work => ({
+    const uniqueClinicsMap = new Map();
+    for (const work of acceptedWork) {
+        if (!uniqueClinicsMap.has(work.clinic.id)) {
+            uniqueClinicsMap.set(work.clinic.id, work);
+        }
+    }
+    const uniqueConnectionsData = Array.from(uniqueClinicsMap.values()).map(work => ({
         id: work.id,
         connectedAt: work.connectedAt,
         clinic: {
             ...work.clinic,
             profileImage: work.clinic.clinicProfileImage?.docUrl || null,
         },
-        job: work.job,
+        job: work.job, // or you can remove job if you're only interested in clinics
     }));
-    ResponseHelper.success(res, { connections: connectionsData }, "Connected clinics fetched successfully");
+    ResponseHelper.success(res, { connections: uniqueConnectionsData }, "Connected clinics fetched successfully");
 });
 // Add a dashboard overview for doctors
 export const getDoctorDashboardOverview = async (req, res) => {
@@ -621,6 +628,102 @@ export const getDoctorsByLocationForClinic = async (req, res) => {
             distance: lat && lng && doctor.latitude && doctor.longitude ? getDistance(parseFloat(lat), parseFloat(lng), doctor.latitude, doctor.longitude) : undefined,
         }));
         res.status(200).json({ doctors: doctorsData });
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Something went wrong" });
+    }
+};
+export const getMeetings = async (req, res) => {
+    try {
+        const { doctorId } = req.params;
+        const { date } = req.query;
+        let meetings = [];
+        if (typeof (date) === 'string') {
+            meetings = await prisma.acceptedWork.findMany({
+                where: {
+                    doctorId: doctorId,
+                    connectedAt: {
+                        gte: new Date(date)
+                    }
+                },
+                include: {
+                    clinic: {
+                        select: {
+                            clinicName: true,
+                        }
+                    },
+                    job: {
+                        select: {
+                            title: true,
+                            date: true,
+                            clinic: {
+                                select: {
+                                    clinicAddress: true,
+                                    latitude: true,
+                                    longitude: true
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        else {
+            meetings = await prisma.acceptedWork.findMany({
+                where: {
+                    doctorId: doctorId,
+                },
+                include: {
+                    clinic: {
+                        select: {
+                            clinicName: true,
+                        }
+                    },
+                    job: {
+                        select: {
+                            title: true,
+                            date: true,
+                            clinic: {
+                                select: {
+                                    clinicName: true,
+                                    clinicAddress: true,
+                                    latitude: true,
+                                    longitude: true
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        const response = meetings.map((meeting) => {
+            // Format the job date if it exists
+            const jobDate = meeting.job.date ?
+                new Date(meeting.job.date).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                }) : null;
+            // Format the job time if date exists
+            const jobTime = meeting.job.date ?
+                new Date(meeting.job.date).toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                }) : null;
+            return {
+                id: meeting.id,
+                title: meeting.job.title,
+                clinic: meeting.clinic.clinicName,
+                jobDate: jobDate,
+                jobTime: jobTime,
+                jobLocation: meeting.job.clinic.clinicAddress,
+                jobLatitude: meeting.job.clinic.latitude,
+                jobLongitude: meeting.job.clinic.longitude,
+            };
+        });
+        res.status(200).json({ meetings: response });
     }
     catch (error) {
         console.error(error);

@@ -84,6 +84,7 @@ interface ChatInterfaceProps {
   patient: Patient;
   messages: ChatMessage[];
   messagesLoading: boolean;
+  chatLoading?: boolean;
   onSendMessage: (messageContent: string, attachments?: { url: string; filename: string; type: string }[]) => void;
   onBack: () => void;
   currentUserId: string;
@@ -94,6 +95,7 @@ export default function ChatInterface({
   patient,
   messages,
   messagesLoading,
+  chatLoading = false,
   onSendMessage,
   onBack,
   currentUserId
@@ -230,6 +232,74 @@ export default function ChatInterface({
     groups[date].push(message);
     return groups;
   }, {});
+
+  // Show loading state for entire chat
+  if (chatLoading) {
+    return (
+      <div className="flex flex-col h-[92vh] bg-gray-50 dark:bg-gray-900">
+        {/* Loading Header */}
+        <div className="bg-white dark:bg-gray-800 border-b dark:border-gray-700 p-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={onBack}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white md:hidden"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            
+            <div className="flex items-center gap-3 flex-1">
+              <div className="flex items-center gap-2">
+                <div className="h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
+                <Building2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              </div>
+              
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-32" />
+                  <span className="text-gray-400 dark:text-gray-500">•</span>
+                  <div className="flex items-center gap-1">
+                    <User className="h-3 w-3 text-gray-500 dark:text-gray-400" />
+                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-24" />
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-16" />
+                  </div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-12" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Loading Messages Area */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <Loading variant="pulse" className="mx-auto mb-4" />
+              <p className="text-gray-500 dark:text-gray-400 text-sm">Loading chat...</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Loading Message Input */}
+        <div className="bg-white dark:bg-gray-800 border-t dark:border-gray-700 p-4">
+          <div className="flex items-end gap-2">
+            <div className="h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
+            <div className="flex-1">
+              <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
+            </div>
+            <div className="h-12 w-12 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-[92vh] bg-gray-50 dark:bg-gray-900">

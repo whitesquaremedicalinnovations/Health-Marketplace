@@ -42,7 +42,8 @@ export default function SignUpScreen() {
       const attempt = await signUp.attemptEmailAddressVerification({ code });
       if (attempt.status === 'complete') {
         await setActive({ session: attempt.createdSessionId });
-        router.replace('/');
+        // Use push instead of replace for more reliable navigation
+        router.push('/(onboarding)');
       }
     } catch (err) {
       console.error(err);
@@ -57,7 +58,8 @@ export default function SignUpScreen() {
       });
       if (createdSessionId && activate) {
         await activate({ session: createdSessionId });
-        router.replace('/');
+        // Use push instead of replace for more reliable navigation
+        router.push('/(onboarding)');
       }
     } catch (err) {
       console.error(err);

@@ -27,10 +27,12 @@ import {
   MessageSquare,
   MapPin,
   Heart,
+  Expand,
 } from "lucide-react";
 import { Loading } from "@/components/ui/loading";
 import PatientChatOverview from "@/components/dashboard/patient-chat-overview";
 import DoctorPatientAnalyticsOverview from "@/components/dashboard/patient-analytics-overview";
+import MeetingCalendar from "@/components/calendar";
 
 interface Overview {
   totalApplications: number;
@@ -68,7 +70,7 @@ export default function Dashboard() {
   const { userId } = useAuth();
   const [overview, setOverview] = useState<Overview | null>(null);
   const router = useRouter();
-
+  const [isExpanded, setIsExpanded] = useState(false);
   useEffect(() => {
     if (userId) {
       axiosInstance
@@ -171,68 +173,33 @@ export default function Dashboard() {
             </CardFooter>
           </Card>
 
-          <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-emerald-50 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="p-3 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl shadow-lg">
-                  <CheckCircle className="h-6 w-6 text-white" />
-                </div>
-                <Badge variant="secondary" className="bg-emerald-100 text-emerald-800">
-                  Working
-                </Badge>
-              </div>
-              <CardTitle className="text-gray-900">Active Positions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-4xl font-bold text-gray-900 mb-2">
-                {overview.totalConnections}
-              </div>
-              <p className="text-gray-600 text-sm">
-                Currently working with clinics
-              </p>
-            </CardContent>
-            <CardFooter>
-              <Button 
-                variant="link" 
-                className="p-0 h-auto text-emerald-600 hover:text-emerald-700" 
-                onClick={() => router.push("/connections")}
-              >
-                View Jobs <ArrowRight className="h-4 w-4 ml-1" />
-              </Button>
-            </CardFooter>
-          </Card>
-
-          <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-purple-50 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg">
-                  <Briefcase className="h-6 w-6 text-white" />
-                </div>
-                <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-                  Available
-                </Badge>
-              </div>
-              <CardTitle className="text-gray-900">New Opportunities</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-4xl font-bold text-gray-900 mb-2">
-                {overview.availableJobs}
-              </div>
-              <p className="text-gray-600 text-sm">
-                Jobs available in your area
-              </p>
-            </CardContent>
-            <CardFooter>
-              <Button 
-                variant="link" 
-                className="p-0 h-auto text-purple-600 hover:text-purple-700" 
-                onClick={() => router.push("/jobs")}
-              >
-                Browse Jobs <ArrowRight className="h-4 w-4 ml-1" />
-              </Button>
-            </CardFooter>
-          </Card>
+          <div className="md:col-span-2 relative">
+            <div className="absolute top-0 right-0" onClick={() => setIsExpanded(!isExpanded)}>
+              <Expand className="h-6 w-6 text-gray-500 hover:text-gray-700 cursor-pointer" />
+            </div>
+            <MeetingCalendar />
+          </div>
         </div>
+        {isExpanded && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg shadow-2xl max-w-7xl w-full max-h-[95vh] overflow-auto">
+              <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 className="text-lg font-semibold">Calendar View</h3>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setIsExpanded(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ✕
+                </Button>
+              </div>
+              <div className="p-4">
+                <MeetingCalendar size="lg"/>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Charts Section */}
         <div className="grid lg:grid-cols-2 gap-8 mb-12">

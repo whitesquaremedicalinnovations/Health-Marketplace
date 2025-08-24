@@ -4,10 +4,11 @@ import { axiosInstance } from '@/lib/axios';
 
 interface GooglePlacesAutocompleteProps {
   onPlaceSelect: (place: any) => void;
+  initialAddress?: string;
 }
 
-export default function GooglePlacesAutocomplete({ onPlaceSelect }: GooglePlacesAutocompleteProps) {
-  const [query, setQuery] = useState('');
+export default function GooglePlacesAutocomplete({ onPlaceSelect, initialAddress }: GooglePlacesAutocompleteProps) {
+  const [query, setQuery] = useState(initialAddress || '');
   const [predictions, setPredictions] = useState([]);
 
   const handleInputChange = async (text: string) => {

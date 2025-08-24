@@ -84,6 +84,7 @@ export default function PatientsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [genderFilter, setGenderFilter] = useState("all");
+  const [assignedDoctorFilter, setAssignedDoctorFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
 
   // Dialog states
@@ -153,8 +154,18 @@ export default function PatientsPage() {
 
     const matchesStatus = statusFilter === "all" || patient.status === statusFilter;
     const matchesGender = genderFilter === "all" || patient.gender === genderFilter;
+    
+    // Filter by assigned doctor
+    let matchesAssignedDoctor = true;
+    if (assignedDoctorFilter !== "all") {
+      if (assignedDoctorFilter === "unassigned") {
+        matchesAssignedDoctor = patient.assignedDoctors.length === 0;
+      } else {
+        matchesAssignedDoctor = patient.assignedDoctors.some(doctor => doctor.id === assignedDoctorFilter);
+      }
+    }
 
-    return matchesSearch && matchesStatus && matchesGender;
+    return matchesSearch && matchesStatus && matchesGender && matchesAssignedDoctor;
   }).sort((a, b) => {
     switch (sortBy) {
       case "newest":
@@ -202,6 +213,7 @@ export default function PatientsPage() {
     setSearchTerm("");
     setStatusFilter("all");
     setGenderFilter("all");
+    setAssignedDoctorFilter("all");
     setSortBy("newest");
   };
 
@@ -408,10 +420,13 @@ export default function PatientsPage() {
           setStatusFilter={setStatusFilter}
           genderFilter={genderFilter}
           setGenderFilter={setGenderFilter}
+          assignedDoctorFilter={assignedDoctorFilter}
+          setAssignedDoctorFilter={setAssignedDoctorFilter}
           sortBy={sortBy}
           setSortBy={setSortBy}
           filteredCount={filteredPatients.length}
           totalCount={patients.length}
+          connectedDoctors={connectedDoctors}
           onCreatePatient={() => setShowCreateDialog(true)}
           onClearFilters={clearFilters}
         />
@@ -424,12 +439,12 @@ export default function PatientsPage() {
                 <Users className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-300 mb-2">No Patients Found</h3>
                 <p className="text-gray-500 dark:text-gray-400 mb-6">
-                  {searchTerm || statusFilter !== "all" || genderFilter !== "all"
+                  {searchTerm || statusFilter !== "all" || genderFilter !== "all" || assignedDoctorFilter !== "all"
                     ? "Try adjusting your filters to see more patients"
                     : "Start by adding your first patient"
                   }
                 </p>
-                {!searchTerm && statusFilter === "all" && genderFilter === "all" && (
+                {!searchTerm && statusFilter === "all" && genderFilter === "all" && assignedDoctorFilter === "all" && (
                   <div
                     onClick={() => setShowCreateDialog(true)}
                     className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 dark:from-blue-500 dark:to-indigo-500 text-white rounded-lg cursor-pointer transition-all"

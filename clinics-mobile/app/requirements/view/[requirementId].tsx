@@ -6,7 +6,7 @@ import {
   View,
 } from "react-native";
 import { useEffect, useState } from "react";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, Briefcase, Calendar, Clock, Eye, MapPin, Users } from "lucide-react-native";
 import { axiosInstance } from "@/lib/axios";
 import Toast from "react-native-toast-message";
@@ -56,15 +56,44 @@ export default function ViewRequirementScreen() {
   }
 
   if (!requirement) {
-    return <Text>Requirement not found</Text>;
+    return (
+      <View>
+      <Stack.Screen 
+              options={
+                {
+                  headerTitle: "View Requirement",
+                  headerStyle: {
+                    backgroundColor: "#2563EB"
+                  },
+                  headerTitleStyle: {
+                    color: "white"
+                  }
+                }
+              }
+              />
+        <View className="flex-1 justify-center items-center">
+          <Text>Requirement not found</Text>
+        </View>
+      </View>
+    );
   }
 
   return (
     <ScrollView className="flex-1 bg-gray-50">
+      <Stack.Screen 
+            options={
+                {
+                    headerTitle: "View Requirement",
+                    headerStyle: {
+                      backgroundColor: "#2563EB"
+                    },
+                    headerTitleStyle: {
+                      color: "white"
+                    }
+                }
+            }
+        />
       <View className="p-4">
-        <TouchableOpacity onPress={() => router.back()} className="mb-4">
-          <ArrowLeft size={24} color="black" />
-        </TouchableOpacity>
         
         <View className="bg-indigo-600 rounded-xl p-6 shadow-lg mb-6">
           <Text className="text-3xl font-bold text-white">{requirement.title}</Text>

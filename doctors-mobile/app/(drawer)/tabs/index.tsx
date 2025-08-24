@@ -36,6 +36,7 @@ import {
   Building,
 } from "lucide-react-native";
 import Chart from "../../../components/Chart";
+import DashboardCalendarMap from "../../../components/dashboard-calendar-map";
 
 import { getDashboardOverview } from "../../../lib/utils";
 
@@ -82,7 +83,7 @@ export default function DashboardScreen() {
     if (user?.id) {
       try {
         // Use doctor-specific dashboard endpoint
-        const data = await getDashboardOverview(user.id, 'doctor');
+        const data = await getDashboardOverview(user.id);
         const overviewWithDefaults = {
           ...data,
           applicationsByStatus: data?.applicationsByStatus || [],
@@ -181,7 +182,7 @@ export default function DashboardScreen() {
       }}
     >
       <LinearGradient
-        colors={gradientColors}
+        colors={gradientColors as any}
         style={{ padding: 20, minHeight: 120 }}
       >
         <View className="flex-row justify-between items-start mb-3">
@@ -259,6 +260,9 @@ export default function DashboardScreen() {
           </View>
         </LinearGradient>
 
+        {/* Calendar Map Section */}
+        <DashboardCalendarMap />
+
         <View style={{ padding: 20, paddingTop: 30 }}>
           {/* Enhanced Statistics Cards */}
           <View className="mb-8">
@@ -330,7 +334,7 @@ export default function DashboardScreen() {
                   <Text className="text-xl font-semibold text-gray-900">Recent Applications</Text>
                 </View>
                 <TouchableOpacity 
-                  onPress={() => router.push("/(drawer)/applications")}
+                  onPress={() => router.push("/(drawer)/tabs/applications")}
                   className="bg-blue-50 rounded-lg px-3 py-2"
                 >
                   <Text className="text-blue-600 font-medium text-sm">See All</Text>
@@ -447,8 +451,8 @@ export default function DashboardScreen() {
             <Text className="text-2xl font-bold text-gray-900 mb-4">Quick Actions</Text>
             <View className="flex-row flex-wrap gap-3">
               <TouchableOpacity 
-                onPress={() => router.push("/(drawer)/jobs")}
-                className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-4 flex-row items-center flex-1 min-w-[45%]"
+                onPress={() => router.push("/(drawer)/tabs/jobs")}
+                className="bg-blue-600 rounded-xl p-4 flex-row items-center flex-1 min-w-[45%]"
               >
                 <Briefcase size={20} color="white" />
                 <Text className="text-white font-medium ml-2">Find New Jobs</Text>
@@ -456,15 +460,15 @@ export default function DashboardScreen() {
               
               <TouchableOpacity 
                 onPress={() => router.push("/(drawer)/profile")}
-                className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-4 flex-row items-center flex-1 min-w-[45%]"
+                className="bg-purple-600 rounded-xl p-4 flex-row items-center flex-1 min-w-[45%]"
               >
                 <Users size={20} color="white" />
                 <Text className="text-white font-medium ml-2">Update Profile</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
-                onPress={() => router.push("/(drawer)/applications")}
-                className="bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-xl p-4 flex-row items-center flex-1 min-w-[45%]"
+                onPress={() => router.push("/(drawer)/tabs/applications")}
+                className="bg-emerald-600 rounded-xl p-4 flex-row items-center flex-1 min-w-[45%]"
               >
                 <MessageSquare size={20} color="white" />
                 <Text className="text-white font-medium ml-2">My Applications</Text>
@@ -472,10 +476,18 @@ export default function DashboardScreen() {
               
               <TouchableOpacity 
                 onPress={() => router.push("/(drawer)/connections")}
-                className="bg-gradient-to-r from-pink-500 to-pink-600 rounded-xl p-4 flex-row items-center flex-1 min-w-[45%]"
+                className="bg-pink-600 rounded-xl p-4 flex-row items-center flex-1 min-w-[45%]"
               >
                 <Heart size={20} color="white" />
                 <Text className="text-white font-medium ml-2">My Work History</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                onPress={() => router.push("/(drawer)/calendar" as any)}
+                className="bg-orange-600 rounded-xl p-4 flex-row items-center flex-1 min-w-[45%]"
+              >
+                <Calendar size={20} color="white" />
+                <Text className="text-white font-medium ml-2">Calendar</Text>
               </TouchableOpacity>
             </View>
           </View>

@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
 import { 
   MessageSquare, 
@@ -22,7 +24,9 @@ import {
   AlertCircle,
   Send,
   Filter,
-  ArrowRight
+  ArrowRight,
+  Search,
+  X
 } from "lucide-react";
 import { Loading } from "@/components/ui/loading";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -52,6 +56,17 @@ interface Application {
   };
 }
 
+interface Filters {
+  status: string;
+  jobType: string;
+  specialization: string;
+  location: string;
+  clinic: string;
+  searchQuery: string;
+  dateFrom: string;
+  dateTo: string;
+}
+
 export default function MyApplications() {
   const { userId } = useAuth();
   const router = useRouter();
@@ -59,7 +74,17 @@ export default function MyApplications() {
   const [loading, setLoading] = useState(true);
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
   const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState<Filters>({
+    status: "all",
+    jobType: "all",
+    specialization: "all",
+    location: "all",
+    clinic: "all",
+    searchQuery: "",
+    dateFrom: "",
+    dateTo: ""
+  });
 
   const fetchApplications = useCallback(async () => {
     if (!userId) return;
@@ -140,9 +165,47 @@ export default function MyApplications() {
     return spec.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
   };
 
-  const filteredApplications = applications.filter(app => 
-    statusFilter === "all" || app.status === statusFilter
-  );
+  // Get unique values for filter options
+  const uniqueJobTypes = [...new Set(applications.map(app => app.jobRequirement.type))];
+  const uniqueSpecializations = [...new Set(applications.map(app => app.jobRequirement.specialization).filter((spec): spec is string => spec !== null))];
+  const uniqueLocations = [...new Set(applications.map(app => app.jobRequirement.location))];
+  const uniqueClinics = [...new Set(applications.map(app => app.jobRequirement.clinic.clinicName))];
+
+  // Filter applications based on all filters
+  const filteredApplications = applications.filter(app => {
+    // Status filter
+    if (filters.status !== "all" && app.status !== filters.status) return false;
+    
+    // Job type filter
+    if (filters.jobType !== "all" && app.jobRequirement.type !== filters.jobType) return false;
+    
+    // Specialization filter
+    if (filters.specialization !== "all" && app.jobRequirement.specialization !== filters.specialization) return false;
+    
+    // Location filter
+    if (filters.location !== "all" && app.jobRequirement.location !== filters.location) return false;
+    
+    // Clinic filter
+    if (filters.clinic !== "all" && app.jobRequirement.clinic.clinicName !== filters.clinic) return false;
+    
+    // Search query filter
+    if (filters.searchQuery) {
+      const query = filters.searchQuery.toLowerCase();
+      const matchesTitle = app.jobRequirement.title.toLowerCase().includes(query);
+      const matchesClinic = app.jobRequirement.clinic.clinicName.toLowerCase().includes(query);
+      const matchesDescription = app.jobRequirement.description.toLowerCase().includes(query);
+      if (!matchesTitle && !matchesClinic && !matchesDescription) return false;
+    }
+    
+    // Date range filter
+    if (filters.dateFrom || filters.dateTo) {
+      const applicationDate = new Date(app.createdAt);
+      if (filters.dateFrom && applicationDate < new Date(filters.dateFrom)) return false;
+      if (filters.dateTo && applicationDate > new Date(filters.dateTo)) return false;
+    }
+    
+    return true;
+  });
 
   const statusCounts = {
     all: applications.length,
@@ -151,6 +214,21 @@ export default function MyApplications() {
     REJECTED: applications.filter(app => app.status === 'REJECTED').length,
     WITHDRAWN: applications.filter(app => app.status === 'WITHDRAWN').length,
   };
+
+  const clearFilters = () => {
+    setFilters({
+      status: "all",
+      jobType: "all",
+      specialization: "all",
+      location: "all",
+      clinic: "all",
+      searchQuery: "",
+      dateFrom: "",
+      dateTo: ""
+    });
+  };
+
+  const hasActiveFilters = Object.values(filters).some(value => value !== "all" && value !== "");
 
   if (loading) {
     return <Loading variant="page" text="Loading your applications..." />;
@@ -194,7 +272,7 @@ export default function MyApplications() {
           </div>
         </div>
 
-        {/* Filter */}
+        {/* Filter Section */}
         <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm mb-8">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -204,31 +282,171 @@ export default function MyApplications() {
                 </div>
                 <CardTitle className="text-xl text-gray-900">Filter Applications</CardTitle>
               </div>
-              <Button
-                onClick={() => router.push("/requirements")}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-              >
-                <Send className="h-4 w-4 mr-2" />
-                Find New Jobs
-              </Button>
+              <div className="flex items-center gap-3">
+                {hasActiveFilters && (
+                  <Button
+                    variant="outline"
+                    onClick={clearFilters}
+                    className="text-red-600 border-red-200 hover:bg-red-50"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Clear Filters
+                  </Button>
+                )}
+                <Button
+                  onClick={() => setShowFilters(!showFilters)}
+                  variant="outline"
+                  className="border-blue-200 text-blue-600 hover:bg-blue-50"
+                >
+                  <Filter className="h-4 w-4 mr-2" />
+                  {showFilters ? "Hide Filters" : "Show Filters"}
+                </Button>
+                <Button
+                  onClick={() => router.push("/requirements")}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  Find New Jobs
+                </Button>
+              </div>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="h-12">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status ({statusCounts.all})</SelectItem>
-                  <SelectItem value="PENDING">Pending ({statusCounts.PENDING})</SelectItem>
-                  <SelectItem value="ACCEPTED">Accepted ({statusCounts.ACCEPTED})</SelectItem>
-                  <SelectItem value="REJECTED">Rejected ({statusCounts.REJECTED})</SelectItem>
-                  <SelectItem value="WITHDRAWN">Withdrawn ({statusCounts.WITHDRAWN})</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
+          
+          {showFilters && (
+            <CardContent className="space-y-6">
+              {/* Search Bar */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search by job title, clinic name, or description..."
+                  value={filters.searchQuery}
+                  onChange={(e) => setFilters(prev => ({ ...prev, searchQuery: e.target.value }))}
+                  className="pl-10 h-12"
+                />
+              </div>
+
+              {/* Basic Filters */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">Status</Label>
+                  <Select value={filters.status} onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}>
+                    <SelectTrigger className="h-12">
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status ({statusCounts.all})</SelectItem>
+                      <SelectItem value="PENDING">Pending ({statusCounts.PENDING})</SelectItem>
+                      <SelectItem value="ACCEPTED">Accepted ({statusCounts.ACCEPTED})</SelectItem>
+                      <SelectItem value="REJECTED">Rejected ({statusCounts.REJECTED})</SelectItem>
+                      <SelectItem value="WITHDRAWN">Withdrawn ({statusCounts.WITHDRAWN})</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">Job Type</Label>
+                  <Select value={filters.jobType} onValueChange={(value) => setFilters(prev => ({ ...prev, jobType: value }))}>
+                    <SelectTrigger className="h-12">
+                      <SelectValue placeholder="Filter by job type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Types</SelectItem>
+                      {uniqueJobTypes.map(type => (
+                        <SelectItem key={type} value={type}>
+                          {formatJobType(type)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">Specialization</Label>
+                  <Select value={filters.specialization} onValueChange={(value) => setFilters(prev => ({ ...prev, specialization: value }))}>
+                    <SelectTrigger className="h-12">
+                      <SelectValue placeholder="Filter by specialization" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Specializations</SelectItem>
+                      {uniqueSpecializations.map(spec => (
+                        <SelectItem key={spec} value={spec}>
+                          {formatSpecialization(spec)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">Location</Label>
+                  <Select value={filters.location} onValueChange={(value) => setFilters(prev => ({ ...prev, location: value }))}>
+                    <SelectTrigger className="h-12">
+                      <SelectValue placeholder="Filter by location" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Locations</SelectItem>
+                      {uniqueLocations.map(location => (
+                        <SelectItem key={location} value={location}>
+                          {location}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">Clinic</Label>
+                  <Select value={filters.clinic} onValueChange={(value) => setFilters(prev => ({ ...prev, clinic: value }))}>
+                    <SelectTrigger className="h-12">
+                      <SelectValue placeholder="Filter by clinic" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Clinics</SelectItem>
+                      {uniqueClinics.map(clinic => (
+                        <SelectItem key={clinic} value={clinic}>
+                          {clinic}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Date Range Filters */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">From Date</Label>
+                  <Input
+                    type="date"
+                    value={filters.dateFrom}
+                    onChange={(e) => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
+                    className="h-12"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">To Date</Label>
+                  <Input
+                    type="date"
+                    value={filters.dateTo}
+                    onChange={(e) => setFilters(prev => ({ ...prev, dateTo: e.target.value }))}
+                    className="h-12"
+                  />
+                </div>
+              </div>
+
+              {/* Results Summary */}
+              <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                <p className="text-sm text-gray-600">
+                  Showing {filteredApplications.length} of {applications.length} applications
+                </p>
+                {hasActiveFilters && (
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                    {Object.values(filters).filter(value => value !== "all" && value !== "").length} active filters
+                  </Badge>
+                )}
+              </div>
+            </CardContent>
+          )}
         </Card>
 
         {/* Applications List */}
@@ -239,20 +457,30 @@ export default function MyApplications() {
                 <MessageSquare className="h-12 w-12 text-blue-600" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                {statusFilter === "all" ? "No Applications Yet" : `No ${statusFilter.toLowerCase()} Applications`}
+                {hasActiveFilters ? "No Applications Match Your Filters" : "No Applications Yet"}
               </h3>
               <p className="text-gray-600 mb-6">
-                {statusFilter === "all" 
-                  ? "Start applying for positions to track your applications here."
-                  : `You don't have any ${statusFilter.toLowerCase()} applications at the moment.`
+                {hasActiveFilters 
+                  ? "Try adjusting your filters or clear them to see all applications."
+                  : "Start applying for positions to track your applications here."
                 }
               </p>
-              <Button 
-                onClick={() => router.push("/requirements")}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-              >
-                Browse Available Jobs
-              </Button>
+              <div className="flex gap-3 justify-center">
+                {hasActiveFilters && (
+                  <Button 
+                    variant="outline"
+                    onClick={clearFilters}
+                  >
+                    Clear Filters
+                  </Button>
+                )}
+                <Button 
+                  onClick={() => router.push("/requirements")}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                >
+                  Browse Available Jobs
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ) : (

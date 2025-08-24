@@ -1,8 +1,27 @@
 import React from 'react';
 import { Drawer } from 'expo-router/drawer';
+import { Redirect } from 'expo-router';
+import { useAuth } from '@clerk/clerk-expo';
+import { View, ActivityIndicator } from 'react-native';
 import { CustomDrawerContent } from '../../components/CustomDrawerContent';
 
 export default function DrawerLayout() {
+  const { isSignedIn, isLoaded } = useAuth();
+
+  // Show loading indicator while Clerk is initializing
+  if (!isLoaded) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC' }}>
+        <ActivityIndicator size="large" color="#2563EB" />
+      </View>
+    );
+  }
+
+  // Redirect to home if not signed in
+  if (!isSignedIn) {
+    return <Redirect href="/(auth)/home" />;
+  }
+
   return (
     <Drawer 
       drawerContent={(props) => <CustomDrawerContent {...props} />}
@@ -59,11 +78,11 @@ export default function DrawerLayout() {
         }} 
       />
       <Drawer.Screen 
-        name="chat" 
+        name="calendar" 
         options={{ 
-          title: 'Messages',
-          drawerLabel: 'Messages',
-          headerTitle: 'Chat & Communication'
+          title: 'Calendar',
+          drawerLabel: 'Calendar',
+          headerTitle: 'Calendar & Schedule'
         }} 
       />
       <Drawer.Screen 

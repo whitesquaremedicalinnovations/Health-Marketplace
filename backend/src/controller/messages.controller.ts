@@ -7,15 +7,10 @@ import { ErrorCode } from "../types/errors.ts";
 
 export const getMessages = asyncHandler(async (req: Request, res: Response) => {
   const { chatId } = req.params;
-  const { page = 1, limit = 50 } = req.query;
 
   if (!chatId) {
     throw new AppError(ErrorCode.VALIDATION_ERROR, "Chat ID is required", 400);
   }
-
-  const pageNum = parseInt(page as string);
-  const limitNum = parseInt(limit as string);
-  const skip = (pageNum - 1) * limitNum;
 
   // Verify chat exists
   const chat = await prisma.chat.findUnique({
@@ -46,8 +41,6 @@ export const getMessages = asyncHandler(async (req: Request, res: Response) => {
       attachments: true
     },
     orderBy: { createdAt: 'asc' },
-    skip,
-    take: limitNum
   });
 
   const totalMessages = await prisma.message.count({
@@ -55,15 +48,7 @@ export const getMessages = asyncHandler(async (req: Request, res: Response) => {
   });
 
   const response = {
-    messages,
-    pagination: {
-      page: pageNum,
-      limit: limitNum,
-      total: totalMessages,
-      totalPages: Math.ceil(totalMessages / limitNum),
-      hasNext: pageNum < Math.ceil(totalMessages / limitNum),
-      hasPrev: pageNum > 1
-    }
+    messages
   };
 
   ResponseHelper.success(res, response, "Messages retrieved successfully");

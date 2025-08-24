@@ -385,7 +385,7 @@ export default function ChatClient() {
         content: messageContent,
         senderId: userId,
         senderType: 'clinic',
-        attachments
+        attachments: attachments || []
       };
 
       console.log(`🚀 Sending message via API:`, messageData);

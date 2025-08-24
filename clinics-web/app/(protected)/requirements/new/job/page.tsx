@@ -38,7 +38,7 @@ import { toast } from "sonner";
 const formSchema = z.object({
   title: z.string().min(2, "Title must be at least 2 characters."),
   description: z.string().min(10, "Description must be at least 10 characters."),
-  type: z.enum(["ONETIME", "FULLTIME", "PARTTIME"]),
+  type: z.enum(["FULLTIME", "PARTTIME"]),
   specialization: z.enum(Object.values(DoctorSpecialization) as [string, ...string[]]),
   date: z.date().optional(),
   additionalInformation: z.string().optional(),
@@ -54,7 +54,7 @@ export default function NewRequirement() {
     defaultValues: {
       title: "",
       description: "",
-      type: "ONETIME",
+      type: "FULLTIME",
     },
   });
 
@@ -90,10 +90,10 @@ export default function NewRequirement() {
                 </div>
                 <div>
                   <h1 className="text-4xl font-bold text-white mb-2">
-                    Post New Requirement
+                    Post Job Requirement
                   </h1>
                   <p className="text-blue-100 text-lg">
-                    Connect with qualified healthcare professionals
+                    Hire healthcare professionals for ongoing positions
                   </p>
                 </div>
               </div>
@@ -113,7 +113,7 @@ export default function NewRequirement() {
                   <FormItem>
                     <FormLabel>Title</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. Need a cardiologist" {...field} />
+                      <Input placeholder="e.g. Cardiologist position available" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -127,7 +127,7 @@ export default function NewRequirement() {
                     <FormLabel>Description</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Describe the requirement in detail"
+                        placeholder="Describe the job position in detail"
                         {...field}
                       />
                     </FormControl>
@@ -151,7 +151,6 @@ export default function NewRequirement() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="ONETIME">Onetime</SelectItem>
                         <SelectItem value="FULLTIME">Full-time</SelectItem>
                         <SelectItem value="PARTTIME">Part-time</SelectItem>
                       </SelectContent>
@@ -192,7 +191,7 @@ export default function NewRequirement() {
                 name="date"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Date (Optional)</FormLabel>
+                    <FormLabel>Start Date (Optional)</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>
@@ -206,7 +205,7 @@ export default function NewRequirement() {
                             {field.value ? (
                               format(field.value, "PPP")
                             ) : (
-                              <span>Pick a date</span>
+                              <span>Pick start date</span>
                             )}
                             <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                           </Button>
@@ -248,7 +247,7 @@ export default function NewRequirement() {
                   className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
                 >
                   {isSubmitting && <Loading variant="button" size="sm" className="mr-2" />}
-                  {isSubmitting ? "Posting..." : "Submit"}
+                  {isSubmitting ? "Posting..." : "Post Job"}
                 </Button>
                 <Button
                   type="button"

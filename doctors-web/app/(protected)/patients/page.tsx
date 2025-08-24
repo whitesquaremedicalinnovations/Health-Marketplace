@@ -24,6 +24,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Button } from "@/components/ui/button";
 import { MoreVertical } from "lucide-react";
 import FeedbackModal from "@/components/chat/feedbackModal";
+import PatientSearchFilters from "@/components/patients/patient-search-filters";
 import { toast } from "sonner";
 
 interface Patient {
@@ -92,6 +93,13 @@ export default function PatientsPage() {
   const [feedbacks, setFeedbacks] = useState<{id: string, feedback: string, createdAt: string}[]>([]);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
+  // Filter states
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [genderFilter, setGenderFilter] = useState("all");
+  const [clinicFilter, setClinicFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("newest");
+
   // Fetch data
   const fetchPatients = useCallback(async () => {
     try {
@@ -125,8 +133,35 @@ export default function PatientsPage() {
     }
   }, [userId, fetchPatients, fetchConnectedClinics]);
 
-  // Group patients by clinic
-  const patientsByClinic = patients.reduce((acc, patient) => {
+  // Filter and sort patients
+  const filteredPatients = patients.filter(patient => {
+    const matchesSearch = searchTerm === "" || 
+      patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      patient.phoneNumber.includes(searchTerm) ||
+      patient.address.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus = statusFilter === "all" || patient.status === statusFilter;
+    const matchesGender = genderFilter === "all" || patient.gender === genderFilter;
+    const matchesClinic = clinicFilter === "all" || patient.clinic.id === clinicFilter;
+
+    return matchesSearch && matchesStatus && matchesGender && matchesClinic;
+  }).sort((a, b) => {
+    switch (sortBy) {
+      case "newest":
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      case "oldest":
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      case "name":
+        return a.name.localeCompare(b.name);
+      case "status":
+        return a.status.localeCompare(b.status);
+      default:
+        return 0;
+    }
+  });
+
+  // Group filtered patients by clinic
+  const patientsByClinic = filteredPatients.reduce((acc, patient) => {
     const clinicId = patient.clinic.id;
     if (!acc[clinicId]) {
       acc[clinicId] = {
@@ -182,6 +217,14 @@ export default function PatientsPage() {
       toast("Failed to change status");
     }
   }
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setStatusFilter("all");
+    setGenderFilter("all");
+    setClinicFilter("all");
+    setSortBy("newest");
+  };
 
   if (loading) {
     return <Loading variant="page" text="Loading your patients..." />;
@@ -245,16 +288,42 @@ export default function PatientsPage() {
           </Card>
         </div>
 
+        {/* Search and Filters */}
+        <PatientSearchFilters
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
+          genderFilter={genderFilter}
+          setGenderFilter={setGenderFilter}
+          clinicFilter={clinicFilter}
+          setClinicFilter={setClinicFilter}
+          sortBy={sortBy}
+          setSortBy={setSortBy}
+          filteredCount={filteredPatients.length}
+          totalCount={patients.length}
+          connectedClinics={connectedClinics}
+          onClearFilters={clearFilters}
+        />
+
         {/* Patients by Clinic */}
         <div className="space-y-8">
           {Object.keys(patientsByClinic).length === 0 ? (
             <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm dark:bg-gray-800/80">
               <CardContent className="text-center py-16">
                 <Users className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-300 mb-2">No Patients Assigned</h3>
-                                 <p className="text-gray-500 dark:text-gray-400 mb-6">
-                   You don&apos;t have any patients assigned yet. Patients will appear here when clinics assign them to you.
-                 </p>
+                <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-300 mb-2">
+                  {searchTerm || statusFilter !== "all" || genderFilter !== "all" || clinicFilter !== "all"
+                    ? "No Patients Found"
+                    : "No Patients Assigned"
+                  }
+                </h3>
+                <p className="text-gray-500 dark:text-gray-400 mb-6">
+                  {searchTerm || statusFilter !== "all" || genderFilter !== "all" || clinicFilter !== "all"
+                    ? "Try adjusting your filters to see more patients"
+                    : "You don't have any patients assigned yet. Patients will appear here when clinics assign them to you."
+                  }
+                </p>
               </CardContent>
             </Card>
           ) : (

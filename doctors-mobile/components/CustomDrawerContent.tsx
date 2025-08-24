@@ -6,7 +6,7 @@ import { Link, useRouter } from 'expo-router';
 import { LogOut } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
-import { getClinic } from '@/lib/utils';
+import { getDoctor } from '@/lib/utils';
 
 interface Clinic {
   id: string;
@@ -61,9 +61,9 @@ export function CustomDrawerContent(props: any) {
   const fetchProfile = async () => {
     if (!user?.id) return;
     try {
-      const response = await getClinic(user.id);
-      const clinic = response.data?.success ? response.data.data : response.data.clinic;
-      setProfile(clinic || null);
+      const response = await getDoctor(user.id);
+      const doctor = response.data?.success ? response.data.data : response.data.doctor;
+      setProfile(doctor || null);
     } catch (error) {
       console.error('Failed to fetch profile:', error);
       setProfile(null);

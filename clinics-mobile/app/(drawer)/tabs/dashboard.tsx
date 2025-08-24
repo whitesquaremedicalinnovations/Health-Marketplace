@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -12,7 +12,6 @@ import {
   StatusBar,
   SafeAreaView,
 } from "react-native";
-import { useEffect, useState, useCallback } from "react";
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 
@@ -34,8 +33,10 @@ import {
   Bell,
 } from "lucide-react-native";
 import Chart from "../../../components/Chart";
+import DashboardCalendarMap from "../../../components/dashboard-calendar-map";
 
 import { getDashboardOverview } from "../../../lib/utils";
+import MeetingCalendar from '@/components/calendar';
 
 const { width, height } = Dimensions.get('window');
 
@@ -267,6 +268,10 @@ export default function DashboardScreen() {
             </View>
           </View>
         </LinearGradient>
+
+        {/* Calendar Map Section */}
+        {/* <DashboardCalendarMap /> */}
+        <MeetingCalendar />
 
         <View style={{ padding: 16, paddingTop: 24 }}>
           {/* Enhanced Statistics Cards */}
@@ -513,7 +518,7 @@ export default function DashboardScreen() {
               </TouchableOpacity>
               
               <TouchableOpacity 
-                onPress={() => router.push("/(drawer)/chat")}
+                onPress={() => router.push("/(drawer)/tabs/chat")}
                 className="bg-emerald-500 rounded-xl p-4 flex-row items-center flex-1 min-w-[45%]"
               >
                 <MessageSquare size={20} color="white" />
@@ -526,6 +531,14 @@ export default function DashboardScreen() {
               >
                 <Heart size={20} color="white" />
                 <Text className="text-white font-medium ml-2">My Team</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                onPress={() => router.push("/(drawer)/calendar" as any)}
+                className="bg-orange-500 rounded-xl p-4 flex-row items-center flex-1 min-w-[45%]"
+              >
+                <Calendar size={20} color="white" />
+                <Text className="text-white font-medium ml-2">Calendar</Text>
               </TouchableOpacity>
             </View>
           </View>

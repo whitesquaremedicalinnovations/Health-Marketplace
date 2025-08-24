@@ -10,8 +10,9 @@ import {
 import { useCallback, useEffect, useState } from "react";
 
 import { useUser } from "@clerk/clerk-expo";
-import { Picker } from "@react-native-picker/picker";
+import { Picker } from "@react-native-picker/picker"; 
 import Slider from "@react-native-community/slider";
+import * as Location from 'expo-location';
 import {
   Briefcase,
   LocateFixed,
@@ -19,12 +20,13 @@ import {
   Search,
   SlidersHorizontal,
   User as UserIcon,
+  X,
 } from "lucide-react-native";
 
-import { getClinic } from "../../lib/utils";
-import { getDoctorsByLocation } from "../../lib/utils";
+import { getClinic , getDoctorsByLocation } from "../../lib/utils";
 import { useRouter } from "expo-router";
 import GooglePlacesAutocomplete from "@/components/ui/google-places-autocomplete";
+import Toast from "react-native-toast-message";
 
 interface Doctor {
   id: string;
@@ -184,9 +186,61 @@ export default function SearchDoctorsScreen() {
     }
   };
 
-  const handleClearCustomLocation = () => {
-    setCustomLocation(null);
-    setCustomLocationAddress("");
+  const handleCurrentLocation = async () => {
+    try {
+      setLoading(true);
+      
+      // Request location permissions
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Toast.show({
+          type: 'error',
+          text1: 'Location Permission',
+          text2: 'Please enable location access to find doctors near you.',
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Get current position
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+
+      const { latitude, longitude } = location.coords;
+      
+      // Get address from coordinates
+      const addressResponse = await Location.reverseGeocodeAsync({
+        latitude,
+        longitude,
+      });
+
+      const address = addressResponse[0] 
+        ? `${addressResponse[0].street}, ${addressResponse[0].city}, ${addressResponse[0].region}`
+        : '';
+
+      // Set the current location
+      setCustomLocation({ lat: latitude, lng: longitude });
+      setCustomLocationAddress(address);
+      
+      Toast.show({
+        type: 'success',
+        text1: 'Location Updated',
+        text2: 'Using your current location to find doctors.',
+      });
+      
+      // Fetch doctors with the new location
+      await fetchClinicAndDoctors();
+    } catch (error) {
+      console.error('Error getting current location:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Location Error',
+        text2: 'Unable to get your current location. Please try again.',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const renderDoctorItem = ({ item }: { item: Doctor }) => (
@@ -258,12 +312,34 @@ export default function SearchDoctorsScreen() {
             <GooglePlacesAutocomplete onPlaceSelect={handlePlaceSelect} />
           </View>
           <TouchableOpacity
-            onPress={handleClearCustomLocation}
+            onPress={handleCurrentLocation}
             className="p-2 ml-2"
           >
             <LocateFixed color="#3b82f6" size={24} />
           </TouchableOpacity>
         </View>
+        
+        {/* Current Location Indicator */}
+        {customLocationAddress && (
+          <View className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+            <View className="flex-row items-center">
+              <MapPin color="#3b82f6" size={16} />
+              <Text className="ml-2 text-blue-700 text-sm flex-1">
+                Searching near: {customLocationAddress}
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setCustomLocation(null);
+                  setCustomLocationAddress("");
+                  fetchClinicAndDoctors();
+                }}
+                className="p-1"
+              >
+                <X color="#3b82f6" size={16} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
       </View>
 
       {showFilters && (
@@ -311,7 +387,7 @@ export default function SearchDoctorsScreen() {
             </Text>
             <View className="flex-row justify-between">
               <Slider
-                className="w-[48%]"
+                style={{ width: '48%' }}
                 minimumValue={0}
                 maximumValue={50}
                 step={1}
@@ -321,7 +397,7 @@ export default function SearchDoctorsScreen() {
                 }
               />
               <Slider
-                className="w-[48%]"
+                style={{ width: '48%' }}
                 minimumValue={0}
                 maximumValue={50}
                 step={1}

@@ -24,6 +24,7 @@ import {
 
 import { axiosInstance } from "../../lib/axios";
 import CommentSection from "../../components/comment-section";
+import { Stack } from 'expo-router';
 
 interface News {
   id: string;
@@ -35,7 +36,7 @@ interface News {
     likes: number;
     comments: number;
   };
-  likes: { clinicId: string }[];
+  likes: { doctorId: string }[];
 }
 
 export default function NewsDetail() {
@@ -55,7 +56,7 @@ export default function NewsDetail() {
         setLikeCount(response.data.news._count.likes);
         setLiked(
           response.data.news.likes.some(
-            (like: { clinicId: string }) => like.clinicId === user?.id
+            (like: { doctorId: string }) => like.doctorId === user?.id
           )
         );
       } catch (error) {
@@ -73,12 +74,11 @@ export default function NewsDetail() {
   const handleLike = async () => {
     try {
       const response = await axiosInstance.post(`/api/user/news/${newsId}/like`, {
-        clinicId: user?.id,
+        doctorId: user?.id,
       });
 
       if (response.data.message === "Liked") {
-        setLiked(true);
-        setLikeCount((prev) => prev + 1);
+      
       } else {
         setLiked(false);
         setLikeCount((prev) => prev - 1);
@@ -101,7 +101,24 @@ export default function NewsDetail() {
   };
 
   if (loading) {
-    return <ActivityIndicator className="flex-1" size="large" />;
+    return (
+    <View className='bg-white flex-1 justify-center items-center'>
+      <Stack.Screen 
+        options={{ 
+          headerTitle: `Loading`,
+          headerStyle: {
+            backgroundColor: '#3b82f6',
+          },
+          headerTitleStyle: {
+            fontSize: 18,
+            fontWeight: '700',
+            color: '#ffffff',
+          },
+        }} 
+      />
+      <ActivityIndicator className="flex-1" size="large" color="#3b82f6"/>
+    </View>
+    );
   }
 
   if (!news) {
@@ -128,6 +145,19 @@ export default function NewsDetail() {
 
   return (
     <ScrollView className="flex-1 bg-gray-50">
+        <Stack.Screen 
+          options={{ 
+            headerTitle: `News | ${news.title}`,
+            headerStyle: {
+              backgroundColor: '#3b82f6',
+            },
+            headerTitleStyle: {
+              fontSize: 18,
+              fontWeight: '700',
+              color: '#ffffff',
+            },
+          }} 
+        />
       <View className="p-4">
         <TouchableOpacity
           onPress={() => router.push("/(drawer)/news")}

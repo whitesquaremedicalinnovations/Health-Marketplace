@@ -3,9 +3,10 @@ import { axiosInstance } from "./axios";
 export const getClinic = async (clinicId: string) => {
   try {
     const response = await axiosInstance.get(`/api/clinic/get-clinic/${clinicId}`);
+    console.log(response)
     return response;
   } catch (error) {
-    console.error("Error fetching user data:", error);
+    console.log("Error fetching user data:", error);
     return { status: 404, data: null };
   }
 };
@@ -33,6 +34,7 @@ export const getDashboardOverview = async (clinicId: string) => {
 export const getRequirementsByClinic = async (clinicId: string) => {
   try {
     const response = await axiosInstance.get(`/api/clinic/get-requirements-by-clinic/${clinicId}`);
+    console.log(response)
     return response.data.requirements;
   } catch (error) {
     console.error("Error fetching requirements:", error);

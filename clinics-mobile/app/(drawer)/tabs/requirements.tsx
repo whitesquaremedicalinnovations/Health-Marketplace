@@ -1,3 +1,4 @@
+import React from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -36,6 +37,7 @@ import Toast from "react-native-toast-message";
 
 import { axiosInstance } from "../../../lib/axios";
 import { getRequirementsByClinic } from "../../../lib/utils";
+import RequirementTypeModal from "../../../components/requirement-type-modal";
 
 const { width } = Dimensions.get('window');
 
@@ -47,6 +49,7 @@ interface Requirement {
   createdAt: string;
   description?: string;
   specialization?: string;
+  preferredDate?: string;
 }
 
 export default function RequirementsScreen() {
@@ -58,6 +61,7 @@ export default function RequirementsScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedRequirement, setSelectedRequirement] =
     useState<Requirement | null>(null);
+  const [showTypeModal, setShowTypeModal] = useState(false);
 
   const fetchRequirements = useCallback(async () => {
     if (user?.id) {
@@ -125,11 +129,37 @@ export default function RequirementsScreen() {
   const getTypeIcon = (type: string) => {
     switch (type) {
       case "FULLTIME":
-        return <Briefcase className="h-4 w-4 text-blue-600" />;
       case "PARTTIME":
+        return <Briefcase className="h-4 w-4 text-purple-600" />;
+      case "ONETIME":
         return <Calendar className="h-4 w-4 text-blue-600" />;
       default:
         return <MapPin className="h-4 w-4 text-blue-600" />;
+    }
+  };
+
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case "FULLTIME":
+      case "PARTTIME":
+        return "bg-purple-100";
+      case "ONETIME":
+        return "bg-blue-100";
+      default:
+        return "bg-blue-100";
+    }
+  };
+
+  const getTypeLabel = (type: string) => {
+    switch (type) {
+      case "FULLTIME":
+        return "Full-time";
+      case "PARTTIME":
+        return "Part-time";
+      case "ONETIME":
+        return "Appointment";
+      default:
+        return type;
     }
   };
 
@@ -165,9 +195,23 @@ export default function RequirementsScreen() {
                 <Text className="text-white opacity-80 mt-1">
                   Manage your hiring needs
                 </Text>
+                <View className="flex-row items-center gap-4 mt-3">
+                  <View className="flex-row items-center">
+                    <View className="w-2 h-2 bg-emerald-400 rounded-full mr-2"></View>
+                    <Text className="text-white text-sm">
+                      {requirements.filter(r => r.requirementStatus === 'POSTED').length} Active
+                    </Text>
+                  </View>
+                  <View className="flex-row items-center">
+                    <View className="w-2 h-2 bg-blue-400 rounded-full mr-2"></View>
+                    <Text className="text-white text-sm">
+                      {requirements.filter(r => r.requirementStatus === 'COMPLETED').length} Completed
+                    </Text>
+                  </View>
+                </View>
               </View>
               <TouchableOpacity
-                onPress={() => router.push("/create-requirement")}
+                onPress={() => setShowTypeModal(true)}
                 className="bg-white p-3 rounded-full"
               >
                 <PlusCircle color="#3b82f6" size={24} />
@@ -186,7 +230,7 @@ export default function RequirementsScreen() {
                 professionals.
               </Text>
               <TouchableOpacity
-                onPress={() => router.push("/create-requirement")}
+                onPress={() => setShowTypeModal(true)}
                 className="bg-blue-600 px-6 py-3 rounded-full mt-6"
               >
                 <Text className="text-white font-semibold">
@@ -201,7 +245,7 @@ export default function RequirementsScreen() {
               renderItem={({ item }) => (
                 <View className="bg-white rounded-lg p-4 mb-4 shadow-md">
                   <View className="flex-row items-start">
-                    <View className="p-2 bg-blue-100 rounded-lg">
+                    <View className={`p-2 rounded-lg ${getTypeColor(item.type)}`}>
                       {getTypeIcon(item.type)}
                     </View>
                     <View className="ml-4 flex-1">
@@ -209,6 +253,11 @@ export default function RequirementsScreen() {
                       <Text className="text-gray-600">
                         {formatSpecialization(item.specialization)}
                       </Text>
+                      <View className="flex-row items-center mt-1">
+                        <Text className="text-xs bg-gray-100 px-2 py-1 rounded-full text-gray-600">
+                          {getTypeLabel(item.type)}
+                        </Text>
+                      </View>
                     </View>
                     <Text
                       className={`font-semibold ${
@@ -228,8 +277,17 @@ export default function RequirementsScreen() {
                   <View className="flex-row items-center mt-4 pt-2 border-t border-gray-200">
                     <Calendar size={14} color="gray" />
                     <Text className="ml-2 text-gray-500">
-                      {new Date(item.createdAt).toLocaleDateString()}
+                      Posted: {new Date(item.createdAt).toLocaleDateString()}
                     </Text>
+                    {item.type === "ONETIME" && item.preferredDate && (
+                      <>
+                        <Text className="mx-2 text-gray-300">•</Text>
+                        <Clock size={14} color="gray" />
+                        <Text className="ml-2 text-gray-500">
+                          {new Date(item.preferredDate).toLocaleDateString()} at {new Date(item.preferredDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </Text>
+                      </>
+                    )}
                   </View>
                   <View className="flex-row justify-end mt-4">
                     <TouchableOpacity
@@ -299,6 +357,12 @@ export default function RequirementsScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Requirement Type Selection Modal */}
+      <RequirementTypeModal 
+        isVisible={showTypeModal} 
+        onClose={() => setShowTypeModal(false)} 
+      />
     </View>
   );
 } 

@@ -430,3 +430,99 @@ export const getConnectedDoctors = asyncHandler(async (req, res) => {
     });
     ResponseHelper.success(res, connectedDoctors, "Connected doctors fetched successfully");
 });
+export const getMeetingsByClinic = async (req, res) => {
+    try {
+        const { clinicId } = req.params;
+        const { date } = req.query;
+        let meetings = [];
+        if (typeof (date) === 'string') {
+            meetings = await prisma.acceptedWork.findMany({
+                where: {
+                    clinicId: clinicId,
+                    connectedAt: {
+                        gte: new Date(date)
+                    }
+                },
+                include: {
+                    clinic: {
+                        select: {
+                            clinicName: true,
+                        }
+                    },
+                    job: {
+                        select: {
+                            title: true,
+                            date: true,
+                            clinic: {
+                                select: {
+                                    clinicAddress: true,
+                                    latitude: true,
+                                    longitude: true
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        else {
+            meetings = await prisma.acceptedWork.findMany({
+                where: {
+                    clinicId: clinicId,
+                },
+                include: {
+                    clinic: {
+                        select: {
+                            clinicName: true,
+                        }
+                    },
+                    job: {
+                        select: {
+                            title: true,
+                            date: true,
+                            clinic: {
+                                select: {
+                                    clinicName: true,
+                                    clinicAddress: true,
+                                    latitude: true,
+                                    longitude: true
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        const response = meetings.map((meeting) => {
+            // Format the job date if it exists
+            const jobDate = meeting.job.date ?
+                new Date(meeting.job.date).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                }) : null;
+            // Format the job time if date exists
+            const jobTime = meeting.job.date ?
+                new Date(meeting.job.date).toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                }) : null;
+            return {
+                id: meeting.id,
+                title: meeting.job.title,
+                clinic: meeting.clinic.clinicName,
+                jobDate: jobDate,
+                jobTime: jobTime,
+                jobLocation: meeting.job.clinic.clinicAddress,
+                jobLatitude: meeting.job.clinic.latitude,
+                jobLongitude: meeting.job.clinic.longitude,
+            };
+        });
+        res.status(200).json({ meetings: response });
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Something went wrong" });
+    }
+};

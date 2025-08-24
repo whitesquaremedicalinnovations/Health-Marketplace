@@ -242,6 +242,7 @@ export const sendMessage = asyncHandler(async (req, res) => {
                 attachments: true
             }
         });
+        console.log("sent message", message);
         // Update chat's last message timestamp
         await prisma.chat.update({
             where: { id: chatId },

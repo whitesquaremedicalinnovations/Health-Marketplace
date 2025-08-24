@@ -1,15 +1,17 @@
+import React from 'react';
 import 'react-native-get-random-values';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import '../globals.css';
-import { ClerkProvider } from '@clerk/clerk-expo';
+import { ClerkProvider, useAuth } from '@clerk/clerk-expo';
 import { tokenCache } from '@clerk/clerk-expo/token-cache';
 import Toast from 'react-native-toast-message';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 
 function NavigationContent() {
+  const { isSignedIn, isLoaded } = useAuth();
   
   return (
     <>

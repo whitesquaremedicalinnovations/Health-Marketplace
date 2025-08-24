@@ -11,12 +11,10 @@ import { useEffect, useState } from "react";
 
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import {
-  ArrowLeft,
   FileText,
   Mail,
-  MapPin,
-  Phone,
-  Share2,
+    MapPin,
+    Phone,
 } from "lucide-react-native";
 
 import { axiosInstance } from "../../lib/axios";
@@ -94,14 +92,16 @@ export default function DoctorProfile() {
     <Stack.Screen
         options={{
           title: `Dr. ${doctor.fullName}`,
+          headerStyle: {
+            backgroundColor: "#2563EB"
+          },
+          headerTitleStyle: {
+            color: "white"
+          }
         }}
       />
     <ScrollView className="flex-1 bg-gray-50">
       <View className="p-4">
-        <TouchableOpacity onPress={() => router.back()} className="mb-4">
-          <ArrowLeft size={24} color="black" />
-        </TouchableOpacity>
-
         <View className="bg-white p-6 rounded-lg shadow-md mb-6">
           <View className="items-center">
             <Image

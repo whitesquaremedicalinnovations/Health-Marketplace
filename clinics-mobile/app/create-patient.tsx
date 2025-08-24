@@ -1,9 +1,10 @@
 import PatientForm from "@/components/patients/patient-form";
-import { useUser } from "@clerk/clerk-expo";
+import { useUser, useAuth } from "@clerk/clerk-expo";
 import { useState } from "react";
-import { View } from "react-native";
+import { View, ActivityIndicator } from "react-native";
 import Toast from "react-native-toast-message";
 import { axiosInstance } from "@/lib/axios";
+import { Redirect } from "expo-router";
 
 interface PatientFormData {
   name: string;
@@ -17,6 +18,7 @@ interface PatientFormData {
 
 export default function CreatePatientScreen() {
   const { user } = useUser();
+  const { isSignedIn, isLoaded } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState<PatientFormData>({
     name: "",
@@ -54,6 +56,20 @@ export default function CreatePatientScreen() {
       setSubmitting(false);
     }
   };
+
+  // Show loading indicator while Clerk is initializing
+  if (!isLoaded) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC' }}>
+        <ActivityIndicator size="large" color="#2563EB" />
+      </View>
+    );
+  }
+
+  // Redirect to home if not signed in
+  if (!isSignedIn) {
+    return <Redirect href="/(auth)/home" />;
+  }
 
   return (
     <View className="flex-1">

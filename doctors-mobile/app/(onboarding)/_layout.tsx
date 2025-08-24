@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ActivityIndicator, View } from 'react-native';
 import { useUser } from '@clerk/clerk-expo';
-import { getClinic } from '../../lib/utils';
+import { getDoctor } from '../../lib/utils';
 
 export default function OnboardingLayout() {
   const { user, isLoaded } = useUser();
@@ -22,7 +22,7 @@ export default function OnboardingLayout() {
         }
 
         if (user?.id) {
-          const userData = await getClinic(user.id);
+          const userData = await getDoctor(user.id);
           if (userData.status === 200) {
             await AsyncStorage.setItem('hasOnboarded', 'true');
             router.replace('/(drawer)/tabs');

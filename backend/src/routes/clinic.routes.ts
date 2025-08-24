@@ -19,6 +19,7 @@ import {
     addGalleryImage,
     updateGalleryImage,
     deleteGalleryImage,
+    getMeetingsByClinic,
 } from "../controller/clinic.controller.ts";
 import { getDoctorsByLocationForClinic } from "../controller/doctor.controller.ts";
 
@@ -28,6 +29,7 @@ router.get("/get-doctors-by-location", getDoctorsByLocationForClinic);
 router.get("/get-clinics", getClinics);
 router.get("/get-clinic/:clinicId", getClinicById);
 router.get("/get-requirements-by-clinic/:clinicId", getRequirementsByClinic);
+router.get("/get-meetings/:clinicId", getMeetingsByClinic);
 router.get("/get-requirement/:requirementId", getRequirementById);
 router.post("/post-requirement", postRequirement);
 router.patch("/update-requirement/:requirementId", updateRequirement);

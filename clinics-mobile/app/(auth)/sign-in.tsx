@@ -29,7 +29,8 @@ export default function SignInScreen() {
       const attempt = await signIn.create({ identifier: email, password });
       if (attempt.status === 'complete' && attempt.createdSessionId) {
         await setActive({ session: attempt.createdSessionId });
-        router.replace('/');
+        // Use push instead of replace for more reliable navigation
+        router.push('/(onboarding)');
       }
     } catch (err) {
       console.error(err);
@@ -44,7 +45,8 @@ export default function SignInScreen() {
       });
       if (createdSessionId && activate) {
         await activate({ session: createdSessionId });
-        router.replace('/');
+        // Use push instead of replace for more reliable navigation
+        router.push('/(onboarding)');
       }
     } catch (err) {
       console.error(err);

@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useUser } from '@clerk/clerk-expo';
-import { getClinicConnections } from '../../lib/utils';
+import { getClinicConnections } from '../../../lib/utils';
 import { useRouter } from 'expo-router';
 import { 
   MessageSquare, 
@@ -31,7 +31,7 @@ interface Connection {
     specialization: string;
     profileImage: { docUrl: string } | null;
   };
-  patients?: Array<{
+  patients?: {
     id: string;
     name: string;
     lastMessage?: {
@@ -40,7 +40,7 @@ interface Connection {
       read: boolean;
     };
     status: 'ACTIVE' | 'COMPLETED';
-  }>;
+  }[];
 }
 
 export default function ChatScreen() {

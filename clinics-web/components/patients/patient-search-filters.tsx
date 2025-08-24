@@ -6,6 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Plus, SlidersHorizontal, FilterX } from "lucide-react";
 
+interface ConnectedDoctor {
+  id: string;
+  fullName: string;
+  specialization: string;
+  phoneNumber: string;
+  profileImage?: {
+    docUrl: string;
+  };
+}
+
 interface PatientSearchFiltersProps {
   searchTerm: string;
   setSearchTerm: (term: string) => void;
@@ -13,10 +23,13 @@ interface PatientSearchFiltersProps {
   setStatusFilter: (status: string) => void;
   genderFilter: string;
   setGenderFilter: (gender: string) => void;
+  assignedDoctorFilter: string;
+  setAssignedDoctorFilter: (doctorId: string) => void;
   sortBy: string;
   setSortBy: (sort: string) => void;
   filteredCount: number;
   totalCount: number;
+  connectedDoctors: ConnectedDoctor[];
   onCreatePatient: () => void;
   onClearFilters: () => void;
 }
@@ -28,10 +41,13 @@ export default function PatientSearchFilters({
   setStatusFilter,
   genderFilter,
   setGenderFilter,
+  assignedDoctorFilter,
+  setAssignedDoctorFilter,
   sortBy,
   setSortBy,
   filteredCount,
   totalCount,
+  connectedDoctors,
   onCreatePatient,
   onClearFilters
 }: PatientSearchFiltersProps) {
@@ -53,7 +69,7 @@ export default function PatientSearchFilters({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-4">
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-4 w-4" />
@@ -87,6 +103,22 @@ export default function PatientSearchFilters({
               <SelectItem value="Male">Male</SelectItem>
               <SelectItem value="Female">Female</SelectItem>
               <SelectItem value="Other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Assigned Doctor Filter */}
+          <Select value={assignedDoctorFilter} onValueChange={setAssignedDoctorFilter}>
+            <SelectTrigger className="h-12 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+              <SelectValue placeholder="Filter by doctor" />
+            </SelectTrigger>
+            <SelectContent className="dark:bg-gray-800 dark:border-gray-600">
+              <SelectItem value="all">All Doctors</SelectItem>
+              <SelectItem value="unassigned">Unassigned</SelectItem>
+              {connectedDoctors.map((doctor) => (
+                <SelectItem key={doctor.id} value={doctor.id}>
+                  {doctor.fullName}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
 

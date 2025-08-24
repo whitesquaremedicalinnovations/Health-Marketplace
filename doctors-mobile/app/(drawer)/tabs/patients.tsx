@@ -1,395 +1,508 @@
-import {
-  ActivityIndicator,
-  FlatList,
-  Modal,
-  RefreshControl,
-  Text,
-  View,
-} from "react-native";
-import { useCallback, useEffect, useState } from "react";
-
-import { useUser } from "@clerk/clerk-expo";
-import Toast from "react-native-toast-message";
-
-import PatientAssignmentDialog from "../../../components/patients/patient-assignment-dialog";
-import PatientCard from "../../../components/patients/patient-card";
-import PatientDeleteDialog from "../../../components/patients/patient-delete-dialog";
-import PatientFeedbackDialog from "../../../components/patients/patient-feedback-dialog";
-import PatientForm from "../../../components/patients/patient-form";
-import PatientSearchFilters from "../../../components/patients/patient-search-filters";
-import PatientStats from "../../../components/patients/patient-stats";
-import { axiosInstance } from "../../../lib/axios";
+import React, { useState, useEffect, useCallback } from 'react';
+import { ScrollView, RefreshControl, StyleSheet, View, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { ThemedView } from '@/components/ThemedView';
+import { ThemedText } from '@/components/ThemedText';
+import { Button } from '@/components/ui/Button';
+import { useTheme } from '@/contexts/ThemeContext';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { useUser } from '@clerk/clerk-expo';
+import { getDoctorPatients } from '@/lib/utils';
+import Toast from 'react-native-toast-message';
 
 interface Patient {
   id: string;
   name: string;
-  phoneNumber: string;
-  gender: string;
-  dateOfBirth: string;
-  address: string;
-  latitude?: number;
-  longitude?: number;
-  status: 'ACTIVE' | 'COMPLETED';
-  clinicId: string;
-  profileImage?: {
-    docUrl: string;
+  age?: number;
+  gender?: 'Male' | 'Female' | 'Other';
+  condition?: string;
+  status: 'Active' | 'Completed' | 'In Progress';
+  assignedDate?: string;
+  clinicName?: string;
+  urgency?: 'Low' | 'Medium' | 'High';
+  lastUpdate?: string;
+  clinic?: {
+    id: string;
+    clinicName: string;
+    clinicAddress: string;
   };
-  assignedDoctors: {
+  assignedDoctors?: Array<{
     id: string;
     fullName: string;
-  }[];
-  feedbacks: {
+    specialization: string;
+  }>;
+  feedbacks?: Array<{
     id: string;
     feedback: string;
     createdAt: string;
-  }[];
+  }>;
   createdAt: string;
   updatedAt: string;
 }
 
-interface ConnectedDoctor {
-  id: string;
-  fullName: string;
-}
-
-interface PatientFormData {
-  name: string;
-  phoneNumber: string;
-  gender: string;
-  dateOfBirth: string;
-  address: string;
-  latitude: string;
-  longitude: string;
-}
-
 export default function PatientsScreen() {
+  const { colors } = useTheme();
   const { user } = useUser();
-
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [connectedDoctors, setConnectedDoctors] = useState<ConnectedDoctor[]>([]);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [genderFilter, setGenderFilter] = useState("all");
-  const [sortBy, setSortBy] = useState("newest");
-
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showAssignDialog, setShowAssignDialog] = useState(false);
-  const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
-
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
-  const [feedbackText, setFeedbackText] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  
-  const [formData, setFormData] = useState<PatientFormData>({
-    name: "",
-    phoneNumber: "",
-    gender: "MALE",
-    dateOfBirth: "",
-    address: "",
-    latitude: "",
-    longitude: ""
-  });
+  const [loading, setLoading] = useState(true);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [filter, setFilter] = useState<'All' | 'Active' | 'Completed' | 'In Progress'>('All');
+  const [error, setError] = useState<string | null>(null);
 
   const fetchPatients = useCallback(async () => {
     if (!user?.id) return;
+    
     try {
-      const response = await axiosInstance.get(`/api/patient/get-clinic-patients/${user.id}`);
-      setPatients(response.data?.data || []);
-    } catch (error) {
-      console.error("Error fetching patients:", error);
+      setError(null);
+      const patientsData = await getDoctorPatients(user.id);
+      
+              // Transform the data to match our interface
+        const transformedPatients = patientsData.map((patient: any) => {
+          console.log('Raw patient data:', patient);
+          console.log('Patient status from API:', patient.status);
+          return {
+            id: patient.id,
+            name: patient.name,
+            age: patient.age || 0,
+            gender: patient.gender || 'Other',
+            condition: patient.condition || 'General Checkup',
+            status: patient.status || 'Active',
+            assignedDate: patient.createdAt,
+            clinicName: patient.clinic?.clinicName || 'Unknown Clinic',
+            urgency: patient.urgency || 'Medium',
+            lastUpdate: patient.updatedAt,
+            clinic: patient.clinic,
+            assignedDoctors: patient.assignedDoctors,
+            feedbacks: patient.feedbacks,
+            createdAt: patient.createdAt,
+            updatedAt: patient.updatedAt,
+          };
+        });
+      setPatients(transformedPatients);
+    } catch (error: any) {
+      console.error('Error fetching patients:', error);
+      setError(error.message || 'Failed to fetch patients');
       setPatients([]);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to load patients',
+      });
     }
-  }, [user]);
+  }, [user?.id]);
 
-  const fetchConnectedDoctors = useCallback(async () => {
-    if (!user?.id) return;
-    try {
-      const response = await axiosInstance.get(`/api/clinic/connected-doctors/${user.id}`);
-      setConnectedDoctors(response.data?.data || []);
-    } catch (error) {
-      console.error("Error fetching connected doctors:", error);
-      setConnectedDoctors([]);
-    }
-  }, [user]);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchPatients();
+    setRefreshing(false);
+  }, [fetchPatients]);
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([fetchPatients(), fetchConnectedDoctors()]).finally(() => setLoading(false));
-  }, [fetchPatients, fetchConnectedDoctors]);
-  
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    Promise.all([fetchPatients(), fetchConnectedDoctors()]).finally(() => setRefreshing(false));
-  }, [fetchPatients, fetchConnectedDoctors]);
+    fetchPatients().finally(() => setLoading(false));
+  }, [fetchPatients]);
 
   const filteredPatients = patients.filter(patient => {
-    const matchesSearch = searchTerm === "" ||
-      patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      patient.phoneNumber.includes(searchTerm) ||
-      patient.address.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || patient.status === statusFilter;
-    const matchesGender = genderFilter === "all" || patient.gender === genderFilter;
-    return matchesSearch && matchesStatus && matchesGender;
-  }).sort((a, b) => {
-    switch (sortBy) {
-      case "newest":
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      case "oldest":
-        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-      case "name":
-        return a.name.localeCompare(b.name);
-      case "status":
-        return a.status.localeCompare(b.status);
-      default:
-        return 0;
-    }
+    console.log('Filtering patient:', patient.name, 'Status:', patient.status, 'Filter:', filter);
+    
+    // Normalize status values to handle different formats from API
+    const normalizedStatus = patient.status?.toLowerCase().replace(/\s+/g, '') || '';
+    const normalizedFilter = filter.toLowerCase().replace(/\s+/g, '');
+    
+    console.log('Normalized status:', normalizedStatus, 'Normalized filter:', normalizedFilter);
+    
+    if (filter === 'All') return true;
+    
+    // Map different possible status values to our expected values
+    const statusMapping: { [key: string]: string } = {
+      'active': 'active',
+      'inprogress': 'inprogress',
+      'in_progress': 'inprogress',
+      'in progress': 'inprogress',
+      'completed': 'completed',
+      'done': 'completed',
+      'finished': 'completed',
+    };
+    
+    const mappedStatus = statusMapping[normalizedStatus] || normalizedStatus;
+    const result = mappedStatus === normalizedFilter;
+    console.log('Mapped status:', mappedStatus, 'Result:', result);
+    
+    return result;
   });
-  
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
 
-  const handleLocationSelect = (place: any) => {
-    if (place) {
-      setFormData(prev => ({
-        ...prev,
-        address: place.formatted_address || "",
-        latitude: place.geometry?.location?.lat()?.toString() || "",
-        longitude: place.geometry?.location?.lng()?.toString() || ""
-      }));
+  console.log('Filtered patients count:', filteredPatients.length, 'Total patients:', patients.length);
+
+  const getStatusColor = (status: Patient['status']) => {
+    switch (status) {
+      case 'Active':
+        return '#10B981'; // Green
+      case 'In Progress':
+        return '#F59E0B'; // Amber
+      case 'Completed':
+        return '#3B82F6'; // Blue
+      default:
+        return '#6B7280'; // Gray
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      phoneNumber: "",
-      gender: "MALE",
-      dateOfBirth: "",
-      address: "",
-      latitude: "",
-      longitude: ""
-    });
-  };
-
-  const handleCreatePatient = async () => {
-    setSubmitting(true);
-    try {
-      await axiosInstance.post("/api/patient/create-patient", { ...formData, clinicId: user?.id });
-      fetchPatients();
-      setShowCreateDialog(false);
-      resetForm();
-      Toast.show({ type: 'success', text1: 'Patient created successfully' });
-    } catch (error) {
-      Toast.show({ type: 'error', text1: 'Failed to create patient' });
-    } finally {
-      setSubmitting(false);
+  const getUrgencyColor = (urgency: Patient['urgency']) => {
+    switch (urgency) {
+      case 'High':
+        return '#EF4444'; // Red
+      case 'Medium':
+        return '#F59E0B'; // Amber
+      case 'Low':
+        return '#10B981'; // Green
+      default:
+        return '#6B7280'; // Gray
     }
   };
 
-  const handleEditPatient = async () => {
-    if (!selectedPatient) return;
-    setSubmitting(true);
-    try {
-      await axiosInstance.put(`/api/patient/update-patient/${selectedPatient.id}`, formData);
-      fetchPatients();
-      setShowEditDialog(false);
-      resetForm();
-      Toast.show({ type: 'success', text1: 'Patient updated successfully' });
-    } catch (error) {
-      Toast.show({ type: 'error', text1: 'Failed to update patient' });
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  const PatientCard = ({ patient }: { patient: Patient }) => (
+    <TouchableOpacity
+      style={[styles.patientCard, { backgroundColor: '#FFFFFF', borderColor: '#E5E7EB' }]}
+      onPress={() => router.push(`/patients/${patient.id}` as any)}
+    >
+      <View style={styles.patientHeader}>
+        <View style={styles.patientInfo}>
+          <ThemedText type="defaultSemiBold" style={[styles.patientName, { color: '#111827' }]}>
+            {patient.name}
+          </ThemedText>
+          <ThemedText style={[styles.patientDetails, { color: '#6B7280' }]}>
+            {patient.age} years • {patient.gender}
+          </ThemedText>
+        </View>
+        <View style={[styles.urgencyBadge, { backgroundColor: getUrgencyColor(patient.urgency) + '15' }]}>
+          <ThemedText style={[styles.urgencyText, { color: getUrgencyColor(patient.urgency) }]}>
+            {patient.urgency}
+          </ThemedText>
+        </View>
+      </View>
 
-  const handleDeletePatient = async () => {
-    if (!selectedPatient) return;
-    setSubmitting(true);
-    try {
-      await axiosInstance.delete(`/api/patient/delete-patient/${selectedPatient.id}`);
-      fetchPatients();
-      setShowDeleteDialog(false);
-      Toast.show({ type: 'success', text1: 'Patient deleted successfully' });
-    } catch (error) {
-      Toast.show({ type: 'error', text1: 'Failed to delete patient' });
-    } finally {
-      setSubmitting(false);
-    }
-  };
+      <View style={styles.patientCondition}>
+        <Ionicons name="medical-outline" size={16} color="#6B7280" />
+        <ThemedText style={[styles.conditionText, { color: '#374151' }]}>
+          {patient.condition}
+        </ThemedText>
+      </View>
 
-  const handleAssignDoctor = async (doctorId: string) => {
-    if (!selectedPatient) return;
-    setSubmitting(true);
-    try {
-      await axiosInstance.patch(`/api/patient/assign-doctor-to-patient/${selectedPatient.id}`, { doctorId });
-      fetchPatients();
-      setShowAssignDialog(false);
-      Toast.show({ type: 'success', text1: 'Doctor assigned successfully' });
-    } catch (error) {
-      Toast.show({ type: 'error', text1: 'Failed to assign doctor' });
-    } finally {
-      setSubmitting(false);
-    }
-  };
+      <View style={styles.patientMeta}>
+        <View style={styles.metaItem}>
+          <Ionicons name="business-outline" size={14} color="#9CA3AF" />
+          <ThemedText style={[styles.metaText, { color: '#6B7280' }]}>
+            {patient.clinicName}
+          </ThemedText>
+        </View>
+        <View style={styles.metaItem}>
+          <Ionicons name="calendar-outline" size={14} color="#9CA3AF" />
+          <ThemedText style={[styles.metaText, { color: '#6B7280' }]}>
+            {patient.assignedDate ? new Date(patient.assignedDate).toLocaleDateString() : 'N/A'}
+          </ThemedText>
+        </View>
+      </View>
 
-  const handleDeassignDoctor = async (patientId: string, doctorId: string) => {
-    setSubmitting(true);
-    try {
-        await axiosInstance.patch(`/api/patient/de-assign-doctor-from-patient/${patientId}`, { doctorId });
-        fetchPatients();
-        Toast.show({ type: 'success', text1: 'Doctor de-assigned successfully' });
-    } catch (error) {
-        Toast.show({ type: 'error', text1: 'Failed to de-assign doctor' });
-    } finally {
-        setSubmitting(false);
-    }
-  };
-  
-  const handleAddFeedback = async () => {
-    if (!selectedPatient || !feedbackText.trim()) return;
-    setSubmitting(true);
-    try {
-        await axiosInstance.post(`/api/patient/add-feedback/${selectedPatient.id}`, { feedback: feedbackText.trim() });
-        fetchPatients();
-        setShowFeedbackDialog(false);
-        setFeedbackText("");
-        Toast.show({ type: 'success', text1: 'Feedback added successfully' });
-    } catch (error) {
-        Toast.show({ type: 'error', text1: 'Failed to add feedback' });
-    } finally {
-        setSubmitting(false);
-    }
-  };
-  
-  const openEditDialog = (patient: Patient) => {
-    setSelectedPatient(patient);
-    setFormData({
-      name: patient.name,
-      phoneNumber: patient.phoneNumber,
-      gender: patient.gender,
-      dateOfBirth: patient.dateOfBirth.split('T')[0],
-      address: patient.address,
-      latitude: patient.latitude?.toString() || "",
-      longitude: patient.longitude?.toString() || ""
-    });
-    setShowEditDialog(true);
-  };
-  
-  const openAssignDialog = (patient: Patient) => {
-    setSelectedPatient(patient);
-    setShowAssignDialog(true);
-  };
-  
-  const openFeedbackDialog = (patient: Patient) => {
-    setSelectedPatient(patient);
-    setShowFeedbackDialog(true);
-  };
+      <View style={styles.patientFooter}>
+        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(patient.status) + '15' }]}>
+          <ThemedText style={[styles.statusText, { color: getStatusColor(patient.status) }]}>
+            {patient.status}
+          </ThemedText>
+        </View>
+        <ThemedText style={[styles.lastUpdate, { color: '#9CA3AF' }]}>
+          Updated {patient.lastUpdate ? new Date(patient.lastUpdate).toLocaleDateString() : 'N/A'}
+        </ThemedText>
+      </View>
+    </TouchableOpacity>
+  );
 
-  const openDeleteDialog = (patient: Patient) => {
-    setSelectedPatient(patient);
-    setShowDeleteDialog(true);
-  };
+  const FilterButton = ({ 
+    title, 
+    isActive,
+    filterType
+  }: { 
+    title: string; 
+    isActive: boolean;
+    filterType: typeof filter;
+  }) => (
+    <TouchableOpacity
+      style={[
+        styles.filterButton,
+        { borderColor: isActive ? '#3B82F6' : '#E5E7EB' },
+        isActive && { backgroundColor: '#3B82F6' }
+      ]}
+      onPress={() => {
+        console.log('Filter button pressed:', filterType);
+        setFilter(filterType);
+      }}
+      activeOpacity={0.7}
+    >
+      <ThemedText
+        style={[
+          styles.filterText,
+          { color: isActive ? '#FFFFFF' : '#374151' }
+        ]}
+      >
+        {title}
+      </ThemedText>
+    </TouchableOpacity>
+  );
 
   if (loading) {
     return (
-      <View className="flex-1 justify-center items-center">
-        <ActivityIndicator size="large" />
-        <Text>Loading patients...</Text>
+      <View style={[styles.container, styles.centerContent, { backgroundColor: '#FFFFFF' }]}>
+        <ActivityIndicator size="large" color="#3B82F6" />
+        <ThemedText style={[styles.loadingText, { color: '#6B7280' }]}>
+          Loading patients...
+        </ThemedText>
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-gray-50 p-4">
-      <PatientStats patients={patients} connectedDoctors={connectedDoctors} />
-      <PatientSearchFilters
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        statusFilter={statusFilter}
-        setStatusFilter={setStatusFilter}
-        genderFilter={genderFilter}
-        setGenderFilter={setGenderFilter}
-        sortBy={sortBy}
-        setSortBy={setSortBy}
-        filteredCount={filteredPatients.length}
-        totalCount={patients.length}
-        onCreatePatient={() => setShowCreateDialog(true)}
-        onClearFilters={() => {
-            setSearchTerm("");
-            setStatusFilter("all");
-            setGenderFilter("all");
-            setSortBy("newest");
-        }}
-      />
-      <FlatList
-        data={filteredPatients}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <PatientCard
-            patient={item}
-            onAssignDoctor={openAssignDialog}
-            onAddFeedback={openFeedbackDialog}
-            onEditPatient={openEditDialog}
-            onDeletePatient={openDeleteDialog}
-            onDeassignDoctor={handleDeassignDoctor}
-          />
+    <View style={[styles.container, { backgroundColor: '#F9FAFB' }]}>
+      <View style={[styles.header, { backgroundColor: '#FFFFFF' }]}>
+        <ThemedText style={[styles.headerTitle, { color: '#111827' }]}>
+          My Patients
+        </ThemedText>
+      </View>
+
+      <View style={styles.filterContainer}>
+        {(['All', 'Active', 'In Progress', 'Completed'] as const).map((filterOption) => {
+          const count = filterOption === 'All' 
+            ? patients.length 
+            : patients.filter(p => {
+              const normalizedStatus = p.status?.toLowerCase().replace(/\s+/g, '') || '';
+              const normalizedFilter = filterOption.toLowerCase().replace(/\s+/g, '');
+              
+              const statusMapping: { [key: string]: string } = {
+                'active': 'active',
+                'inprogress': 'inprogress',
+                'in_progress': 'inprogress',
+                'in progress': 'inprogress',
+                'completed': 'completed',
+                'done': 'completed',
+                'finished': 'completed',
+              };
+              
+              const mappedStatus = statusMapping[normalizedStatus] || normalizedStatus;
+              return mappedStatus === normalizedFilter;
+            }).length;
+          
+          return (
+            <FilterButton
+              key={filterOption}
+              title={`${filterOption} (${count})`}
+              isActive={filter === filterOption}
+              filterType={filterOption}
+            />
+          );
+        })}
+      </View>
+
+      <ScrollView
+        style={styles.patientsList}
+        contentContainerStyle={styles.patientsContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        {error ? (
+          <View style={[styles.emptyState, { backgroundColor: '#FFFFFF' }]}>
+            <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+            <ThemedText style={[styles.emptyTitle, { color: '#111827' }]}>
+              Error loading patients
+            </ThemedText>
+            <ThemedText style={[styles.emptyDescription, { color: '#6B7280' }]}>
+              {error}
+            </ThemedText>
+            <Button
+              title="Retry"
+              size="small"
+              onPress={fetchPatients}
+              style={styles.retryButton}
+            />
+          </View>
+        ) : filteredPatients.length > 0 ? (
+          filteredPatients.map((patient) => (
+            <PatientCard key={patient.id} patient={patient} />
+          ))
+        ) : (
+          <View style={[styles.emptyState, { backgroundColor: '#FFFFFF' }]}>
+            <Ionicons name="medical-outline" size={48} color="#9CA3AF" />
+            <ThemedText style={[styles.emptyTitle, { color: '#111827' }]}>
+              No patients found
+            </ThemedText>
+            <ThemedText style={[styles.emptyDescription, { color: '#6B7280' }]}>
+              {filter === 'All' 
+                ? "You don't have any patients assigned yet."
+                : `No patients with ${filter.toLowerCase()} status.`
+              }
+            </ThemedText>
+          </View>
         )}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      />
-      
-      <Modal visible={showCreateDialog} transparent>
-          <PatientForm
-            formData={formData}
-            onFormDataChange={handleInputChange}
-            onLocationSelect={handleLocationSelect}
-            onSubmit={handleCreatePatient}
-            submitting={submitting}
-            mode="create"
-          />
-      </Modal>
-
-      <Modal visible={showEditDialog} transparent>
-          <PatientForm
-            formData={formData}
-            onFormDataChange={handleInputChange}
-            onLocationSelect={handleLocationSelect}
-            onSubmit={handleEditPatient}
-            submitting={submitting}
-            mode="edit"
-          />
-      </Modal>
-      
-      <PatientAssignmentDialog
-        open={showAssignDialog}
-        onOpenChange={setShowAssignDialog}
-        patient={selectedPatient}
-        connectedDoctors={connectedDoctors}
-        onAssign={handleAssignDoctor}
-        submitting={submitting}
-      />
-      
-      <PatientFeedbackDialog
-        open={showFeedbackDialog}
-        onOpenChange={setShowFeedbackDialog}
-        patient={selectedPatient}
-        feedbackText={feedbackText}
-        setFeedbackText={setFeedbackText}
-        onSubmit={handleAddFeedback}
-        submitting={submitting}
-      />
-
-      <PatientDeleteDialog
-        open={showDeleteDialog}
-        onOpenChange={setShowDeleteDialog}
-        patient={selectedPatient}
-        onConfirm={handleDeletePatient}
-        submitting={submitting}
-      />
+      </ScrollView>
     </View>
   );
-} 
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    flex: 1,
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    padding: 20,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB', 
+  },
+  filterButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    minWidth: 70,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 28,
+  },
+  filterText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  patientsList: {
+    flex: 1,
+  },
+  patientsContent: {
+    padding: 20,
+    gap: 16,
+  },
+  patientCard: {
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 3.84,
+    elevation: 2,
+  },
+  patientHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  patientInfo: {
+    flex: 1,
+  },
+  patientName: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  patientDetails: {
+    fontSize: 14,
+  },
+  urgencyBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  urgencyText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  patientCondition: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  conditionText: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  patientMeta: {
+    flexDirection: 'row',
+    gap: 20,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  metaText: {
+    fontSize: 13,
+  },
+  patientFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  lastUpdate: {
+    fontSize: 12,
+  },
+  emptyState: {
+    padding: 40,
+    alignItems: 'center',
+    borderRadius: 16,
+    marginTop: 40,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 3.84,
+    elevation: 2,
+  },
+  emptyTitle: {
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  emptyDescription: {
+    textAlign: 'center',
+    lineHeight: 22,
+    fontSize: 14,
+  },
+  retryButton: {
+    marginTop: 16,
+  },
+});

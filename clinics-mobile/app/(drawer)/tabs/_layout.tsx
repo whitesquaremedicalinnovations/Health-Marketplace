@@ -1,5 +1,5 @@
-import React from 'react';
-import { Tabs } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
+import { router, Tabs } from 'expo-router';
 import { 
   Home, 
   Stethoscope, 
@@ -9,12 +9,70 @@ import {
   MessageSquare,
   Activity 
 } from 'lucide-react-native';
-import { useNavigation } from '@react-navigation/native';
-import { TouchableOpacity, Platform } from 'react-native';
-import { DrawerActions } from '@react-navigation/native';
+import { useNavigation , DrawerActions } from '@react-navigation/native';
+import { TouchableOpacity, Platform, View, ActivityIndicator } from 'react-native';
+import { useUser } from '@clerk/clerk-expo';
+import { getClinic } from '@/lib/utils';
+import Toast from 'react-native-toast-message';
+
+interface ClinicData {
+  id: string;
+  clinicName: string;
+  ownerName: string;
+  email: string;
+  isVerified: boolean;
+  clinicAddress: string;
+  clinicPhoneNumber: string;
+  createdAt: string;
+}
 
 export default function TabLayout() {
   const navigation = useNavigation();
+  const { user } = useUser();
+  const [loading, setLoading] = useState(true);
+  const [clinicData, setClinicData] = useState<ClinicData | null>(null);  
+
+  const fetchClinicData = async () => {
+    console.log("fetchign clinic")
+    try { 
+      const response = await getClinic(user?.id || '');
+      console.log(response.data)
+      if (response.status === 200 && response.data) {
+        if(!(response.data.data.isVerified)) {
+          router.replace('/verification-status');
+        } else {
+          setClinicData(response.data);
+        }
+      } else {
+        router.replace('/(auth)/home');
+      }
+    } catch (error) {
+      console.error('Error fetching clinic data:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to fetch clinic information',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };  
+
+  useEffect(() => {
+    if (!clinicData && user?.id && !loading) {
+      setLoading(true);
+      fetchClinicData();
+      setLoading(false);
+    }
+  }, [user?.id]);
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#2563EB" />
+      </View>
+    );
+  }
 
   return (
     <Tabs
@@ -50,7 +108,7 @@ export default function TabLayout() {
         headerStyle: {
           backgroundColor: '#2563EB',
           elevation: 4,
-          shadowColor: '#000',
+          shadowColor: 'none',
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.1,
           shadowRadius: 4,
@@ -63,7 +121,7 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen
-        name="index"
+        name="dashboard"
         options={{
           title: 'Dashboard',
           tabBarIcon: ({ color, size, focused }) => (
@@ -101,6 +159,16 @@ export default function TabLayout() {
           ),
           headerTitle: 'Analytics & Reports',
         }}
+      />
+      <Tabs.Screen 
+        name="chat" 
+        options={{ 
+          title: 'Messages',
+          tabBarIcon: ({ color, size, focused }) => (
+            <MessageSquare color={color} size={size} />
+          ),  
+          headerTitle: 'Chat & Communication'
+        }} 
       />
     </Tabs>
   );

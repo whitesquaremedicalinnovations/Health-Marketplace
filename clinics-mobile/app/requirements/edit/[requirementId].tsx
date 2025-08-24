@@ -9,7 +9,7 @@ import {
   View,
 } from "react-native";
 import { useEffect, useState } from "react";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useUser } from "@clerk/clerk-expo";
 import { Picker } from "@react-native-picker/picker";
 import { Briefcase } from "lucide-react-native";
@@ -116,6 +116,19 @@ export default function EditRequirementScreen() {
   if (loading) {
     return (
       <View className="flex-1 justify-center items-center">
+        <Stack.Screen 
+            options={
+                {
+                    headerTitle: "Edit Requirement",
+                    headerStyle: {
+                      backgroundColor: "#2563EB"
+                    },
+                    headerTitleStyle: {
+                      color: "white"
+                    }
+                }
+            }
+        />
         <ActivityIndicator size="large" />
         <Text>Loading requirement...</Text>
       </View>
@@ -133,6 +146,19 @@ export default function EditRequirementScreen() {
         contentContainerStyle={{ paddingBottom: 50 }}
         keyboardShouldPersistTaps="handled"
       >
+        <Stack.Screen 
+            options={
+                {
+                    headerTitle: "Edit Requirement",
+                    headerStyle: {
+                      backgroundColor: "#2563EB"
+                    },
+                    headerTitleStyle: {
+                      color: "white"
+                    }
+                }
+            }
+        />
         <View className="p-4">
           <View className="bg-orange-600 rounded-xl p-6 shadow-lg mb-6">
             <View className="flex-row items-center">

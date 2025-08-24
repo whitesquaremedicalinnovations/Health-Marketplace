@@ -9,6 +9,7 @@ import { Calendar, MapPin, Briefcase, ArrowLeft, Eye, Users, Clock } from "lucid
 import { axiosInstance } from "@/lib/axios";
 import { Loading } from "@/components/ui/loading";
 import { toast } from "sonner";
+import { useUser } from "@clerk/nextjs";
 
 interface Requirement {
   id: string;
@@ -27,7 +28,7 @@ export default function ViewRequirement() {
   const { requirementId } = useParams();
   const [requirement, setRequirement] = useState<Requirement | null>(null);
   const [loading, setLoading] = useState(true);
-
+  const { user } = useUser();
   useEffect(() => {
     const fetchRequirement = async () => {
       const response = await axiosInstance.get(`/api/clinic/get-requirement/${requirementId}`)
@@ -51,6 +52,24 @@ export default function ViewRequirement() {
     return <div>Requirement not found</div>;
   }
 
+  const handleApply = async () => {
+    try {
+      await axiosInstance.post(`/api/doctor/pitch-requirement/${requirementId}`, {
+        doctorId: user?.id,
+        message: "I am interested in this job"
+      });
+      
+      toast("Application submitted successfully!");
+      router.push("/applications");
+    } catch (error: unknown) {
+      console.log("Error submitting application:", error);
+      const errorMsg = error instanceof Error && 'response' in error ? 
+        (error as { response?: { data?: { message?: string } } }).response?.data?.message || "Failed to submit application" :
+        "Failed to submit application";
+      toast(errorMsg);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <div className="container mx-auto p-8">
@@ -71,13 +90,6 @@ export default function ViewRequirement() {
                     Back to Requirements
                   </Button>
                 </div>
-                <Button 
-                  onClick={() => router.push(`/requirements/view/${requirementId}/applications`)}
-                  className="bg-white text-indigo-600 hover:bg-blue-50 shadow-lg hover:shadow-xl transition-all duration-300 border-0"
-                >
-                  <Users className="mr-2 h-4 w-4" />
-                  View Applications
-                </Button>
               </div>
               <div className="mt-6">
                 <h1 className="text-4xl font-bold text-white mb-2">
@@ -197,18 +209,11 @@ export default function ViewRequirement() {
                     <Button 
                       variant="secondary" 
                       className="w-full bg-white text-gray-900 hover:bg-gray-100"
-                      onClick={() => router.push(`/requirements/edit/${requirement.id}`)}
+                      onClick={handleApply}
                     >
-                      Edit Requirement
+                      Apply 
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      className="w-full border-white text-white hover:bg-white/20"
-                      onClick={() => router.push(`/requirements/view/${requirementId}/applications`)}
-                    >
-                      <Users className="mr-2 h-4 w-4" />
-                      View Applications
-                    </Button>
+                    
                   </div>
                 </CardContent>
               </Card>

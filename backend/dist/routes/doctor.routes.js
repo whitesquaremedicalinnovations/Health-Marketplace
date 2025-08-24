@@ -1,10 +1,11 @@
 import { Router } from "express";
-import { getDoctors, getDoctorById, getClinicsByLocation, getRequirementsByLocation, pitchRequirement, rejectRequirement, getMyPitches, withdrawPitch, getMyAcceptedPitches, getAllDoctors, getDoctorDashboardOverview } from "../controller/doctor.controller.js";
+import { getDoctors, getDoctorById, getClinicsByLocation, getRequirementsByLocation, pitchRequirement, rejectRequirement, getMyPitches, withdrawPitch, getMyAcceptedPitches, getAllDoctors, getDoctorDashboardOverview, getMeetings } from "../controller/doctor.controller.js";
 const router = Router();
 router.get("/get-doctors", getDoctors);
 router.get("/get-all-doctors", getAllDoctors);
 router.get("/get-doctor/:doctorId", getDoctorById);
 router.get("/get-clinics-by-location", getClinicsByLocation);
+router.get("/get-meetings/:doctorId", getMeetings);
 router.get("/get-requirements-by-location", getRequirementsByLocation);
 router.post("/pitch-requirement/:requirementId", pitchRequirement);
 router.post("/reject-requirement/:requirementId", rejectRequirement);
