@@ -71,6 +71,8 @@ export default function PatientsScreen() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [genderFilter, setGenderFilter] = useState("all");
+  const [doctorFilter, setDoctorFilter] = useState("all");
+  const [ageRangeFilter, setAgeRangeFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
   const [showFilters, setShowFilters] = useState(false);
 
@@ -114,14 +116,56 @@ export default function PatientsScreen() {
     Promise.all([fetchPatients(), fetchConnectedDoctors()]).finally(() => setRefreshing(false));
   }, [fetchPatients, fetchConnectedDoctors]);
 
+  // Helper function to calculate age from date of birth
+  const calculateAge = (dateOfBirth: string) => {
+    const today = new Date();
+    const birthDate = new Date(dateOfBirth);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
   const filteredPatients = patients.filter(patient => {
     const matchesSearch = searchTerm === "" ||
       patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       patient.phoneNumber.includes(searchTerm) ||
       patient.address.toLowerCase().includes(searchTerm.toLowerCase());
+    
     const matchesStatus = statusFilter === "all" || patient.status === statusFilter;
     const matchesGender = genderFilter === "all" || patient.gender === genderFilter;
-    return matchesSearch && matchesStatus && matchesGender;
+    
+    // Doctor filter - check if patient is assigned to the selected doctor
+    const matchesDoctor = doctorFilter === "all" || 
+      (doctorFilter === "unassigned" && patient.assignedDoctors.length === 0) ||
+      patient.assignedDoctors.some(doctor => doctor.id === doctorFilter);
+    
+    // Age range filter
+    let matchesAgeRange = true;
+    if (ageRangeFilter !== "all") {
+      const age = calculateAge(patient.dateOfBirth);
+      switch (ageRangeFilter) {
+        case "0-18":
+          matchesAgeRange = age <= 18;
+          break;
+        case "19-35":
+          matchesAgeRange = age >= 19 && age <= 35;
+          break;
+        case "36-50":
+          matchesAgeRange = age >= 36 && age <= 50;
+          break;
+        case "51-65":
+          matchesAgeRange = age >= 51 && age <= 65;
+          break;
+        case "65+":
+          matchesAgeRange = age > 65;
+          break;
+      }
+    }
+    
+    return matchesSearch && matchesStatus && matchesGender && matchesDoctor && matchesAgeRange;
   }).sort((a, b) => {
     switch (sortBy) {
       case "newest":
@@ -132,6 +176,10 @@ export default function PatientsScreen() {
         return a.name.localeCompare(b.name);
       case "status":
         return a.status.localeCompare(b.status);
+      case "age":
+        return calculateAge(b.dateOfBirth) - calculateAge(a.dateOfBirth);
+      case "assignedDoctors":
+        return b.assignedDoctors.length - a.assignedDoctors.length;
       default:
         return 0;
     }
@@ -232,8 +280,12 @@ export default function PatientsScreen() {
           <TouchableOpacity onPress={() => router.push('/create-patient')} className="p-2">
             <Plus size={24} color="gray" />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setShowFilters(!showFilters)} className="p-2">
-            <Filter size={24} color="gray" />
+          <TouchableOpacity onPress={() => setShowFilters(!showFilters)} className="p-2 relative">
+            <Filter size={24} color={showFilters ? "#2563EB" : "gray"} />
+            {/* Active filters indicator */}
+            {(searchTerm !== "" || statusFilter !== "all" || genderFilter !== "all" || doctorFilter !== "all" || ageRangeFilter !== "all" || sortBy !== "newest") && (
+              <View className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full" />
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -246,14 +298,21 @@ export default function PatientsScreen() {
           setStatusFilter={setStatusFilter}
           genderFilter={genderFilter}
           setGenderFilter={setGenderFilter}
+          doctorFilter={doctorFilter}
+          setDoctorFilter={setDoctorFilter}
+          ageRangeFilter={ageRangeFilter}
+          setAgeRangeFilter={setAgeRangeFilter}
           sortBy={sortBy}
           setSortBy={setSortBy}
+          connectedDoctors={connectedDoctors}
           filteredCount={filteredPatients.length}
           totalCount={patients.length}
           onClearFilters={() => {
               setSearchTerm("");
               setStatusFilter("all");
               setGenderFilter("all");
+              setDoctorFilter("all");
+              setAgeRangeFilter("all");
               setSortBy("newest");
           }}
         />

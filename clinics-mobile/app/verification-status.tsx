@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getClinic } from '../lib/utils';
 import Toast from 'react-native-toast-message';
 import * as Clipboard from 'expo-clipboard';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface ClinicData {
   id: string;
@@ -35,15 +36,38 @@ export default function VerificationStatusScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchClinicData = async () => {
+  const fetchClinicData = async (useCache = true) => {
     console.log("getting data")
     if (!user?.id) return;
 
     try {
+      // Check cache first if useCache is true
+      if (useCache) {
+        const cachedUserData = await AsyncStorage.getItem(`user_data_${user.id}`);
+        if (cachedUserData) {
+          const userData = JSON.parse(cachedUserData);
+          console.log("Using cached userData in verification", userData);
+          
+          if (userData.isVerified) {
+            router.replace('/(drawer)/tabs/dashboard');
+            return;
+          } else {
+            setClinicData(userData);
+            setLoading(false);
+            // Still fetch fresh data in background
+            fetchClinicData(false);
+            return;
+          }
+        }
+      }
+
       const response = await getClinic(user.id);
       console.log(response.data)
       if (response.status === 200 && response.data) {
-        if(response.data.data.isVerified) {
+        // Update cache
+        await AsyncStorage.setItem(`user_data_${user.id}`, JSON.stringify(response.data));
+        
+        if(response.data.isVerified) {
           router.replace('/(drawer)/tabs/dashboard');
         } else {
           setClinicData(response.data);
@@ -53,6 +77,33 @@ export default function VerificationStatusScreen() {
       }
     } catch (error) {
       console.error('Error fetching clinic data:', error);
+      
+      // Try to use cached data if fresh fetch fails
+      if (useCache) {
+        try {
+          const cachedUserData = await AsyncStorage.getItem(`user_data_${user.id}`);
+          if (cachedUserData) {
+            const userData = JSON.parse(cachedUserData);
+            console.log("Falling back to cached userData due to error");
+            
+            if (userData.isVerified) {
+              router.replace('/(drawer)/tabs/dashboard');
+              return;
+            } else {
+              setClinicData(userData);
+              Toast.show({
+                type: 'warning',
+                text1: 'Using cached data',
+                text2: 'Check network connection',
+              });
+              return;
+            }
+          }
+        } catch (cacheError) {
+          console.error('Error reading cached data:', cacheError);
+        }
+      }
+      
       Toast.show({
         type: 'error',
         text1: 'Error',
@@ -65,7 +116,7 @@ export default function VerificationStatusScreen() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await fetchClinicData();
+    await fetchClinicData(false); // Force fresh data on refresh
     setRefreshing(false);
   };
 
@@ -101,6 +152,12 @@ export default function VerificationStatusScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
+              // Clear cached data on sign out
+              if (user?.id) {
+                await AsyncStorage.removeItem(`user_data_${user.id}`);
+              }
+              await AsyncStorage.removeItem('hasOnboarded');
+              
               await signOut();
               router.replace('/(auth)/home');
             } catch (error) {

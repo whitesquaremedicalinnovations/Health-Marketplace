@@ -427,6 +427,12 @@ export default function OnboardingScreen() {
       const response = await onboardingClinic(data);
       if (response.status === 200) {
         await AsyncStorage.setItem("hasOnboarded", "true");
+        
+        // Cache the user data for quicker subsequent loads
+        if (user?.id && response.data) {
+          await AsyncStorage.setItem(`user_data_${user.id}`, JSON.stringify(response.data));
+        }
+        
         Toast.show({
           type: 'success',
           text1: 'Registration Complete!',
