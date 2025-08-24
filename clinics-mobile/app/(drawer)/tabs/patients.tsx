@@ -296,14 +296,8 @@ export default function PatientsScreen() {
           setSearchTerm={setSearchTerm}
           statusFilter={statusFilter}
           setStatusFilter={setStatusFilter}
-          genderFilter={genderFilter}
-          setGenderFilter={setGenderFilter}
           doctorFilter={doctorFilter}
           setDoctorFilter={setDoctorFilter}
-          ageRangeFilter={ageRangeFilter}
-          setAgeRangeFilter={setAgeRangeFilter}
-          sortBy={sortBy}
-          setSortBy={setSortBy}
           connectedDoctors={connectedDoctors}
           filteredCount={filteredPatients.length}
           totalCount={patients.length}

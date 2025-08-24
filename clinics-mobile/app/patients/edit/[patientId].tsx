@@ -1,5 +1,5 @@
 import PatientForm from "../../../components/patients/patient-form";
-import { useLocalSearchParams } from "expo-router";
+import { Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { View, ActivityIndicator, Text } from "react-native";
 import Toast from "react-native-toast-message";
@@ -92,6 +92,19 @@ export default function EditPatientScreen() {
 
   return (
     <View className="flex-1">
+      <Stack.Screen 
+            options={
+                {
+                    headerTitle: "View Requirement",
+                    headerStyle: {
+                      backgroundColor: "#2563EB"
+                    },
+                    headerTitleStyle: {
+                      color: "white"
+                    }
+                }
+            }
+        />
       <PatientForm
         formData={formData}
         onFormDataChange={handleInputChange}

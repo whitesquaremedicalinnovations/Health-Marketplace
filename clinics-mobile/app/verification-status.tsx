@@ -41,33 +41,12 @@ export default function VerificationStatusScreen() {
     if (!user?.id) return;
 
     try {
-      // Check cache first if useCache is true
-      if (useCache) {
-        const cachedUserData = await AsyncStorage.getItem(`user_data_${user.id}`);
-        if (cachedUserData) {
-          const userData = JSON.parse(cachedUserData);
-          console.log("Using cached userData in verification", userData);
-          
-          if (userData.isVerified) {
-            router.replace('/(drawer)/tabs/dashboard');
-            return;
-          } else {
-            setClinicData(userData);
-            setLoading(false);
-            // Still fetch fresh data in background
-            fetchClinicData(false);
-            return;
-          }
-        }
-      }
-
       const response = await getClinic(user.id);
-      console.log(response.data)
+      console.log(response.data.data)
       if (response.status === 200 && response.data) {
-        // Update cache
         await AsyncStorage.setItem(`user_data_${user.id}`, JSON.stringify(response.data));
         
-        if(response.data.isVerified) {
+        if(response.data.data.isVerified) {
           router.replace('/(drawer)/tabs/dashboard');
         } else {
           setClinicData(response.data);
@@ -76,39 +55,14 @@ export default function VerificationStatusScreen() {
         router.replace('/(auth)/home');
       }
     } catch (error) {
-      console.error('Error fetching clinic data:', error);
-      
-      // Try to use cached data if fresh fetch fails
-      if (useCache) {
-        try {
-          const cachedUserData = await AsyncStorage.getItem(`user_data_${user.id}`);
-          if (cachedUserData) {
-            const userData = JSON.parse(cachedUserData);
-            console.log("Falling back to cached userData due to error");
-            
-            if (userData.isVerified) {
-              router.replace('/(drawer)/tabs/dashboard');
-              return;
-            } else {
-              setClinicData(userData);
-              Toast.show({
-                type: 'warning',
-                text1: 'Using cached data',
-                text2: 'Check network connection',
-              });
-              return;
-            }
-          }
-        } catch (cacheError) {
-          console.error('Error reading cached data:', cacheError);
-        }
-      }
+      console.log ('Error fetching clinic data:', error);
       
       Toast.show({
         type: 'error',
         text1: 'Error',
         text2: 'Failed to fetch clinic information',
       });
+      router.replace('/(onboarding)');
     } finally {
       setLoading(false);
     }
@@ -116,7 +70,7 @@ export default function VerificationStatusScreen() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await fetchClinicData(false); // Force fresh data on refresh
+    await fetchClinicData(); // Force fresh data on refresh
     setRefreshing(false);
   };
 
@@ -172,7 +126,7 @@ export default function VerificationStatusScreen() {
 
   useEffect(() => {
     if (!clinicData && user?.id) {
-      fetchClinicData();
+      fetchClinicData(true);
     }
   }, [user?.id]);
 
@@ -193,7 +147,7 @@ export default function VerificationStatusScreen() {
         <Text style={styles.errorDescription}>
           Please try again or contact support if the problem persists.
         </Text>
-        <TouchableOpacity style={styles.retryButton} onPress={fetchClinicData}>
+        <TouchableOpacity style={styles.retryButton} onPress={() => fetchClinicData()}>
           <Text style={styles.retryButtonText}>Try Again</Text>
         </TouchableOpacity>
       </View>

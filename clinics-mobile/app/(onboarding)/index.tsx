@@ -223,6 +223,7 @@ export default function OnboardingScreen() {
               userType: "CLINIC",
             }
           });
+          console.log("payment status", res.data)
           const data = res.data;
           setHasEmailPaid(data.data.payment !== null);
         } catch (error) {

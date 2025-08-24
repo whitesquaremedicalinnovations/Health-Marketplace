@@ -12,7 +12,7 @@ import {
 } from "react-native";
 
 import { useUser } from "@clerk/clerk-expo";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import {
   ArrowLeft,
   Calendar,
@@ -107,6 +107,19 @@ export default function NewsDetail() {
   if (!news) {
     return (
       <View className="flex-1 justify-center items-center bg-gray-100 p-4">
+        <Stack.Screen 
+            options={
+                {
+                    headerTitle: "View Requirement",
+                    headerStyle: {
+                      backgroundColor: "#2563EB"
+                    },
+                    headerTitleStyle: {
+                      color: "white"
+                    }
+                }
+            }
+        />
         <View className="bg-white p-8 rounded-lg shadow-md items-center">
           <Text className="text-xl font-bold text-gray-900 mb-3">
             Article Not Found
@@ -114,13 +127,6 @@ export default function NewsDetail() {
           <Text className="text-gray-600 mb-4 text-center">
             The article you're looking for doesn't exist.
           </Text>
-          <TouchableOpacity
-            onPress={() => router.push("/(drawer)/news")}
-            className="flex-row items-center bg-blue-500 p-3 rounded-md"
-          >
-            <ArrowLeft className="h-4 w-4 text-white mr-2" />
-            <Text className="text-white">Back to News</Text>
-          </TouchableOpacity>
         </View>
       </View>
     );
@@ -128,15 +134,20 @@ export default function NewsDetail() {
 
   return (
     <ScrollView className="flex-1 bg-gray-50">
+      <Stack.Screen 
+            options={
+                {
+                    headerTitle: "View Requirement",
+                    headerStyle: {
+                      backgroundColor: "#2563EB"
+                    },
+                    headerTitleStyle: {
+                      color: "white"
+                    }
+                }
+            }
+        />
       <View className="p-4">
-        <TouchableOpacity
-          onPress={() => router.push("/(drawer)/news")}
-          className="flex-row items-center mb-4"
-        >
-          <ArrowLeft className="h-5 w-5 text-blue-600 mr-2" />
-          <Text className="text-blue-600 text-base">Back to News</Text>
-        </TouchableOpacity>
-
         <View className="bg-white rounded-lg shadow-md overflow-hidden">
           {news.imageUrl && (
             <Image

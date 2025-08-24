@@ -12,14 +12,8 @@ interface Props {
   setSearchTerm: (term: string) => void;
   statusFilter: string;
   setStatusFilter: (status: string) => void;
-  genderFilter: string;
-  setGenderFilter: (gender: string) => void;
   doctorFilter: string;
   setDoctorFilter: (doctor: string) => void;
-  ageRangeFilter: string;
-  setAgeRangeFilter: (ageRange: string) => void;
-  sortBy: string;
-  setSortBy: (sort: string) => void;
   connectedDoctors: ConnectedDoctor[];
   filteredCount: number;
   totalCount: number;
@@ -31,21 +25,15 @@ export default function PatientSearchFilters({
   setSearchTerm,
   statusFilter,
   setStatusFilter,
-  genderFilter,
-  setGenderFilter,
   doctorFilter,
   setDoctorFilter,
-  ageRangeFilter,
-  setAgeRangeFilter,
-  sortBy,
-  setSortBy,
   connectedDoctors,
   filteredCount,
   totalCount,
   onClearFilters,
 }: Props) {
   return (
-    <ScrollView className="bg-white rounded-lg shadow-md mb-6" showsVerticalScrollIndicator={false}>
+    <ScrollView className="bg-white rounded-lg shadow-md mb-6 h-full" showsVerticalScrollIndicator={false}>
       <View className="p-4">
         {/* Search Bar */}
         <View className="flex-row items-center border border-gray-300 rounded-lg p-2 mb-4">
@@ -77,22 +65,7 @@ export default function PatientSearchFilters({
               <Picker.Item label="Completed" value="COMPLETED" />
             </Picker>
           </View>
-          <View className="flex-1 ml-2 border border-gray-200 rounded-lg">
-            <Picker
-              selectedValue={genderFilter}
-              onValueChange={setGenderFilter}
-              style={{ height: 50 }}
-            >
-              <Picker.Item label="All Genders" value="all" />
-              <Picker.Item label="Male" value="MALE" />
-              <Picker.Item label="Female" value="FEMALE" />
-              <Picker.Item label="Other" value="OTHER" />
-            </Picker>
-          </View>
-        </View>
 
-        {/* Second Row: Doctor Assignment and Age Range */}
-        <View className="flex-row justify-between mb-4">
           <View className="flex-1 mr-2 border border-gray-200 rounded-lg">
             <Picker
               selectedValue={doctorFilter}
@@ -108,35 +81,6 @@ export default function PatientSearchFilters({
                   value={doctor.id} 
                 />
               ))}
-            </Picker>
-          </View>
-          <View className="flex-1 ml-2 border border-gray-200 rounded-lg">
-            <Picker
-              selectedValue={ageRangeFilter}
-              onValueChange={setAgeRangeFilter}
-              style={{ height: 50 }}
-            >
-              <Picker.Item label="All Ages" value="all" />
-              <Picker.Item label="0-18 years" value="0-18" />
-              <Picker.Item label="19-35 years" value="19-35" />
-              <Picker.Item label="36-50 years" value="36-50" />
-              <Picker.Item label="51-65 years" value="51-65" />
-              <Picker.Item label="65+ years" value="65+" />
-            </Picker>
-          </View>
-        </View>
-
-        {/* Sort Section */}
-        <View className="mb-4">
-          <Text className="text-sm font-medium text-gray-600 mb-2">Sort by</Text>
-          <View className="border border-gray-200 rounded-lg">
-            <Picker selectedValue={sortBy} onValueChange={setSortBy} style={{ height: 50 }}>
-              <Picker.Item label="Newest First" value="newest" />
-              <Picker.Item label="Oldest First" value="oldest" />
-              <Picker.Item label="Name (A-Z)" value="name" />
-              <Picker.Item label="Status" value="status" />
-              <Picker.Item label="Age (Oldest First)" value="age" />
-              <Picker.Item label="Most Assigned Doctors" value="assignedDoctors" />
             </Picker>
           </View>
         </View>

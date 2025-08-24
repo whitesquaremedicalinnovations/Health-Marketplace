@@ -3,7 +3,6 @@ import { axiosInstance } from "./axios";
 export const getClinic = async (clinicId: string) => {
   try {
     const response = await axiosInstance.get(`/api/clinic/get-clinic/${clinicId}`);
-    console.log(response)
     return response;
   } catch (error) {
     console.log("Error fetching user data:", error);

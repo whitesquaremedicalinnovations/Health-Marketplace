@@ -41,7 +41,7 @@ export default function TabLayout() {
         if(!(response.data.data.isVerified)) {
           router.replace('/verification-status');
         } else {
-          setClinicData(response.data);
+          setClinicData(response.data.data);
         }
       } else {
         router.replace('/(auth)/home');
@@ -59,16 +59,12 @@ export default function TabLayout() {
   };  
 
   useEffect(() => {
-    if (!clinicData && user?.id && !loading) {
-      setLoading(true);
-      fetchClinicData();
-      setLoading(false);
-    }
+    fetchClinicData();
   }, [user?.id]);
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC' }}>
         <ActivityIndicator size="large" color="#2563EB" />
       </View>
     );
