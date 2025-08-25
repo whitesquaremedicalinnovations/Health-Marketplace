@@ -3,6 +3,8 @@ import { prisma } from "../utils/prisma.ts";
 import { asyncHandler, ResponseHelper } from "../utils/response.ts";
 import { QueryBuilder } from "../utils/query-builder.ts";
 import { AppError } from "../utils/app-error.ts";
+import { generateAccessToken } from "../utils/generate-auth-tokens.ts";
+import bcrypt from "bcrypt";
 
 export const getNewsById = asyncHandler(async (req: Request, res: Response) => {
     const { newsId } = req.params;
@@ -122,3 +124,49 @@ export const totalNewsComments = async (req: Request, res: Response) => {
     const totalComments = await prisma.newsComment.count({ where: { newsId } });
     res.status(200).json({ totalComments });
 }
+
+// Admin Authentication
+export const adminLogin = asyncHandler(async (req: Request, res: Response) => {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+        throw AppError.badRequest("Email and password are required");
+    }
+
+    // For demo purposes, using hardcoded admin credentials
+    // In production, this should be stored in database with hashed passwords
+    const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@healthcare.com";
+    const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
+    const ADMIN_ID = process.env.ADMIN_ID || "admin-1";
+
+    if (email !== ADMIN_EMAIL) {
+        throw AppError.unauthorized("Invalid admin credentials");
+    }
+
+    // In production, use bcrypt.compare for hashed passwords
+    const isValidPassword = password === ADMIN_PASSWORD;
+    if (!isValidPassword) {
+        throw AppError.unauthorized("Invalid admin credentials");
+    }
+
+    // Generate JWT token with admin role
+    const token = generateAccessToken(ADMIN_ID, "admin");
+
+    const adminData = {
+        id: ADMIN_ID,
+        email: ADMIN_EMAIL,
+        name: "Admin User",
+        role: "admin",
+    };
+
+    ResponseHelper.success(res, {
+        admin: adminData,
+        token,
+    }, "Admin login successful");
+});
+
+export const adminLogout = asyncHandler(async (req: Request, res: Response) => {
+    // For JWT tokens, logout is handled client-side by removing the token
+    // In production, you might want to implement token blacklisting
+    ResponseHelper.success(res, null, "Admin logout successful");
+});

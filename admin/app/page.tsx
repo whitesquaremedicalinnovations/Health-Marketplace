@@ -23,7 +23,8 @@ import {
   UserX,
   Wallet,
   Globe,
-  RefreshCw
+  RefreshCw,
+  LogOut
 } from "lucide-react";
 import {
   Card,
@@ -39,22 +40,13 @@ import { Separator } from "../components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { toast } from "sonner";
+import { adminApi, type DashboardStats } from "../lib/api";
+import { useAuthStore } from "../lib/auth-store";
 
-// Dynamic data interface
-interface DashboardData {
-  totalUsers: number;
-  totalClinics: number;
-  totalDoctors: number;
-  totalRevenue: number;
-  monthlyGrowth: number;
-  pendingVerifications: number;
-  verifiedUsers: number;
-  rejectedUsers: number;
-  activeConnections: number;
-  totalRequirements: number;
-  completedRequirements: number;
+// Dashboard data interface
+interface DashboardData extends DashboardStats {
   recentUsers: Array<{
-    id: number;
+    id: string;
     name: string;
     type: "Doctor" | "Clinic";
     status: "pending" | "verified" | "rejected";
@@ -62,63 +54,66 @@ interface DashboardData {
     avatar?: string;
   }>;
   recentPayments: Array<{
-    id: number;
+    id: string;
     user: string;
     amount: number;
     type: "Onboarding" | "Subscription" | "Commission";
     date: string;
     status: "completed" | "pending" | "failed";
   }>;
-  systemHealth: {
-    uptime: number;
-    responseTime: number;
-    errorRate: number;
-  };
 }
 
 export default function AdminDashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const { admin, logout } = useAuthStore();
 
-  // Simulate API data fetching
+  // Fetch real dashboard data from API
   const fetchDashboardData = async (): Promise<DashboardData> => {
-    // In real app, this would be an actual API call
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          totalUsers: 1248 + Math.floor(Math.random() * 50),
-          totalClinics: 342 + Math.floor(Math.random() * 10),
-          totalDoctors: 906 + Math.floor(Math.random() * 20),
-          totalRevenue: 125400 + Math.floor(Math.random() * 5000),
-          monthlyGrowth: 12.5 + (Math.random() * 5 - 2.5),
-          pendingVerifications: 23 + Math.floor(Math.random() * 10),
-          verifiedUsers: 1180 + Math.floor(Math.random() * 30),
-          rejectedUsers: 45 + Math.floor(Math.random() * 5),
-          activeConnections: 456 + Math.floor(Math.random() * 20),
-          totalRequirements: 89 + Math.floor(Math.random() * 10),
-          completedRequirements: 67 + Math.floor(Math.random() * 5),
-          recentUsers: [
-            { id: 1, name: "Dr. Sarah Johnson", type: "Doctor", status: "pending", date: "2024-01-15", avatar: "/avatars/01.png" },
-            { id: 2, name: "City Medical Center", type: "Clinic", status: "verified", date: "2024-01-14" },
-            { id: 3, name: "Dr. Michael Chen", type: "Doctor", status: "verified", date: "2024-01-13" },
-            { id: 4, name: "HealthCare Plus", type: "Clinic", status: "pending", date: "2024-01-12" },
-            { id: 5, name: "Dr. Emily Davis", type: "Doctor", status: "rejected", date: "2024-01-11" },
-          ],
-          recentPayments: [
-            { id: 1, user: "Dr. Sarah Johnson", amount: 500, type: "Onboarding", date: "2024-01-15", status: "completed" },
-            { id: 2, user: "City Medical Center", amount: 500, type: "Onboarding", date: "2024-01-14", status: "completed" },
-            { id: 3, user: "Dr. Michael Chen", amount: 500, type: "Onboarding", date: "2024-01-13", status: "pending" },
-            { id: 4, user: "HealthCare Plus", amount: 1200, type: "Subscription", date: "2024-01-12", status: "completed" },
-          ],
-          systemHealth: {
-            uptime: 99.8 + (Math.random() * 0.2),
-            responseTime: 120 + Math.floor(Math.random() * 50),
-            errorRate: 0.1 + (Math.random() * 0.1),
-          },
-        });
-      }, 1000);
-    });
+    try {
+      const [overviewData, usersData, paymentsData] = await Promise.all([
+        adminApi.getOverview(),
+        adminApi.getAllUsers(),
+        adminApi.getAllPayments(),
+      ]);
+
+      // Transform and combine the data
+      const recentUsers = [
+        ...usersData.doctors.slice(0, 3).map(doctor => ({
+          id: doctor.id,
+          name: doctor.name,
+          type: "Doctor" as const,
+          status: doctor.isVerified ? "verified" as const : "pending" as const,
+          date: new Date(doctor.createdAt).toISOString().split('T')[0],
+        })),
+        ...usersData.clinics.slice(0, 2).map(clinic => ({
+          id: clinic.id,
+          name: clinic.name,
+          type: "Clinic" as const,
+          status: clinic.isVerified ? "verified" as const : "pending" as const,
+          date: new Date(clinic.createdAt).toISOString().split('T')[0],
+        })),
+      ];
+
+      const recentPayments = paymentsData.payments.slice(0, 4).map(payment => ({
+        id: payment.id,
+        user: payment.user?.name || "Unknown User",
+        amount: payment.amount,
+        type: payment.type || "Onboarding",
+        date: new Date(payment.createdAt).toISOString().split('T')[0],
+        status: payment.status || "completed",
+      }));
+
+      return {
+        ...overviewData,
+        recentUsers,
+        recentPayments,
+      };
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+      throw error;
+    }
   };
 
   const loadData = async () => {
@@ -210,16 +205,36 @@ export default function AdminDashboard() {
                 <h1 className="text-2xl font-bold text-gray-900">HealthCare Admin</h1>
               </div>
             </div>
-            <nav className="flex space-x-4">
+            <nav className="flex items-center space-x-4">
               <Link href="/users">
                 <Button variant="ghost">Users</Button>
               </Link>
               <Link href="/analytics">
                 <Button variant="ghost">Analytics</Button>
               </Link>
+              <Link href="/news">
+                <Button variant="ghost">News</Button>
+              </Link>
               <Link href="/settings">
                 <Button variant="ghost">Settings</Button>
               </Link>
+              
+              <div className="flex items-center space-x-2 pl-4 border-l">
+                <span className="text-sm text-gray-600">
+                  Welcome, {admin?.name}
+                </span>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    logout();
+                    toast.success("Logged out successfully");
+                  }}
+                >
+                  <LogOut className="h-4 w-4 mr-1" />
+                  Logout
+                </Button>
+              </div>
             </nav>
           </div>
         </div>
@@ -236,35 +251,31 @@ export default function AdminDashboard() {
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatCard
-            title="Total Users"
-            value={data?.totalUsers.toLocaleString() || 0}
-            description="Registered users on platform"
-            icon={Users}
-            trend="+12% from last month"
-            href="/users"
-          />
-          <StatCard
-            title="Clinics"
-            value={data?.totalClinics.toLocaleString() || 0}
-            description="Active healthcare facilities"
-            icon={Building}
-            trend="+8% from last month"
-            href="/users?type=clinic"
-          />
-          <StatCard
-            title="Doctors"
+            title="Total Doctors"
             value={data?.totalDoctors.toLocaleString() || 0}
-            description="Verified medical professionals"
+            description="Registered doctors on platform"
             icon={Stethoscope}
-            trend="+15% from last month"
             href="/users?type=doctor"
           />
           <StatCard
-            title="Revenue"
-            value={`$${data?.totalRevenue.toLocaleString()}`}
-            description="Total platform revenue"
+            title="Total Clinics"
+            value={data?.totalClinics.toLocaleString() || 0}
+            description="Active healthcare facilities"
+            icon={Building}
+            href="/users?type=clinic"
+          />
+          <StatCard
+            title="Total Payments"
+            value={data?.totalPayments.toLocaleString() || 0}
+            description="Payment transactions"
             icon={DollarSign}
-            trend="+23% from last month"
+            href="/analytics"
+          />
+          <StatCard
+            title="Total Revenue"
+            value={`$${data?.totalAmount?._sum?.amount?.toLocaleString() || 0}`}
+            description="Total platform revenue"
+            icon={Wallet}
             href="/analytics"
           />
         </div>
@@ -283,7 +294,7 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-orange-600 mb-4">
-                {data?.pendingVerifications}
+                {data?.recentUsers?.filter(u => u.status === 'pending').length || 0}
               </div>
               <Link href="/users?status=pending">
                 <Button className="w-full">
@@ -307,12 +318,12 @@ export default function AdminDashboard() {
             <CardContent>
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between text-sm">
-                  <span>Onboarding Fee</span>
-                  <span className="font-medium">$500</span>
+                  <span>Total News</span>
+                  <span className="font-medium">{data?.totalNews || 0}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span>Active Policies</span>
-                  <span className="font-medium">12</span>
+                  <span>Total Requirements</span>
+                  <span className="font-medium">{data?.totalRequirements || 0}</span>
                 </div>
               </div>
               <Link href="/settings">
