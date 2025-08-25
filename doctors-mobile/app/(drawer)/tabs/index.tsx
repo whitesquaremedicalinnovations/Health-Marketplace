@@ -36,7 +36,7 @@ import {
   Building,
 } from "lucide-react-native";
 import Chart from "../../../components/Chart";
-import DashboardCalendarMap from "../../../components/dashboard-calendar-map";
+import MeetingCalendar from '@/components/calendar';
 
 import { getDashboardOverview } from "../../../lib/utils";
 
@@ -261,7 +261,7 @@ export default function DashboardScreen() {
         </LinearGradient>
 
         {/* Calendar Map Section */}
-        <DashboardCalendarMap />
+        <MeetingCalendar />
 
         <View style={{ padding: 20, paddingTop: 30 }}>
           {/* Enhanced Statistics Cards */}

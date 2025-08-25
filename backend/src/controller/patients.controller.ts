@@ -161,7 +161,7 @@ export const getPatientById = asyncHandler(async (req: Request, res: Response) =
 });
 
 export const createPatient = asyncHandler(async (req: Request, res: Response) => {
-    const { name, phoneNumber, gender, dateOfBirth, address, latitude, longitude, clinicId } = req.body as {
+    const { name, phoneNumber, gender, dateOfBirth, address, latitude, longitude, clinicId, medicalProcedure } = req.body as {
         name: string;
         phoneNumber: string;
         gender: string;
@@ -170,6 +170,7 @@ export const createPatient = asyncHandler(async (req: Request, res: Response) =>
         latitude?: number;
         longitude?: number;
         clinicId: string;
+        medicalProcedure?: string;
     };
     
     // Validate required fields
@@ -196,7 +197,8 @@ export const createPatient = asyncHandler(async (req: Request, res: Response) =>
             address,
             latitude: latitude ? Number(latitude) : null,
             longitude: longitude ? Number(longitude) : null,
-            clinicId
+            clinicId,
+            medicalProcedure: medicalProcedure ? medicalProcedure : null
         },
         include: {
             clinic: {
@@ -214,7 +216,7 @@ export const createPatient = asyncHandler(async (req: Request, res: Response) =>
 
 export const updatePatient = asyncHandler(async (req: Request, res: Response) => {
     const { patientId } = req.params as { patientId: string };
-    const { name, phoneNumber, gender, dateOfBirth, address, latitude, longitude, clinicId } = req.body as {
+    const { name, phoneNumber, gender, dateOfBirth, address, latitude, longitude, clinicId, medicalProcedure } = req.body as {
         name?: string;
         phoneNumber?: string;
         gender?: string;
@@ -223,6 +225,7 @@ export const updatePatient = asyncHandler(async (req: Request, res: Response) =>
         latitude?: number;
         longitude?: number;
         clinicId?: string;
+        medicalProcedure?: string;
     };
     
     // Check if patient exists
@@ -256,7 +259,7 @@ export const updatePatient = asyncHandler(async (req: Request, res: Response) =>
     if (latitude !== undefined) updateData.latitude = latitude ? Number(latitude) : null;
     if (longitude !== undefined) updateData.longitude = longitude ? Number(longitude) : null;
     if (clinicId) updateData.clinicId = clinicId;
-    
+    if (medicalProcedure) updateData.medicalProcedure = medicalProcedure;    
         const patient = await prisma.patient.update({
         where: { id: patientId },
         data: updateData,
@@ -271,7 +274,19 @@ export const updatePatient = asyncHandler(async (req: Request, res: Response) =>
         }
     });
     
-        ResponseHelper.success(res, patient, "Patient updated successfully");
+    ResponseHelper.success(res, patient, "Patient updated successfully");
+});
+
+export const updatePatientMedicalProcedure = asyncHandler(async (req: Request, res: Response) => {
+    const { patientId } = req.params as { patientId: string };
+    const { medicalProcedure } = req.body as { medicalProcedure: string };
+    
+    const patient = await prisma.patient.update({
+        where: { id: patientId },
+        data: { medicalProcedure: medicalProcedure }
+    });
+    
+    ResponseHelper.success(res, patient, "Patient medical procedure updated successfully");
 });
 
 export const assignDoctorToPatient = asyncHandler(async (req: Request, res: Response) => {

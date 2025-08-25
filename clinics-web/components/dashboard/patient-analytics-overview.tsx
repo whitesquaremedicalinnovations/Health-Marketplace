@@ -281,7 +281,7 @@ export default function PatientAnalyticsOverview({ userId }: PatientAnalyticsOve
       <div className="text-center py-8">
         <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
         <h3 className="text-lg font-medium text-gray-900 mb-2">No Data Available</h3>
-        <p className="text-gray-500 mb-4">You don't have any patient data yet to display analytics.</p>
+        <p className="text-gray-500 mb-4">You don&apos;t have any patient data yet to display analytics.</p>
         <p className="text-sm text-gray-400">Analytics will appear once you have patients in your clinic.</p>
       </div>
     );

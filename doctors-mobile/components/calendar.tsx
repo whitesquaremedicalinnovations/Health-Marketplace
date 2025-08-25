@@ -1,13 +1,18 @@
 "use client"
 
 import * as React from "react"
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator } from "react-native"
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Alert } from "react-native"
 import { Calendar } from "./ui/calendar"
 import { Card, CardContent } from "./ui/card"
 import { axiosInstance } from "@/lib/axios"
-import CalendarMap from "./calender-map"
+// import CalendarMap from "./calender-map"
 import { useUser } from "@clerk/clerk-expo"
 import { useTheme } from "@/contexts/ThemeContext"
+import dayjs from "dayjs"
+import customParseFormat from "dayjs/plugin/customParseFormat";
+
+// extend once in your app setup
+dayjs.extend(customParseFormat);
 
 type Meeting = {
   id: string;
@@ -25,6 +30,21 @@ type CalendarSize = 'sm' | 'lg';
 interface MeetingCalendarProps {
   size?: CalendarSize;
 }
+
+// Helper function to format time from HH:MM to 12-hour format
+const formatTime = (time: string | null): string | null => {
+  if (!time) return null;
+  
+  try {
+    const [hours, minutes] = time.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour % 12 || 12;
+    return `${displayHour}:${minutes} ${ampm}`;
+  } catch (error) {
+    return time; // Return original if parsing fails
+  }
+};
 
 const dummymeetings: Meeting[] = [
   { 
@@ -82,43 +102,74 @@ const dummymeetings: Meeting[] = [
 export default function MeetingCalendar({ size = 'sm' }: MeetingCalendarProps) {
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(new Date())
   const [meetings, setMeetings] = React.useState<Meeting[]>(dummymeetings)
+  const [error, setError] = React.useState<string | null>(null)
   const { user } = useUser()
   const [isLoading, setIsLoading] = React.useState(false)
   const { colors } = useTheme()
 
-  const fetchMeetings = async () => {
+  const fetchMeetings = React.useCallback(async () => {
+    if (!user?.id) return
+
     try {
       setIsLoading(true)
-      const response = await axiosInstance.get(`/api/doctor/get-meetings/${user?.id}`)
+      setError(null)
+      
+      // Fetch all meetings without date filter
+      const response = await axiosInstance.get(`/api/doctor/get-meetings/${user.id}`)
       if (response.status === 200) {
-        console.log("meetings", response.data.meetings)
-        setMeetings(response.data.meetings)
+        setMeetings(response.data.meetings || [])
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching meetings:", error)
+      setError(error?.response?.data?.message || "Failed to load meetings")
+      // Show user-friendly error message
+      Alert.alert(
+        "Error",
+        "Unable to load meetings. Please try again later.",
+        [{ text: "OK" }]
+      )
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [user?.id])
 
   React.useEffect(() => {
-    console.log("user data", user)
     if (user) {
       fetchMeetings()    
     }
-  }, [user])
+  }, [user, fetchMeetings])
 
-  const meetingsByDate = (date: Date) =>
-    meetings.filter(m => {
-      if (!m.jobDate) return false;
-      const meetingDate = new Date(m.jobDate);
-      return meetingDate.toDateString() === date.toDateString();
+  // Handle date selection - only update local state, no API call
+  const handleDateSelect = React.useCallback((date: Date) => {
+    setSelectedDate(date)
+    // No need to fetch meetings again, just filter locally
+  }, [])
+
+  const meetingsByDate = React.useCallback((date: Date) => {
+    const filteredMeetings = meetings.filter(m => {
+      if (!m.jobDate) {
+        return false
+      }
+      console.log("Before formating: ")
+      console.log("Meeting Date: ", m.jobDate)
+      console.log("Date: ", date)
+      const meetingDate = dayjs(m.jobDate, "MMMM D, YYYY") 
+      const newDate = dayjs(date)
+      console.log("After formating: ")
+      console.log("Meeting Date: ", meetingDate)
+      console.log("Date: ", newDate)
+      return meetingDate.isSame(newDate, 'day');
     })
+    return filteredMeetings
+  }, [meetings])
 
-  const selectedMeetings = selectedDate ? meetingsByDate(selectedDate) : []
+  const selectedMeetings = React.useMemo(() => {
+    const result = selectedDate ? meetingsByDate(selectedDate) : []
+    return result
+  }, [selectedDate, meetingsByDate])
 
   // Custom DayButton component to show meeting indicators and titles
-  const CustomDayButton = ({ 
+  const CustomDayButton = React.memo(({ 
     day, 
     modifiers, 
     style, 
@@ -149,19 +200,32 @@ export default function MeetingCalendar({ size = 'sm' }: MeetingCalendarProps) {
         <View style={styles.dayContent}>
           <Text style={[
             styles.dayNumber,
-            size === 'lg' ? styles.largeDayNumber : styles.smallDayNumber,
-            hasMeetings ? { color: colors.primary } : { color: colors.text }
+            size === 'lg' ? styles.largeDayNumber : styles.smallDayNumber
           ]}>
             {day.date.getDate()}
           </Text>
           
           {hasMeetings && (
             <View style={styles.meetingsContainer}>
-              {dayMeetings.length} meetings
+              <Text style={[styles.meetingsCountText, { color: colors.primary }]}>
+                {dayMeetings.length} meeting{dayMeetings.length !== 1 ? 's' : ''}
+              </Text>
             </View>
           )}
         </View>
       </TouchableOpacity>
+    )
+  })
+
+  // Error state
+  if (error && !isLoading) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>Failed to load calendar data</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={() => fetchMeetings()}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
     )
   }
 
@@ -177,7 +241,7 @@ export default function MeetingCalendar({ size = 'sm' }: MeetingCalendarProps) {
             </Text>
             <Calendar
               selected={selectedDate}
-              onSelect={setSelectedDate}
+              onSelect={handleDateSelect}
               modifiers={{
                 hasMeetings: (day: Date) => meetingsByDate(day).length > 0,
               }}
@@ -221,7 +285,7 @@ export default function MeetingCalendar({ size = 'sm' }: MeetingCalendarProps) {
                           {meeting.jobTime && (
                             <View style={styles.meetingTimeContainer}>
                               <View style={[styles.timeDot, { backgroundColor: colors.primary }]} />
-                              <Text style={styles.meetingTimeText}>{meeting.jobTime}</Text>
+                              <Text style={styles.meetingTimeText}>{formatTime(meeting.jobTime)}</Text>
                             </View>
                           )}
                           <View style={styles.meetingLocationContainer}>
@@ -249,42 +313,6 @@ export default function MeetingCalendar({ size = 'sm' }: MeetingCalendarProps) {
           </View>
         </View>
       </View>
-
-      {/* Bottom Section: Map */}
-      {size === 'lg' && selectedMeetings.length > 0 && (
-        <View style={styles.mapContainer}>
-          <View style={styles.mapCard}>
-            <Text style={styles.mapTitle}>Job Locations</Text>
-            <View style={styles.mapWrapper}>
-              {selectedMeetings.length > 0 && selectedMeetings.some(meeting => meeting.jobLatitude && meeting.jobLongitude) ? (
-                <CalendarMap
-                  places={selectedMeetings
-                    .filter(meeting => meeting.jobLatitude && meeting.jobLongitude)
-                    .map(meeting => ({
-                      lat: meeting.jobLatitude!,
-                      lng: meeting.jobLongitude!,
-                      clinicName: meeting.clinic
-                    }))}
-                  center={{
-                    lat: selectedMeetings.find(m => m.jobLatitude)?.jobLatitude || 40.7128,
-                    lng: selectedMeetings.find(m => m.jobLongitude)?.jobLongitude || -74.0060
-                  }}
-                  zoom={12}
-                  updateLocation={() => {}} // No-op since we don't need to update locations
-                />
-              ) : (
-                <View style={styles.mapPlaceholder}>
-                  <View style={styles.mapPlaceholderIcon}>
-                    <Text style={styles.mapPlaceholderIconText}>📍</Text>
-                  </View>
-                  <Text style={styles.mapPlaceholderTitle}>No jobs selected</Text>
-                  <Text style={styles.mapPlaceholderSubtitle}>Select a date with jobs to see locations on the map</Text>
-                </View>
-              )}
-            </View>
-          </View>
-        </View>
-      )}
     </ScrollView>
   )
 }
@@ -551,59 +579,32 @@ const styles = StyleSheet.create({
     width: '100%',
     marginTop: 4,
   },
-  meetingItem: {
-    width: '100%',
-    alignItems: 'center',
-  },
-  meetingTitle: {
-    fontWeight: '500',
-    textAlign: 'center',
-    color: '#3b82f6',
-  },
-  smallMeetingTitle: {
-    fontSize: 9,
-  },
-  largeMeetingTitle: {
-    fontSize: 12,
-  },
-  meetingTime: {
-    textAlign: 'center',
-    color: '#3b82f6',
-    fontWeight: '500',
-  },
-  smallMeetingTime: {
-    fontSize: 8,
-  },
-  largeMeetingTime: {
+  meetingsCountText: {
     fontSize: 10,
+    fontWeight: '500',
   },
-  moreMeetings: {
-    backgroundColor: '#dbeafe',
-    paddingHorizontal: 4,
-    paddingVertical: 2,
+  // Error handling styles
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#ef4444',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: '#3b82f6',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
     borderRadius: 8,
   },
-  moreMeetingsText: {
-    color: '#3b82f6',
+  retryButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
     fontWeight: '600',
-  },
-  smallMoreText: {
-    fontSize: 8,
-  },
-  largeMoreText: {
-    fontSize: 10,
-  },
-  meetingDots: {
-    position: 'absolute',
-    bottom: 4,
-    left: '50%',
-    transform: [{ translateX: -8 }],
-    flexDirection: 'row',
-    gap: 4,
-  },
-  dot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
   },
 });

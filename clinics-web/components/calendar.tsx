@@ -14,6 +14,11 @@ type Meeting = {
   id: string;
   title: string;
   clinic: string;
+  doctor: {
+    fullName: string;
+    specialization: string;
+    profileImage: string | null;
+  };
   jobDate: string | null;
   jobTime: string | null;
   jobLocation: string;
@@ -27,11 +32,31 @@ interface MeetingCalendarProps {
   size?: CalendarSize;
 }
 
+// Helper function to format time from HH:MM to 12-hour format
+const formatTime = (time: string | null): string | null => {
+  if (!time) return null;
+  
+  try {
+    const [hours, minutes] = time.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour % 12 || 12;
+    return `${displayHour}:${minutes} ${ampm}`;
+  } catch (error) {
+    return time; // Return original if parsing fails
+  }
+};
+
 const dummymeetings: Meeting[] = [
   { 
     id: "1", 
     title: "Client Meeting", 
     clinic: "City Clinic",
+    doctor: {
+      fullName: "Dr. Smith",
+      specialization: "Cardiology",
+      profileImage: null,
+    },
     jobDate: "August 21, 2025",
     jobTime: "10:00 AM",
     jobLocation: "123 Main St, City",
@@ -42,6 +67,11 @@ const dummymeetings: Meeting[] = [
     id: "2", 
     title: "Team Sync", 
     clinic: "Medical Center",
+    doctor: {
+      fullName: "Dr. Johnson",
+      specialization: "Pediatrics",
+      profileImage: null,
+    },
     jobDate: "August 21, 2025",
     jobTime: "2:00 PM",
     jobLocation: "456 Oak Ave, City",
@@ -52,6 +82,11 @@ const dummymeetings: Meeting[] = [
     id: "3", 
     title: "Project Review", 
     clinic: "Health Hub",
+    doctor: {
+      fullName: "Dr. Brown",
+      specialization: "Neurology",
+      profileImage: null,
+    },
     jobDate: "August 22, 2025",
     jobTime: "4:00 PM",
     jobLocation: "789 Pine St, City",
@@ -62,6 +97,11 @@ const dummymeetings: Meeting[] = [
     id: "4", 
     title: "Follow-up Call", 
     clinic: "Wellness Clinic",
+    doctor: {
+      fullName: "Dr. Davis",
+      specialization: "Dermatology",
+      profileImage: null,
+    },
     jobDate: "August 23, 2025",
     jobTime: "11:00 AM",
     jobLocation: "321 Elm St, City",
@@ -72,6 +112,11 @@ const dummymeetings: Meeting[] = [
     id: "5", 
     title: "Consultation", 
     clinic: "Family Medical",
+    doctor: {
+      fullName: "Dr. Wilson",
+      specialization: "Family Medicine",
+      profileImage: null,
+    },
     jobDate: "August 23, 2025",
     jobTime: "3:30 PM",
     jobLocation: "654 Maple Dr, City",
@@ -218,10 +263,32 @@ export default function MeetingCalendar({ size = 'sm' }: MeetingCalendarProps) {
                         <div className="flex-1">
                           <p className="font-semibold text-base md:text-lg lg:text-xl text-gray-800">{meeting.title}</p>
                           <p className="text-blue-600 mt-1 text-sm md:text-base font-medium">{meeting.clinic}</p>
+                          
+                          {/* Doctor Information */}
+                          <div className="flex items-center mt-3 mb-2">
+                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                              {meeting.doctor.profileImage ? (
+                                <img 
+                                  src={meeting.doctor.profileImage} 
+                                  alt={meeting.doctor.fullName}
+                                  className="w-8 h-8 rounded-full object-cover"
+                                />
+                              ) : (
+                                <span className="text-blue-600 text-sm font-semibold">
+                                  {meeting.doctor.fullName.split(' ').map(n => n[0]).join('')}
+                                </span>
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-gray-800 font-medium text-sm md:text-base">{meeting.doctor.fullName}</p>
+                              <p className="text-gray-600 text-xs md:text-sm">{meeting.doctor.specialization}</p>
+                            </div>
+                          </div>
+                          
                           {meeting.jobTime && (
                             <div className="flex items-center mt-2">
                               <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
-                              <p className="text-gray-600 text-sm md:text-base">{meeting.jobTime}</p>
+                              <p className="text-gray-600 text-sm md:text-base">{formatTime(meeting.jobTime)}</p>
                             </div>
                           )}
                           <div className="flex items-center mt-2">

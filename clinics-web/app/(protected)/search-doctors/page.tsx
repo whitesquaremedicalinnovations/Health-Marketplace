@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { axiosInstance } from "@/lib/axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +23,8 @@ import { Slider } from "@/components/ui/slider";
 import LocationSearch from "@/components/ui/location-search";
 import ReusableMap from "@/components/ui/reusable-map";
 import { APIProvider } from "@vis.gl/react-google-maps";
+import { MultiSelect } from "@/components/ui/multi-select";
+import { toast } from "sonner";
 
 interface Doctor {
   id: string;
@@ -39,9 +41,11 @@ interface Doctor {
 export default function SearchDoctors() {
   const { userId } = useAuth();
   const router = useRouter();
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [filteredDoctors, setFilteredDoctors] = useState<Doctor[]>([]);
+  const [allDoctors, setAllDoctors] = useState<Doctor[]>([]);
   const [doctorsLoading, setDoctorsLoading] = useState(false);
+  const [isFiltering, setIsFiltering] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [locationLoading, setLocationLoading] = useState(false);
   const [mapCenter, setMapCenter] = useState<{lat: number, lng: number}>({ lat: 28.6139, lng: 77.2090 });
   
   // Filter states
@@ -52,7 +56,125 @@ export default function SearchDoctors() {
   const [customLocation, setCustomLocation] = useState("");
   const [selectedPlace, setSelectedPlace] = useState<google.maps.places.PlaceResult | null>(null);
   const [useCustomLocation, setUseCustomLocation] = useState(false);
+  const [selectedSpecializations, setSelectedSpecializations] = useState<string[]>([]);
 
+  // Specialization options
+  const specializationOptions = [
+    { value: "GENERAL_PHYSICIAN", label: "General Physician" },
+    { value: "CARDIOLOGIST", label: "Cardiologist" },
+    { value: "DERMATOLOGIST", label: "Dermatologist" },
+    { value: "ENDOCRINOLOGIST", label: "Endocrinologist" },
+    { value: "GYNECOLOGIST", label: "Gynecologist" },
+    { value: "NEUROSURGEON", label: "Neurosurgeon" },
+    { value: "ORTHOPEDIC_SURGEON", label: "Orthopedic Surgeon" },
+    { value: "PLASTIC_SURGEON", label: "Plastic Surgeon" },
+    { value: "UROLOGIST", label: "Urologist" },
+    { value: "ENT_SPECIALIST", label: "ENT Specialist" },
+    { value: "PEDIATRICIAN", label: "Pediatrician" },
+    { value: "PSYCHIATRIST", label: "Psychiatrist" },
+    { value: "DENTIST", label: "Dentist" },
+  ];
+
+
+
+  // Client-side filtering for better performance
+  const filteredDoctors = useMemo(() => {
+    // Show filtering indicator for a brief moment
+    setIsFiltering(true);
+    
+    let filtered = allDoctors;
+
+    // Search filter
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(doctor =>
+        doctor.fullName.toLowerCase().includes(searchLower) ||
+        doctor.specialization.toLowerCase().includes(searchLower) ||
+        doctor.address.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Specialization filter
+    if (selectedSpecializations.length > 0) {
+      filtered = filtered.filter(doctor => 
+        selectedSpecializations.includes(doctor.specialization)
+      );
+    }
+
+    // Experience filter
+    filtered = filtered.filter(doctor => 
+      doctor.experience >= experienceRange[0] && doctor.experience <= experienceRange[1]
+    );
+
+    // Sort filtered results
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'experience_asc':
+          return a.experience - b.experience;
+        case 'experience_desc':
+          return b.experience - a.experience;
+        case 'name_asc':
+          return a.fullName.localeCompare(b.fullName);
+        case 'name_desc':
+          return b.fullName.localeCompare(a.fullName);
+        default: // nearest
+          if (a.distance !== undefined && b.distance !== undefined) {
+            return a.distance - b.distance;
+          }
+          return 0;
+      }
+    });
+
+    // Hide filtering indicator after a brief delay
+    setTimeout(() => setIsFiltering(false), 100);
+
+    return filtered;
+  }, [allDoctors, searchTerm, selectedSpecializations, experienceRange, sortBy]);
+
+  // Get user's current location
+  const getCurrentLocation = useCallback(async () => {
+    if (!navigator.geolocation) {
+      console.log("Geolocation is not supported by this browser");
+      return null;
+    }
+
+    console.log("Requesting current location...");
+
+    return new Promise<{lat: number, lng: number} | null>((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          console.log("Location obtained successfully:", { lat: latitude, lng: longitude });
+          resolve({ lat: latitude, lng: longitude });
+        },
+        (error) => {
+          console.log("Error getting current location:", error);
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              console.log("Location permission denied by user");
+              break;
+            case error.POSITION_UNAVAILABLE:
+              console.log("Location information unavailable");
+              break;
+            case error.TIMEOUT:
+              console.log("Location request timed out");
+              break;
+            default:
+              console.log("Unknown location error:", error.message);
+              break;
+          }
+          resolve(null);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 15000, // Increased timeout
+          maximumAge: 300000 // 5 minutes
+        }
+      );
+    });
+  }, []);
+
+  // Only fetch doctors when location or radius changes (not on every filter change)
   const fetchDoctors = useCallback(async () => {
     if (!userId) return;
     
@@ -60,54 +182,102 @@ export default function SearchDoctors() {
     try {
       let searchLat: number, searchLng: number;
       
+      // Priority order: Custom location > Current location > Clinic location
       if (useCustomLocation && selectedPlace?.geometry?.location) {
+        // User manually selected a location
         searchLat = selectedPlace.geometry.location.lat();
         searchLng = selectedPlace.geometry.location.lng();
         setMapCenter({ lat: searchLat, lng: searchLng });
+        console.log("Using custom location:", { lat: searchLat, lng: searchLng });
+      } else if (currentLocation) {
+        // Use current location (default)
+        searchLat = currentLocation.lat;
+        searchLng = currentLocation.lng;
+        setMapCenter({ lat: searchLat, lng: searchLng });
+        console.log("Using current location:", { lat: searchLat, lng: searchLng });
       } else {
+        // Fallback to clinic location
         const userResponse = await axiosInstance.get(`/api/clinic/get-clinic/${userId}`);
         const userLocationData = userResponse.data?.success ? userResponse.data.data : userResponse.data.clinic;
         
         if (!userLocationData.latitude || !userLocationData.longitude) {
           console.log("User location not available");
-          setDoctors([]);
+          setAllDoctors([]);
           return;
         }
         
         searchLat = userLocationData.latitude;
         searchLng = userLocationData.longitude;
         setMapCenter({ lat: searchLat, lng: searchLng });
+        console.log("Using clinic location:", { lat: searchLat, lng: searchLng });
       }
       
+      console.log("Fetching doctors with params:", {
+        lat: searchLat,
+        lng: searchLng,
+        radius: locationRange,
+        sortBy: "nearest",
+        search: "",
+        experience_min: 0,
+        experience_max: 50,
+        specializations: "all"
+      });
+
       const response = await axiosInstance.get(`/api/clinic/get-doctors-by-location`, {
         params: {
           lat: searchLat,
           lng: searchLng,
           radius: locationRange,
-          sortBy: sortBy,
-          search: searchTerm,
-          experience_min: experienceRange[0],
-          experience_max: experienceRange[1],
+          sortBy: "nearest", // Always fetch with nearest sort, we'll sort client-side
+          search: "", // Don't filter by search on server, do it client-side
+          experience_min: 0, // Don't filter by experience on server, do it client-side
+          experience_max: 50,
+          specializations: "all", // Don't filter by specialization on server, do it client-side
         }
       });
       
-      setDoctors(response.data.doctors);
+      console.log("API Response:", response.data);
+      setAllDoctors(response.data.doctors);
     } catch (error) {
       console.log("Error fetching doctors:", error);
     } finally {
       setDoctorsLoading(false);
     }
-  }, [userId, useCustomLocation, selectedPlace, locationRange, sortBy, searchTerm, experienceRange]);
+  }, [userId, useCustomLocation, selectedPlace, locationRange, currentLocation]); // Only depend on location-related changes
 
+  // Get current location on component mount
+  useEffect(() => {
+    const initializeLocation = async () => {
+      if (!userId) return;
+      
+      setLocationLoading(true);
+      try {
+        const location = await getCurrentLocation();
+        if (location) {
+          setCurrentLocation(location);
+          setMapCenter(location);
+          console.log("Current location obtained:", location);
+          toast.success("Location detected! Using your current location to find doctors.");
+        } else {
+          console.log("Could not get current location, will use clinic location");
+          toast.info("Using your clinic location. You can manually select a different location.");
+        }
+      } catch (error) {
+        console.log("Error getting current location:", error);
+      } finally {
+        setLocationLoading(false);
+      }
+    };
+
+    initializeLocation();
+  }, [userId, getCurrentLocation]);
+
+  // Fetch doctors when location changes
   useEffect(() => {
     if (userId) {
       fetchDoctors();
     }
   }, [userId, fetchDoctors]);
-
-  useEffect(() => {
-    setFilteredDoctors(doctors);
-  }, [doctors]);
 
   const handlePlaceSelect = (place: google.maps.places.PlaceResult | null) => {
     setSelectedPlace(place);
@@ -125,9 +295,7 @@ export default function SearchDoctors() {
     }
   };
 
-  if (doctorsLoading) {
-    return <Loading variant="page" text="Finding healthcare professionals..." />;
-  }
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
@@ -155,7 +323,7 @@ export default function SearchDoctors() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               {/* Search */}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -167,8 +335,18 @@ export default function SearchDoctors() {
                 />
               </div>
 
+              {/* Specialization Filter */}
+              <div>
+                <MultiSelect
+                  options={specializationOptions}
+                  selected={selectedSpecializations}
+                  onChange={setSelectedSpecializations}
+                  placeholder="Select specializations..."
+                />
+              </div>
+
               {/* Location Filter */}
-              <div className="relative flex items-center">
+              <div className="relative flex items-center gap-2">
                 <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}>
                   <LocationSearch
                     onPlaceSelect={handlePlaceSelect}
@@ -179,14 +357,32 @@ export default function SearchDoctors() {
                 <Button 
                     variant="ghost" 
                     size="icon" 
-                    onClick={() => {
+                    onClick={async () => {
                         setUseCustomLocation(false);
                         setCustomLocation("");
                         setSelectedPlace(null);
+                        
+                        // Refresh current location
+                        setLocationLoading(true);
+                        try {
+                            const location = await getCurrentLocation();
+                            if (location) {
+                                setCurrentLocation(location);
+                                setMapCenter(location);
+                                toast.success("Location updated! Using your current location.");
+                            } else {
+                                toast.error("Could not get your current location. Please try again.");
+                            }
+                        } catch (error) {
+                            console.log("Error refreshing location:", error);
+                            toast.error("Error updating location. Please try again.");
+                        } finally {
+                            setLocationLoading(false);
+                        }
                     }}
-                    className="ml-2"
+                    disabled={locationLoading}
                 >
-                    <LocateFixed className="h-5 w-5" />
+                    <LocateFixed className={`h-5 w-5 ${locationLoading ? 'animate-spin' : ''}`} />
                 </Button>
 
                 {/* Sort By */}
@@ -238,23 +434,38 @@ export default function SearchDoctors() {
 
             <div className="flex items-center justify-between text-sm text-gray-600 mt-4">
               <span>
-                Showing {filteredDoctors.length} of {doctors.length} doctors within {locationRange}km
-                {useCustomLocation && customLocation ? ` from ${customLocation}` : ' from your location'}
+                {locationLoading ? (
+                  <span className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                    Getting your location...
+                  </span>
+                ) : isFiltering ? (
+                  <span className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                    Filtering...
+                  </span>
+                ) : (
+                  `Showing ${filteredDoctors.length} of ${allDoctors.length} doctors within ${locationRange}km
+                  ${useCustomLocation && customLocation ? ` from ${customLocation}` : currentLocation ? ' from your current location' : ' from your clinic location'}`
+                )}
               </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setSearchTerm("");
-                  setSortBy("nearest");
-                  setExperienceRange([0, 50]);
-                  setUseCustomLocation(false);
-                  setCustomLocation("");
-                  setSelectedPlace(null);
-                }}
-              >
-                Clear All Filters
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setSortBy("nearest");
+                    setExperienceRange([0, 50]);
+                    setUseCustomLocation(false);
+                    setCustomLocation("");
+                    setSelectedPlace(null);
+                    setSelectedSpecializations([]);
+                  }}
+                >
+                  Clear All Filters
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -265,7 +476,14 @@ export default function SearchDoctors() {
                 <div className="flex-1 overflow-y-auto space-y-4 pr-2">
                     {doctorsLoading ? (
                         <div className="flex items-center justify-center h-64">
-                            <Loading variant="page" text="Searching for doctors..." />
+                            <Loading variant="card" text="Searching for doctors..." />
+                        </div>
+                    ) : isFiltering ? (
+                        <div className="flex items-center justify-center h-32">
+                            <div className="flex items-center gap-2 text-gray-500">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                                <span className="text-sm">Applying filters...</span>
+                            </div>
                         </div>
                     ) : filteredDoctors.length === 0 ? (
                         <div className="text-center py-16">

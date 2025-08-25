@@ -15,6 +15,7 @@ interface PatientFormData {
   address: string;
   latitude: string;
   longitude: string;
+  medicalProcedure: string;
 }
 
 interface PatientFormProps {
@@ -36,7 +37,8 @@ export default function PatientForm({
   onLocationSelect,
   onSubmit,
   submitting,
-  mode
+  mode,
+
 }: PatientFormProps) {
   const isEdit = mode === 'edit';
 
@@ -115,6 +117,16 @@ export default function PatientForm({
                 onChange={(value) => onFormDataChange("address", value)}
               />
             </APIProvider>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Medical Procedure
+            </label>
+            <Input
+              value={formData.medicalProcedure}
+              onChange={(e) => onFormDataChange("medicalProcedure", e.target.value)}
+              placeholder="Enter medical procedure"
+            />
           </div>
         </div>
 

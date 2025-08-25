@@ -23,8 +23,8 @@ import {
   Trash2,
   UserX,
   Check,
-  X
-} from "lucide-react";
+  X,
+} from "lucide-react";  
 import FeedbackModal from "./feedbackModal";
 import { axiosInstance } from "@/lib/axios";
 import { useState } from "react";
@@ -62,6 +62,7 @@ interface Patient {
     hasDoctorAccepted: boolean;
     hasClinicAccepted: boolean;
   }[] | [];
+  medicalProcedure: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -142,6 +143,15 @@ export default function PatientCard({
                 >
                   {patient.status}
                 </Badge>
+
+                {patient.medicalProcedure && (
+                  <Badge 
+                    variant="default"
+                    className="bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700"
+                  >
+                    {patient.medicalProcedure}
+                  </Badge>
+                )}
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">

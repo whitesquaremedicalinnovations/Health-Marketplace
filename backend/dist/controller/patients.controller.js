@@ -149,7 +149,7 @@ export const getPatientById = asyncHandler(async (req, res) => {
     ResponseHelper.success(res, patient, "Patient fetched successfully");
 });
 export const createPatient = asyncHandler(async (req, res) => {
-    const { name, phoneNumber, gender, dateOfBirth, address, latitude, longitude, clinicId } = req.body;
+    const { name, phoneNumber, gender, dateOfBirth, address, latitude, longitude, clinicId, medicalProcedure } = req.body;
     // Validate required fields
     if (!name || !phoneNumber || !gender || !dateOfBirth || !address || !clinicId) {
         throw AppError.badRequest(ErrorCode.VALIDATION_ERROR, "Please provide all required patient information");
@@ -171,7 +171,8 @@ export const createPatient = asyncHandler(async (req, res) => {
             address,
             latitude: latitude ? Number(latitude) : null,
             longitude: longitude ? Number(longitude) : null,
-            clinicId
+            clinicId,
+            medicalProcedure: medicalProcedure ? medicalProcedure : null
         },
         include: {
             clinic: {
@@ -187,7 +188,7 @@ export const createPatient = asyncHandler(async (req, res) => {
 });
 export const updatePatient = asyncHandler(async (req, res) => {
     const { patientId } = req.params;
-    const { name, phoneNumber, gender, dateOfBirth, address, latitude, longitude, clinicId } = req.body;
+    const { name, phoneNumber, gender, dateOfBirth, address, latitude, longitude, clinicId, medicalProcedure } = req.body;
     // Check if patient exists
     const existingPatient = await prisma.patient.findUnique({
         where: { id: patientId },
@@ -223,6 +224,8 @@ export const updatePatient = asyncHandler(async (req, res) => {
         updateData.longitude = longitude ? Number(longitude) : null;
     if (clinicId)
         updateData.clinicId = clinicId;
+    if (medicalProcedure)
+        updateData.medicalProcedure = medicalProcedure;
     const patient = await prisma.patient.update({
         where: { id: patientId },
         data: updateData,
@@ -237,6 +240,15 @@ export const updatePatient = asyncHandler(async (req, res) => {
         }
     });
     ResponseHelper.success(res, patient, "Patient updated successfully");
+});
+export const updatePatientMedicalProcedure = asyncHandler(async (req, res) => {
+    const { patientId } = req.params;
+    const { medicalProcedure } = req.body;
+    const patient = await prisma.patient.update({
+        where: { id: patientId },
+        data: { medicalProcedure: medicalProcedure }
+    });
+    ResponseHelper.success(res, patient, "Patient medical procedure updated successfully");
 });
 export const assignDoctorToPatient = asyncHandler(async (req, res) => {
     const { patientId } = req.params;

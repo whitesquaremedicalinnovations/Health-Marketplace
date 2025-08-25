@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getPatientsByClinicId, getPatientsByDoctorId, getPatientById, createPatient, assignDoctorToPatient, updatePatient, deAssignDoctorFromPatient, updatePatientStatus, addFeedback, searchPatients, getPatientFeedbacks, deletePatient } from "../controller/patients.controller.ts";
+import { getPatientsByClinicId, getPatientsByDoctorId, getPatientById, createPatient, assignDoctorToPatient, updatePatient, deAssignDoctorFromPatient, updatePatientStatus, addFeedback, searchPatients, getPatientFeedbacks, deletePatient, updatePatientMedicalProcedure } from "../controller/patients.controller.ts";
 
 const router = Router();
 
@@ -9,6 +9,7 @@ router.get("/get-patient-by-id/:patientId", getPatientById)
 
 router.post("/create-patient", createPatient)
 router.put("/update-patient/:patientId", updatePatient)
+router.put("/update-patient-medical-procedure/:patientId", updatePatientMedicalProcedure)
 
 router.patch("/assign-doctor-to-patient/:patientId", assignDoctorToPatient)
 router.patch("/de-assign-doctor-from-patient/:patientId", deAssignDoctorFromPatient)

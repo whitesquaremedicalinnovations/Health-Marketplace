@@ -637,7 +637,7 @@ export const getAllDoctors = async (req: Request, res: Response) => {
 
 export const getDoctorsByLocationForClinic = async (req: Request, res: Response) => {
     try {
-        const { lat, lng, radius, sortBy, search, experience_min, experience_max } = req.query as {
+        const { lat, lng, radius, sortBy, search, experience_min, experience_max, specializations } = req.query as {
             lat?: string;
             lng?: string;
             radius?: string;
@@ -645,6 +645,7 @@ export const getDoctorsByLocationForClinic = async (req: Request, res: Response)
             search?: string;
             experience_min?: string;
             experience_max?: string;
+            specializations?: string;
         };
 
         let doctors = await prisma.doctor.findMany({
@@ -670,6 +671,14 @@ export const getDoctorsByLocationForClinic = async (req: Request, res: Response)
         }
         if (experience_max) {
             doctors = doctors.filter(doctor => doctor.experience <= parseInt(experience_max, 10));
+        }
+
+        // Specialization filter
+        if (specializations && specializations !== 'all') {
+            const specializationArray = specializations.split(',').map(s => s.trim());
+            doctors = doctors.filter(doctor => 
+                specializationArray.includes(doctor.specialization)
+            );
         }
 
         // Location filter
@@ -757,6 +766,7 @@ export const getMeetings = async (req: Request, res: Response) => {
                         select: {
                             title: true,
                             date: true,
+                            time: true,
                             clinic: {
                                 select: {
                                     clinicAddress: true,
@@ -783,6 +793,7 @@ export const getMeetings = async (req: Request, res: Response) => {
                         select: {
                             title: true,
                             date: true,
+                            time: true,
                             clinic: {
                                 select: {
                                     clinicName: true,
@@ -806,13 +817,8 @@ export const getMeetings = async (req: Request, res: Response) => {
                     day: 'numeric'
                 }) : null;
 
-            // Format the job time if date exists
-            const jobTime = meeting.job.date ? 
-                new Date(meeting.job.date).toLocaleTimeString('en-US', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: true
-                }) : null;
+            // Use the time field from the job requirement
+            const jobTime = meeting.job.time || null;
 
             return {
                 id: meeting.id,

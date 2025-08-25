@@ -15,6 +15,7 @@ import { Picker } from "@react-native-picker/picker";
 import { Briefcase } from "lucide-react-native";
 import Toast from "react-native-toast-message";
 import { axiosInstance } from "../../../lib/axios";
+import DateTimePickerAndroid from "@react-native-community/datetimepicker";
 
 enum DoctorSpecialization {
   GENERAL_PHYSICIAN = "GENERAL_PHYSICIAN",
@@ -62,6 +63,7 @@ export default function EditRequirementScreen() {
   const [specialization, setSpecialization] = useState(DoctorSpecialization.GENERAL_PHYSICIAN);
   const [additionalInformation, setAdditionalInformation] = useState("");
   const [requirementStatus, setRequirementStatus] = useState("POSTED");
+  const [time, setTime] = useState("");
 
   useEffect(() => {
     const fetchRequirement = async () => {
@@ -74,6 +76,7 @@ export default function EditRequirementScreen() {
         setSpecialization(requirement.specialization);
         setAdditionalInformation(requirement.additionalInformation);
         setRequirementStatus(requirement.requirementStatus);
+        setTime(requirement.time || "");
       } catch (error) {
         console.error("Error fetching requirement:", error);
         Toast.show({ type: 'error', text1: 'Failed to fetch requirement details.' });
@@ -101,6 +104,7 @@ export default function EditRequirementScreen() {
         specialization,
         additionalInformation,
         requirementStatus,
+        time,
         clinicId: user?.id,
       });
       Toast.show({ type: 'success', text1: 'Requirement updated successfully!' });
@@ -207,6 +211,15 @@ export default function EditRequirementScreen() {
                   <Picker.Item key={spec} label={spec} value={spec} />
                 ))}
               </Picker>
+            </View>
+            <View className="mt-4">
+              <Text className="font-semibold mb-1">Time (Optional)</Text>
+              <TextInput
+                className="border border-gray-300 p-2 rounded-md"
+                placeholder="e.g. 14:30"
+                onChangeText={setTime}
+                value={time}
+              />
             </View>
             <View className="mt-4">
               <Text className="font-semibold mb-1">

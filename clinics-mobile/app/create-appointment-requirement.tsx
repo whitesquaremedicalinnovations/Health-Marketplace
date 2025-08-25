@@ -111,8 +111,8 @@ export default function CreateAppointmentRequirementScreen() {
           specialization,
           additionalInformation,
           clinicId: user?.id,
-          preferredDate: preferredDate.toISOString(),
-          duration,
+          date: preferredDate.toISOString().split('T')[0], // Send date in YYYY-MM-DD format
+          time: preferredDate.toTimeString().slice(0, 5), // Send time in HH:MM format
         }
       );
       if (response.status === 201) {

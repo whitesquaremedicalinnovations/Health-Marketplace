@@ -47,6 +47,7 @@ export default function PatientsScreen() {
   const [loading, setLoading] = useState(true);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [filter, setFilter] = useState<'All' | 'Active' | 'Completed' | 'In Progress'>('All');
+  const [clinicFilter, setClinicFilter] = useState<string>('All');
   const [error, setError] = useState<string | null>(null);
 
   const fetchPatients = useCallback(async () => {
@@ -102,6 +103,25 @@ export default function PatientsScreen() {
     fetchPatients().finally(() => setLoading(false));
   }, [fetchPatients]);
 
+  // Get unique clinics from patients data
+  const uniqueClinics = React.useMemo(() => {
+    const clinics = patients
+      .map(patient => patient.clinic)
+      .filter(clinic => clinic && clinic.clinicName)
+      .map(clinic => ({
+        id: clinic!.id,
+        name: clinic!.clinicName,
+        address: clinic!.clinicAddress
+      }));
+    
+    // Remove duplicates based on clinic ID
+    const unique = clinics.filter((clinic, index, self) => 
+      index === self.findIndex(c => c.id === clinic.id)
+    );
+    
+    return unique;
+  }, [patients]);
+
   const filteredPatients = patients.filter(patient => {
     console.log('Filtering patient:', patient.name, 'Status:', patient.status, 'Filter:', filter);
     
@@ -111,24 +131,37 @@ export default function PatientsScreen() {
     
     console.log('Normalized status:', normalizedStatus, 'Normalized filter:', normalizedFilter);
     
-    if (filter === 'All') return true;
+    // Status filter
+    let statusMatches = false;
+    if (filter === 'All') {
+      statusMatches = true;
+    } else {
+      // Map different possible status values to our expected values
+      const statusMapping: { [key: string]: string } = {
+        'active': 'active',
+        'inprogress': 'inprogress',
+        'in_progress': 'inprogress',
+        'in progress': 'inprogress',
+        'completed': 'completed',
+        'done': 'completed',
+        'finished': 'completed',
+      };
+      
+      const mappedStatus = statusMapping[normalizedStatus] || normalizedStatus;
+      statusMatches = mappedStatus === normalizedFilter;
+    }
     
-    // Map different possible status values to our expected values
-    const statusMapping: { [key: string]: string } = {
-      'active': 'active',
-      'inprogress': 'inprogress',
-      'in_progress': 'inprogress',
-      'in progress': 'inprogress',
-      'completed': 'completed',
-      'done': 'completed',
-      'finished': 'completed',
-    };
+    // Clinic filter
+    let clinicMatches = false;
+    if (clinicFilter === 'All') {
+      clinicMatches = true;
+    } else {
+      clinicMatches = patient.clinic?.id === clinicFilter;
+    }
     
-    const mappedStatus = statusMapping[normalizedStatus] || normalizedStatus;
-    const result = mappedStatus === normalizedFilter;
-    console.log('Mapped status:', mappedStatus, 'Result:', result);
+    console.log('Status matches:', statusMatches, 'Clinic matches:', clinicMatches);
     
-    return result;
+    return statusMatches && clinicMatches;
   });
 
   console.log('Filtered patients count:', filteredPatients.length, 'Total patients:', patients.length);
@@ -227,8 +260,8 @@ export default function PatientsScreen() {
     <TouchableOpacity
       style={[
         styles.filterButton,
-        { borderColor: isActive ? '#3B82F6' : '#E5E7EB' },
-        isActive && { backgroundColor: '#3B82F6' }
+        { borderColor: isActive ? '#2563EB' : '#E5E7EB' },
+        isActive && { backgroundColor: '#2563EB' }
       ]}
       onPress={() => {
         console.log('Filter button pressed:', filterType);
@@ -247,10 +280,43 @@ export default function PatientsScreen() {
     </TouchableOpacity>
   );
 
+  const ClinicFilterButton = ({ 
+    clinicId, 
+    clinicName, 
+    isActive 
+  }: { 
+    clinicId: string; 
+    clinicName: string; 
+    isActive: boolean;
+  }) => (
+    <TouchableOpacity
+      style={[
+        styles.filterButton,
+        { borderColor: isActive ? '#2563EB' : '#E5E7EB' },
+        isActive && { backgroundColor: '#2563EB' }
+      ]}
+      onPress={() => {
+        console.log('Clinic filter button pressed:', clinicId);
+        setClinicFilter(clinicId);
+      }}
+      activeOpacity={0.7}
+    >
+      <ThemedText
+        style={[
+          styles.filterText,
+          { color: isActive ? '#FFFFFF' : '#374151' }
+        ]}
+        numberOfLines={1}
+      >
+        {clinicName}
+      </ThemedText>
+    </TouchableOpacity>
+  );
+
   if (loading) {
     return (
       <View style={[styles.container, styles.centerContent, { backgroundColor: '#FFFFFF' }]}>
-        <ActivityIndicator size="large" color="#3B82F6" />
+        <ActivityIndicator size="large" color="#2563EB" />
         <ThemedText style={[styles.loadingText, { color: '#6B7280' }]}>
           Loading patients...
         </ThemedText>
@@ -266,6 +332,7 @@ export default function PatientsScreen() {
         </ThemedText>
       </View>
 
+      {/* Status Filters */}
       <View style={styles.filterContainer}>
         {(['All', 'Active', 'In Progress', 'Completed'] as const).map((filterOption) => {
           const count = filterOption === 'All' 
@@ -298,6 +365,51 @@ export default function PatientsScreen() {
           );
         })}
       </View>
+
+      {/* Clinic Filters */}
+      {uniqueClinics.length > 0 && (
+        <View style={styles.clinicFilterContainer}>
+          <ThemedText style={[styles.clinicFilterTitle, { color: '#374151' }]}>
+            Filter by Clinic:
+          </ThemedText>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.clinicFilterScroll}
+          >
+            <TouchableOpacity
+              style={[
+                styles.filterButton,
+                { borderColor: clinicFilter === 'All' ? '#2563EB' : '#E5E7EB' },
+                clinicFilter === 'All' && { backgroundColor: '#2563EB' }
+              ]}
+              onPress={() => setClinicFilter('All')}
+              activeOpacity={0.7}
+            >
+              <ThemedText
+                style={[
+                  styles.filterText,
+                  { color: clinicFilter === 'All' ? '#FFFFFF' : '#374151' }
+                ]}
+              >
+                All Clinics
+              </ThemedText>
+            </TouchableOpacity>
+            
+            {uniqueClinics.map((clinic) => {
+              const clinicPatientCount = patients.filter(p => p.clinic?.id === clinic.id).length;
+              return (
+                <ClinicFilterButton
+                  key={clinic.id}
+                  clinicId={clinic.id}
+                  clinicName={`${clinic.name} (${clinicPatientCount})`}
+                  isActive={clinicFilter === clinic.id}
+                />
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
 
       <ScrollView
         style={styles.patientsList}
@@ -333,9 +445,9 @@ export default function PatientsScreen() {
               No patients found
             </ThemedText>
             <ThemedText style={[styles.emptyDescription, { color: '#6B7280' }]}>
-              {filter === 'All' 
+              {filter === 'All' && clinicFilter === 'All'
                 ? "You don't have any patients assigned yet."
-                : `No patients with ${filter.toLowerCase()} status.`
+                : `No patients match the selected filters.`
               }
             </ThemedText>
           </View>
@@ -377,6 +489,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB', 
+  },
+  clinicFilterContainer: {
+    padding: 20,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  clinicFilterTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  clinicFilterScroll: {
+    gap: 12,
+    paddingRight: 20,
   },
   filterButton: {
     paddingHorizontal: 12,

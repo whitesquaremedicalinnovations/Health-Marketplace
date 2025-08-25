@@ -50,6 +50,7 @@ interface Patient {
     hasDoctorAccepted: boolean;
     hasClinicAccepted: boolean;
   }[] | [];
+  medicalProcedure: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -72,6 +73,7 @@ interface PatientFormData {
   address: string;
   latitude: string;
   longitude: string;
+  medicalProcedure: string;
 }
 
 export default function PatientsPage() {
@@ -106,7 +108,8 @@ export default function PatientsPage() {
     dateOfBirth: "",
     address: "",
     latitude: "",
-    longitude: ""
+    longitude: "",
+    medicalProcedure: ""
   });
 
   const [feedbackText, setFeedbackText] = useState("");
@@ -205,7 +208,8 @@ export default function PatientsPage() {
       dateOfBirth: "",
       address: "",
       latitude: "",
-      longitude: ""
+      longitude: "",
+      medicalProcedure: ""
     });
   };
 
@@ -255,7 +259,8 @@ export default function PatientsPage() {
       await axiosInstance.put(`/api/patient/update-patient/${selectedPatient.id}`, {
         ...formData,
         latitude: formData.latitude ? Number(formData.latitude) : null,
-        longitude: formData.longitude ? Number(formData.longitude) : null
+        longitude: formData.longitude ? Number(formData.longitude) : null,
+        medicalProcedure: formData.medicalProcedure
       });
       
       setShowEditDialog(false);
@@ -354,7 +359,8 @@ export default function PatientsPage() {
       dateOfBirth: patient.dateOfBirth.split('T')[0],
       address: patient.address,
       latitude: patient.latitude?.toString() || "",
-      longitude: patient.longitude?.toString() || ""
+      longitude: patient.longitude?.toString() || "",
+      medicalProcedure: patient.medicalProcedure
     });
     setShowEditDialog(true);
   };

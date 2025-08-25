@@ -58,7 +58,7 @@ export default function SearchDoctorsScreen() {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("nearest");
   const [experienceRange, setExperienceRange] = useState([0, 50]);
-  const [specializationFilter, setSpecializationFilter] = useState("all");
+  const [selectedSpecializations, setSelectedSpecializations] = useState<string[]>([]);
   const [radius, setRadius] = useState(50);
   const [customLocation, setCustomLocation] = useState<{
     lat: number;
@@ -99,8 +99,8 @@ export default function SearchDoctorsScreen() {
     }
 
     // Specialization filter
-    if (specializationFilter !== "all") {
-      filtered = filtered.filter(doctor => doctor.specialization === specializationFilter);
+    if (selectedSpecializations.length > 0) {
+      filtered = filtered.filter(doctor => selectedSpecializations.includes(doctor.specialization));
     }
 
     // Experience range filter
@@ -123,7 +123,7 @@ export default function SearchDoctorsScreen() {
     });
 
     setFilteredDoctors(filtered);
-  }, [doctors, searchTerm, specializationFilter, experienceRange, sortBy]);
+  }, [doctors, searchTerm, selectedSpecializations, experienceRange, sortBy]);
 
   const fetchClinicAndDoctors = useCallback(async () => {
     setLoading(true);
@@ -150,14 +150,16 @@ export default function SearchDoctorsScreen() {
         searchLng = clinicData.longitude;
       }
 
+      // Only fetch with location and radius, do filtering client-side
       const fetchedDoctors = await getDoctorsByLocation(
         searchLat,
         searchLng,
         radius,
-        experienceRange[0],
-        experienceRange[1],
-        sortBy,
-        searchTerm
+        0, // experience_min - don't filter on server
+        50, // experience_max - don't filter on server
+        "nearest", // sortBy - don't sort on server
+        "", // search - don't search on server
+        undefined // specializations - don't filter on server
       );
       setDoctors(fetchedDoctors || []);
     } catch (error) {
@@ -169,11 +171,53 @@ export default function SearchDoctorsScreen() {
   }, [
     user,
     radius,
-    experienceRange,
-    sortBy,
     customLocation,
-    searchTerm,
-  ]);
+  ]); // Only depend on location-related changes
+
+  // Get current location on component mount
+  useEffect(() => {
+    const initializeLocation = async () => {
+      try {
+        // Request location permissions
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          console.log('Location permission denied');
+          return;
+        }
+
+        // Get current position
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+        });
+
+        const { latitude, longitude } = location.coords;
+        
+        // Get address from coordinates
+        const addressResponse = await Location.reverseGeocodeAsync({
+          latitude,
+          longitude,
+        });
+
+        const address = addressResponse[0] 
+          ? `${addressResponse[0].street}, ${addressResponse[0].city}, ${addressResponse[0].region}`
+          : '';
+
+        // Set the current location
+        setCustomLocation({ lat: latitude, lng: longitude });
+        setCustomLocationAddress(address);
+        
+        Toast.show({
+          type: 'success',
+          text1: 'Location Updated',
+          text2: 'Using your current location to find doctors.',
+        });
+      } catch (error) {
+        console.error('Error getting current location:', error);
+      }
+    };
+
+    initializeLocation();
+  }, []);
 
   useEffect(() => {
     fetchClinicAndDoctors();
@@ -347,22 +391,42 @@ export default function SearchDoctorsScreen() {
           {/* Specialization Filter */}
           <View className="mb-4">
             <Text className="text-base font-semibold mb-2">Specialization</Text>
-            <View style={{ backgroundColor: '#f9fafb', borderRadius: 8, borderWidth: 1, borderColor: '#e5e7eb' }}>
-              <Picker
-                selectedValue={specializationFilter}
-                onValueChange={(itemValue) => setSpecializationFilter(itemValue)}
-                style={{ height: 50 }}
-              >
-                <Picker.Item label="All Specializations" value="all" />
-                {SPECIALIZATIONS.map((spec) => (
-                  <Picker.Item 
-                    key={spec} 
-                    label={spec.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())} 
-                    value={spec} 
-                  />
-                ))}
-              </Picker>
+            <View className="flex-row flex-wrap gap-2">
+              {SPECIALIZATIONS.map((spec) => {
+                const isSelected = selectedSpecializations.includes(spec);
+                return (
+                  <TouchableOpacity
+                    key={spec}
+                    onPress={() => {
+                      if (isSelected) {
+                        setSelectedSpecializations(selectedSpecializations.filter(s => s !== spec));
+                      } else {
+                        setSelectedSpecializations([...selectedSpecializations, spec]);
+                      }
+                    }}
+                    className={`px-3 py-2 rounded-full border ${
+                      isSelected 
+                        ? 'bg-blue-500 border-blue-500' 
+                        : 'bg-gray-100 border-gray-300'
+                    }`}
+                  >
+                    <Text className={`text-sm ${
+                      isSelected ? 'text-white' : 'text-gray-700'
+                    }`}>
+                      {spec.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
+            {selectedSpecializations.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setSelectedSpecializations([])}
+                className="mt-2"
+              >
+                <Text className="text-blue-500 text-sm">Clear all specializations</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Sort By */}
@@ -440,19 +504,19 @@ export default function SearchDoctorsScreen() {
         </View>
       )}
 
-      {loading ? (
-        <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" />
-          <Text className="mt-2 text-gray-600">
-            Finding doctors near you...
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={filteredDoctors}
-          keyExtractor={(item) => item.id}
-          renderItem={renderDoctorItem}
-          ListEmptyComponent={
+      <FlatList
+        data={filteredDoctors}
+        keyExtractor={(item) => item.id}
+        renderItem={renderDoctorItem}
+        ListEmptyComponent={
+          loading ? (
+            <View className="flex-1 justify-center items-center mt-16">
+              <ActivityIndicator size="large" />
+              <Text className="mt-2 text-gray-600">
+                Finding doctors near you...
+              </Text>
+            </View>
+          ) : (
             <View className="flex-1 justify-center items-center mt-16">
               <Text className="text-lg text-gray-600">No doctors found.</Text>
               <Text className="text-gray-500">
@@ -462,9 +526,9 @@ export default function SearchDoctorsScreen() {
                 Found {doctors.length} total doctors, {filteredDoctors.length} match your criteria
               </Text>
             </View>
-          }
-        />
-      )}
+          )
+        }
+      />
     </View>
   );
 } 

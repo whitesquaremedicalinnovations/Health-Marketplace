@@ -1,5 +1,5 @@
-import React from 'react';
-import { Tabs } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
+import { router, Tabs } from 'expo-router';
 import { 
   Home, 
   User, 
@@ -9,12 +9,65 @@ import {
   Activity,
   FileText 
 } from 'lucide-react-native';
-import { useNavigation } from '@react-navigation/native';
-import { TouchableOpacity, Platform } from 'react-native';
-import { DrawerActions } from '@react-navigation/native';
+import { useNavigation , DrawerActions } from '@react-navigation/native';
+import { TouchableOpacity, Platform, View, ActivityIndicator } from 'react-native';
+import { useUser } from '@clerk/clerk-expo';
+import { getDoctor } from '@/lib/utils';
+import Toast from 'react-native-toast-message';
+
+interface DoctorData {
+  id: string;
+  doctorName: string;
+  email: string;
+  isVerified: boolean;
+  specialization: string;
+  phoneNumber: string;
+  createdAt: string;
+}
 
 export default function TabLayout() {
   const navigation = useNavigation();
+  const { user } = useUser();
+  const [loading, setLoading] = useState(true);
+  const [doctorData, setDoctorData] = useState<DoctorData | null>(null);  
+
+  const fetchDoctorData = async () => {
+    console.log("fetching doctor")
+    try { 
+      const response = await getDoctor(user?.id || '');
+      console.log(response.data)
+      if (response.status === 200 && response.data) {
+        if(!(response.data.data.isVerified)) {
+          router.replace('/verification-status');
+        } else {
+          setDoctorData(response.data.data);
+        }
+      } else {
+        router.replace('/(auth)/home');
+      }
+    } catch (error) {
+      console.error('Error fetching doctor data:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to fetch doctor information',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };  
+
+  useEffect(() => {
+    fetchDoctorData();
+  }, [user?.id]);
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC' }}>
+        <ActivityIndicator size="large" color="#2563EB" />
+      </View>
+    );
+  }
 
   return (
     <Tabs
@@ -30,27 +83,27 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: '#f0f9ff',
           borderTopWidth: 0,
-          borderTopColor: '#e5e7eb',
-          paddingBottom: Platform.OS === 'ios' ? 20 : 10,
-          paddingTop: 10,
-          height: Platform.OS === 'ios' ? 90 : 70,
-          elevation: 8,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 8,
+          paddingBottom: Platform.OS === 'ios' ? 20 : 0,
+          paddingTop: 0,
+          height: Platform.OS === 'ios' ? 90 : 80,
         },
-        tabBarActiveTintColor: '#3b82f6',
-        tabBarInactiveTintColor: '#9ca3af',
+        tabBarActiveTintColor: '#2563EB',
+        tabBarInactiveTintColor: '#64748b',
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '600',
           marginTop: 4,
         },
+        tabBarItemStyle: {
+          paddingVertical: 4,
+        },
+
+        tabBarShowLabel: true,
+        tabBarHideOnKeyboard: true,
         headerStyle: {
-          backgroundColor: '#3b82f6',
+          backgroundColor: '#2563EB',
           elevation: 4,
-          shadowColor: '#3b82f6',
+          shadowColor: 'none',
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.1,
           shadowRadius: 4,
@@ -66,15 +119,19 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Dashboard',
-          tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
-          headerShown: false, // We handle the header in the dashboard component
+          tabBarIcon: ({ color, size, focused }) => (
+            <Home color={color} size={size} />
+          ),
+          headerTitle: 'Doctor Dashboard',
         }}
       />
       <Tabs.Screen
         name="jobs"
         options={{
           title: 'Find Jobs',
-          tabBarIcon: ({ color, size }) => <Briefcase color={color} size={size} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <Briefcase color={color} size={size} />
+          ),
           headerTitle: 'Available Opportunities',
         }}
       />
@@ -82,7 +139,9 @@ export default function TabLayout() {
         name="applications"
         options={{
           title: 'Applications',
-          tabBarIcon: ({ color, size }) => <FileText color={color} size={size} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <FileText color={color} size={size} />
+          ),
           headerTitle: 'My Applications',
         }}
       />
@@ -90,9 +149,21 @@ export default function TabLayout() {
         name="patients"
         options={{
           title: 'Patients',
-          tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <User color={color} size={size} />
+          ),
           headerTitle: 'Patient Management',
         }}
+      />
+      <Tabs.Screen 
+        name="chat" 
+        options={{ 
+          title: 'Messages',
+          tabBarIcon: ({ color, size, focused }) => (
+            <MessageSquare color={color} size={size} />
+          ),  
+          headerTitle: 'Chat & Communication'
+        }} 
       />
     </Tabs>
   );

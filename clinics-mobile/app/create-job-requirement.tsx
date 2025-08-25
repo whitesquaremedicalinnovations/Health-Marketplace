@@ -62,6 +62,7 @@ export default function CreateJobRequirementScreen() {
     DoctorSpecialization.GENERAL_PHYSICIAN
   );
   const [additionalInformation, setAdditionalInformation] = useState("");
+  const [time, setTime] = useState("");
 
   async function onSubmit() {
     if (!title.trim() || !description.trim()) {
@@ -78,6 +79,7 @@ export default function CreateJobRequirementScreen() {
           type,
           specialization,
           additionalInformation,
+          time,
           clinicId: user?.id,
         }
       );
@@ -191,6 +193,15 @@ export default function CreateJobRequirementScreen() {
                   <Picker.Item key={spec} label={spec.replace(/_/g, ' ')} value={spec} />
                 ))}
               </Picker>
+            </View>
+            <View className="mt-4">
+              <Text className="font-semibold mb-1">Start Time (Optional)</Text>
+              <TextInput
+                className="border border-gray-300 p-3 rounded-md"
+                placeholder="e.g. 09:00"
+                onChangeText={setTime}
+                value={time}
+              />
             </View>
             <View className="mt-4">
               <Text className="font-semibold mb-1">

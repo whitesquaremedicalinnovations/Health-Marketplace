@@ -27,6 +27,21 @@ interface MeetingCalendarProps {
   size?: CalendarSize;
 }
 
+// Helper function to format time from HH:MM to 12-hour format
+const formatTime = (time: string | null): string | null => {
+  if (!time) return null;
+  
+  try {
+    const [hours, minutes] = time.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour % 12 || 12;
+    return `${displayHour}:${minutes} ${ampm}`;
+  } catch (error) {
+    return time; // Return original if parsing fails
+  }
+};
+
 const dummymeetings: Meeting[] = [
   { 
     id: "1", 
@@ -220,7 +235,7 @@ export default function MeetingCalendar({ size = 'sm' }: MeetingCalendarProps) {
                           {meeting.jobTime && (
                             <div className="flex items-center mt-2">
                               <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
-                              <p className="text-gray-600 text-sm md:text-base">{meeting.jobTime}</p>
+                              <p className="text-gray-600 text-sm md:text-base">{formatTime(meeting.jobTime)}</p>
                             </div>
                           )}
                           <div className="flex items-center mt-2">

@@ -41,6 +41,7 @@ const formSchema = z.object({
   type: z.enum(["FULLTIME", "PARTTIME"]),
   specialization: z.enum(Object.values(DoctorSpecialization) as [string, ...string[]]),
   date: z.date().optional(),
+  time: z.string().optional(),
   additionalInformation: z.string().optional(),
 });
 
@@ -55,6 +56,7 @@ export default function NewRequirement() {
       title: "",
       description: "",
       type: "FULLTIME",
+      time: "",
     },
   });
 
@@ -220,6 +222,23 @@ export default function NewRequirement() {
                         />
                       </PopoverContent>
                     </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="time"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Start Time (Optional)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="time" 
+                        placeholder="Select time"
+                        {...field} 
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

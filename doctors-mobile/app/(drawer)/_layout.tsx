@@ -83,14 +83,6 @@ export default function DrawerLayout() {
         }} 
       />
       <Drawer.Screen 
-        name="chat" 
-        options={{ 
-          title: 'Chat',
-          drawerLabel: 'Messages',
-          headerTitle: 'Communication Center'
-        }} 
-      />
-      <Drawer.Screen 
         name="news" 
         options={{ 
           title: 'News',

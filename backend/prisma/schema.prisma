@@ -142,6 +142,8 @@ model Patient {
   clinicId String
   clinic Clinic @relation(fields: [clinicId], references: [id])
 
+  medicalProcedure String?
+
   status PatientStatus @default(ACTIVE)
   feedbacks Feedback[]
   changeStatusRequests ChangeStatusRequest[]
@@ -213,6 +215,7 @@ model JobRequirement {
   specialization DoctorSpecialization?
   additionalInformation String?
   date        DateTime?
+  time        String?
   type        RequirementType
   requirementStatus     RequirementStatus
   clinicId    String

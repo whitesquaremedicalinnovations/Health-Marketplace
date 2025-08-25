@@ -41,6 +41,7 @@ const formSchema = z.object({
   type: z.enum(["ONETIME", "FULLTIME", "PARTTIME"]),
   specialization: z.enum(Object.values(DoctorSpecialization) as [string, ...string[]]),
   date: z.date().optional(),
+  time: z.string().optional(),
   additionalInformation: z.string().optional(),
   requirementStatus: z.enum(["POSTED", "COMPLETED"]),
 });
@@ -240,6 +241,23 @@ export default function EditRequirement() {
                         />
                       </PopoverContent>
                     </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="time"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Time (Optional)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="time" 
+                        placeholder="Select time"
+                        {...field} 
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

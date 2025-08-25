@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { Calendar, MapPin, Clock, Expand } from 'lucide-react-native';
 import { useUser } from '@clerk/clerk-expo';
 import { axiosInstance } from '@/lib/axios';
-import CalendarMap from './calender-map';
 import { useTheme } from '@/contexts/ThemeContext';
 
 type Meeting = {
@@ -163,18 +162,6 @@ export default function DashboardCalendarMap() {
             <Text style={styles.mapSubtitle}>
               {meetingsWithLocation.length} location{meetingsWithLocation.length !== 1 ? 's' : ''} in the next 7 days
             </Text>
-          </View>
-          <View style={styles.mapWrapper}>
-            <CalendarMap
-              places={meetingsWithLocation.map(meeting => ({
-                lat: meeting.jobLatitude!,
-                lng: meeting.jobLongitude!,
-                clinicName: meeting.clinic
-              }))}
-              center={centerLocation}
-              zoom={10}
-              updateLocation={() => {}}
-            />
           </View>
         </View>
       )}

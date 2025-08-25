@@ -91,7 +91,7 @@ export const getRequirementById = async (req, res) => {
 };
 export const postRequirement = async (req, res) => {
     try {
-        const { title, description, type, additionalInformation, specialization, date, clinicId } = req.body;
+        const { title, description, type, additionalInformation, specialization, date, clinicId, time } = req.body;
         console.log(req.body);
         const clinic = await prisma.clinic.findUnique({ where: { id: clinicId } });
         if (!clinic) {
@@ -107,7 +107,8 @@ export const postRequirement = async (req, res) => {
                 date,
                 additionalInformation,
                 requirementStatus: "POSTED",
-                clinicId
+                clinicId,
+                time
             }
         });
         res.status(201).json({ requirement });
@@ -120,7 +121,7 @@ export const postRequirement = async (req, res) => {
 export const updateRequirement = async (req, res) => {
     try {
         const { requirementId } = req.params;
-        const { title, description, type, additionalInformation, specialization, date, requirementStatus, clinicId } = req.body;
+        const { title, description, type, additionalInformation, specialization, date, requirementStatus, clinicId, time } = req.body;
         const requirement = await prisma.jobRequirement.findUnique({ where: { id: requirementId } });
         if (!requirement) {
             return res.status(404).json({ message: "Requirement not found" });
@@ -130,7 +131,7 @@ export const updateRequirement = async (req, res) => {
         }
         const updatedRequirement = await prisma.jobRequirement.update({
             where: { id: requirementId },
-            data: { title, description, type, additionalInformation, specialization, date, requirementStatus }
+            data: { title, description, type, additionalInformation, specialization, date, requirementStatus, time }
         });
         res.status(200).json({ requirement: updatedRequirement });
     }
@@ -449,10 +450,22 @@ export const getMeetingsByClinic = async (req, res) => {
                             clinicName: true,
                         }
                     },
+                    doctor: {
+                        select: {
+                            fullName: true,
+                            specialization: true,
+                            profileImage: {
+                                select: {
+                                    docUrl: true
+                                }
+                            }
+                        }
+                    },
                     job: {
                         select: {
                             title: true,
                             date: true,
+                            time: true,
                             clinic: {
                                 select: {
                                     clinicAddress: true,
@@ -476,10 +489,22 @@ export const getMeetingsByClinic = async (req, res) => {
                             clinicName: true,
                         }
                     },
+                    doctor: {
+                        select: {
+                            fullName: true,
+                            specialization: true,
+                            profileImage: {
+                                select: {
+                                    docUrl: true
+                                }
+                            }
+                        }
+                    },
                     job: {
                         select: {
                             title: true,
                             date: true,
+                            time: true,
                             clinic: {
                                 select: {
                                     clinicName: true,
@@ -501,17 +526,17 @@ export const getMeetingsByClinic = async (req, res) => {
                     month: 'long',
                     day: 'numeric'
                 }) : null;
-            // Format the job time if date exists
-            const jobTime = meeting.job.date ?
-                new Date(meeting.job.date).toLocaleTimeString('en-US', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: true
-                }) : null;
+            // Use the time field from the job requirement
+            const jobTime = meeting.job.time || null;
             return {
                 id: meeting.id,
                 title: meeting.job.title,
                 clinic: meeting.clinic.clinicName,
+                doctor: {
+                    fullName: meeting.doctor.fullName,
+                    specialization: meeting.doctor.specialization,
+                    profileImage: meeting.doctor.profileImage?.docUrl || null
+                },
                 jobDate: jobDate,
                 jobTime: jobTime,
                 jobLocation: meeting.job.clinic.clinicAddress,

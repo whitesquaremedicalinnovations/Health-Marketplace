@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Alert } from "react-native"
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Alert, Image } from "react-native"
 import { Calendar } from "./ui/calendar"
 import { Card, CardContent } from "./ui/card"
 import { axiosInstance } from "@/lib/axios"
@@ -19,6 +19,11 @@ type Meeting = {
   id: string;
   title: string;
   clinic: string;
+  doctor: {
+    fullName: string;
+    specialization: string;
+    profileImage: string | null;
+  };
   jobDate: string | null;
   jobTime: string | null;
   jobLocation: string;
@@ -32,11 +37,31 @@ interface MeetingCalendarProps {
   size?: CalendarSize;
 }
 
+// Helper function to format time from HH:MM to 12-hour format
+const formatTime = (time: string | null): string | null => {
+  if (!time) return null;
+  
+  try {
+    const [hours, minutes] = time.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour % 12 || 12;
+    return `${displayHour}:${minutes} ${ampm}`;
+  } catch (error) {
+    return time; // Return original if parsing fails
+  }
+};
+
 const dummymeetings: Meeting[] = [
   { 
     id: "1", 
     title: "Client Meeting", 
     clinic: "City Clinic",
+    doctor: {
+      fullName: "Dr. Sarah Johnson",
+      specialization: "Cardiology",
+      profileImage: null,
+    },
     jobDate: "August 21, 2025",
     jobTime: "10:00 AM",
     jobLocation: "123 Main St, City",
@@ -47,6 +72,11 @@ const dummymeetings: Meeting[] = [
     id: "2", 
     title: "Team Sync", 
     clinic: "Medical Center",
+    doctor: {
+      fullName: "Dr. Michael Brown",
+      specialization: "Neurology",
+      profileImage: null,
+    },
     jobDate: "August 21, 2025",
     jobTime: "2:00 PM",
     jobLocation: "456 Oak Ave, City",
@@ -57,6 +87,11 @@ const dummymeetings: Meeting[] = [
     id: "3", 
     title: "Project Review", 
     clinic: "Health Hub",
+    doctor: {
+      fullName: "Dr. Emily Davis",
+      specialization: "Pediatrics",
+      profileImage: null,
+    },
     jobDate: "August 22, 2025",
     jobTime: "4:00 PM",
     jobLocation: "789 Pine St, City",
@@ -67,6 +102,11 @@ const dummymeetings: Meeting[] = [
     id: "4", 
     title: "Follow-up Call", 
     clinic: "Wellness Clinic",
+    doctor: {
+      fullName: "Dr. David Wilson",
+      specialization: "Oncology",
+      profileImage: null,
+    },
     jobDate: "August 23, 2025",
     jobTime: "11:00 AM",
     jobLocation: "321 Elm St, City",
@@ -77,6 +117,11 @@ const dummymeetings: Meeting[] = [
     id: "5", 
     title: "Consultation", 
     clinic: "Family Medical",
+    doctor: {
+      fullName: "Dr. Lisa Anderson",
+      specialization: "Family Medicine",
+      profileImage: null,
+    },
     jobDate: "August 23, 2025",
     jobTime: "3:30 PM",
     jobLocation: "654 Maple Dr, City",
@@ -269,10 +314,31 @@ export default function MeetingCalendar({ size = 'sm' }: MeetingCalendarProps) {
                         <View style={styles.meetingInfo}>
                           <Text style={styles.meetingTitleText}>{meeting.title}</Text>
                           <Text style={styles.meetingClinic}>{meeting.clinic}</Text>
+                          
+                          {/* Doctor Information */}
+                          <View style={styles.doctorContainer}>
+                            <View style={styles.doctorAvatar}>
+                              {meeting.doctor.profileImage ? (
+                                <Image 
+                                  source={{ uri: meeting.doctor.profileImage }} 
+                                  style={styles.doctorImage}
+                                />
+                              ) : (
+                                <Text style={styles.doctorInitials}>
+                                  {meeting.doctor.fullName.split(' ').map(n => n[0]).join('')}
+                                </Text>
+                              )}
+                            </View>
+                            <View style={styles.doctorInfo}>
+                              <Text style={styles.doctorName}>{meeting.doctor.fullName}</Text>
+                              <Text style={styles.doctorSpecialization}>{meeting.doctor.specialization}</Text>
+                            </View>
+                          </View>
+                          
                           {meeting.jobTime && (
                             <View style={styles.meetingTimeContainer}>
                               <View style={[styles.timeDot, { backgroundColor: colors.primary }]} />
-                              <Text style={styles.meetingTimeText}>{meeting.jobTime}</Text>
+                              <Text style={styles.meetingTimeText}>{formatTime(meeting.jobTime)}</Text>
                             </View>
                           )}
                           <View style={styles.meetingLocationContainer}>
@@ -592,6 +658,42 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '600',
+  },
+  doctorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  doctorAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#e0e7ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  doctorImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 20,
+  },
+  doctorInitials: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#4f46e5',
+  },
+  doctorInfo: {
+    flex: 1,
+  },
+  doctorName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1f2937',
+  },
+  doctorSpecialization: {
+    fontSize: 12,
+    color: '#6b7280',
   },
 });
 

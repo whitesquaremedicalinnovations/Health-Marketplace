@@ -68,7 +68,8 @@ export const getDoctorsByLocation = async (
   experience_min: number,
   experience_max: number,
   sortBy: string,
-  search: string
+  search: string,
+  specializations?: string[]
 ) => {
   try {
     const response = await axiosInstance.get(
@@ -82,6 +83,7 @@ export const getDoctorsByLocation = async (
           experience_max,
           sortBy,
           search,
+          specializations: specializations && specializations.length > 0 ? specializations.join(',') : 'all',
         },
       }
     );

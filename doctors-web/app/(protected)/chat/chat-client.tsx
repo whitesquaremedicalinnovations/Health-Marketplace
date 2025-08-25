@@ -48,6 +48,7 @@ interface Patient {
     feedbacks: number;
     assignedDoctors: number;
   };
+  medicalProcedure: string;
   createdAt: string;
 }
 

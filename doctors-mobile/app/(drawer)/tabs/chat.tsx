@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useUser } from '@clerk/clerk-expo';
-import { getDoctorConnections } from '../../lib/utils';
+import { getDoctorConnections } from '../../../lib/utils';
 import { useRouter } from 'expo-router';
 import { 
   MessageSquare, 

@@ -43,6 +43,7 @@ interface Patient {
     feedbacks: number;
     assignedDoctors: number;
   };
+  medicalProcedure: string;
   createdAt: string;
 }
 
@@ -141,15 +142,25 @@ export default function PatientsList({
                       <h4 className="font-semibold text-gray-900 dark:text-white truncate">
                         {patient.name}
                       </h4>
-                      <Badge 
-                        variant={patient.status === 'ACTIVE' ? 'default' : 'secondary'}
-                        className={patient.status === 'ACTIVE' 
-                          ? 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700' 
-                          : 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700'
-                        }
-                      >
-                        {patient.status}
-                      </Badge>
+                      <div className="flex flex-col items-center gap-2">
+                        <Badge 
+                          variant={patient.status === 'ACTIVE' ? 'default' : 'secondary'}
+                          className={patient.status === 'ACTIVE' 
+                            ? 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700' 
+                            : 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700'
+                          }
+                          >
+                          {patient.status}
+                        </Badge>
+                        {patient.medicalProcedure && (
+                          <Badge 
+                          variant="default"
+                          className="bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700"
+                          >
+                            {patient.medicalProcedure}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                     
                     <div className="space-y-1">

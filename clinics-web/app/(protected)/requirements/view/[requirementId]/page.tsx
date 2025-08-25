@@ -17,6 +17,7 @@ interface Requirement {
   type: string;
   specialization: string;
   date: string;
+  time: string;
   additionalInformation: string;
   requirementStatus: string;
   location: string;
@@ -184,6 +185,12 @@ export default function ViewRequirement() {
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-gray-500" />
                       <span className="text-gray-700 text-sm">{new Date(requirement.date).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                  {requirement.time && (
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-gray-500" />
+                      <span className="text-gray-700 text-sm">{requirement.time}</span>
                     </div>
                   )}
                 </CardContent>

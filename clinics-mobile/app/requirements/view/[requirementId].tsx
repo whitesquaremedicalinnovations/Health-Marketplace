@@ -18,6 +18,7 @@ interface Requirement {
   type: string;
   specialization: string;
   date: string;
+  time: string;
   additionalInformation: string;
   requirementStatus: string;
   location: string;
@@ -112,6 +113,13 @@ export default function ViewRequirementScreen() {
           <Text className="text-xl font-bold">Required Specialization</Text>
           <Text className="mt-2 text-gray-700">{requirement.specialization}</Text>
         </View>
+
+        {requirement.time && (
+          <View className="bg-white p-6 rounded-lg shadow-md mb-6">
+            <Text className="text-xl font-bold">Time</Text>
+            <Text className="mt-2 text-gray-700">{requirement.time}</Text>
+          </View>
+        )}
 
         <View className="bg-white p-6 rounded-lg shadow-md mb-6">
           <Text className="text-xl font-bold">Additional Details</Text>
