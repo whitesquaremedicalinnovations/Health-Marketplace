@@ -13,7 +13,10 @@ import {
   User,
   Search,
   Filter,
-  LogOut
+  LogOut,
+  X,
+  Save,
+  Image as ImageIcon
 } from "lucide-react";
 import {
   Card,
@@ -28,12 +31,30 @@ import { toast } from "sonner";
 import { adminApi, type NewsItem } from "../../lib/api";
 import { useAuthStore } from "../../lib/auth-store";
 
+interface NewsFormData {
+  title: string;
+  content: string;
+  imageUrl: string;
+  isPublished: boolean;
+}
+
 export default function NewsPage() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [filteredNews, setFilteredNews] = useState<NewsItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [showView, setShowView] = useState(false);
+  const [editingNews, setEditingNews] = useState<NewsItem | null>(null);
+  const [viewingNews, setViewingNews] = useState<NewsItem | null>(null);
+  const [formData, setFormData] = useState<NewsFormData>({
+    title: "",
+    content: "",
+    imageUrl: "",
+    isPublished: false,
+  });
+  const [submitting, setSubmitting] = useState(false);
   const { admin, logout } = useAuthStore();
 
   // Fetch news data from API
@@ -74,6 +95,73 @@ export default function NewsPage() {
 
     setFilteredNews(filtered);
   }, [news, searchTerm, statusFilter]);
+
+  const handleCreate = () => {
+    setEditingNews(null);
+    setFormData({
+      title: "",
+      content: "",
+      imageUrl: "",
+      isPublished: false,
+    });
+    setShowForm(true);
+  };
+
+  const handleEdit = (article: NewsItem) => {
+    setEditingNews(article);
+    setFormData({
+      title: article.title,
+      content: article.content,
+      imageUrl: article.imageUrl || "",
+      isPublished: article.isPublished || false,
+    });
+    setShowForm(true);
+  };
+
+  const handleView = (article: NewsItem) => {
+    setViewingNews(article);
+    setShowView(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.title.trim() || !formData.content.trim()) {
+      toast.error("Title and content are required");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      
+      if (editingNews) {
+        // Update existing news
+        await adminApi.updateNews(editingNews.id, {
+          title: formData.title,
+          content: formData.content,
+          imageUrl: formData.imageUrl || undefined,
+        });
+        toast.success("News article updated successfully");
+      } else {
+        // Create new news
+        await adminApi.createNews({
+          title: formData.title,
+          content: formData.content,
+          imageUrl: formData.imageUrl || undefined,
+          adminId: admin?.id || "",
+        });
+        toast.success("News article created successfully");
+      }
+      
+      setShowForm(false);
+      fetchNews(); // Refresh the list
+    } catch (error) {
+      toast.error(editingNews ? "Failed to update news article" : "Failed to create news article");
+      console.error("Error saving news:", error);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const handleDelete = async (id: string) => {
     if (confirm("Are you sure you want to delete this news article?")) {
@@ -125,7 +213,10 @@ export default function NewsPage() {
             </div>
             
             <div className="flex items-center space-x-4">
-              <Button className="bg-blue-600 hover:bg-blue-700">
+              <Button 
+                className="bg-blue-600 hover:bg-blue-700"
+                onClick={handleCreate}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Create Article
               </Button>
@@ -270,11 +361,19 @@ export default function NewsPage() {
                   </div>
 
                   <div className="flex items-center space-x-2 ml-4">
-                    <Button size="sm" variant="outline">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => handleView(article)}
+                    >
                       <Eye className="h-3 w-3 mr-1" />
                       View
                     </Button>
-                    <Button size="sm" variant="outline">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => handleEdit(article)}
+                    >
                       <Edit3 className="h-3 w-3 mr-1" />
                       Edit
                     </Button>
@@ -298,7 +397,7 @@ export default function NewsPage() {
                 <p className="mt-1 text-sm text-gray-500">
                   Try adjusting your search criteria or create a new article.
                 </p>
-                <Button className="mt-4">
+                <Button className="mt-4" onClick={handleCreate}>
                   <Plus className="h-4 w-4 mr-2" />
                   Create Article
                 </Button>
@@ -307,6 +406,191 @@ export default function NewsPage() {
           </CardContent>
         </Card>
       </main>
+
+      {/* Create/Edit News Modal */}
+      {showForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-xl font-semibold">
+                {editingNews ? "Edit News Article" : "Create News Article"}
+              </h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowForm(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Title *
+                </label>
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter article title"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Content *
+                </label>
+                <textarea
+                  value={formData.content}
+                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                  rows={8}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter article content"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Image URL
+                </label>
+                <div className="relative">
+                  <ImageIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <input
+                    type="url"
+                    value={formData.imageUrl}
+                    onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="https://example.com/image.jpg"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="isPublished"
+                  checked={formData.isPublished}
+                  onChange={(e) => setFormData({ ...formData, isPublished: e.target.checked })}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <label htmlFor="isPublished" className="text-sm font-medium text-gray-700">
+                  Publish immediately
+                </label>
+              </div>
+              
+              <div className="flex justify-end space-x-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowForm(false)}
+                  disabled={submitting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={submitting}
+                >
+                  {submitting ? (
+                    <div className="flex items-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      {editingNews ? "Updating..." : "Creating..."}
+                    </div>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      {editingNews ? "Update Article" : "Create Article"}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* View News Modal */}
+      {showView && viewingNews && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-xl font-semibold">View News Article</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowView(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  {viewingNews.title}
+                </h3>
+                {getStatusBadge(viewingNews.isPublished)}
+              </div>
+              
+              {viewingNews.imageUrl && (
+                <div>
+                  <img
+                    src={viewingNews.imageUrl}
+                    alt={viewingNews.title}
+                    className="w-full h-48 object-cover rounded-lg"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                </div>
+              )}
+              
+              <div>
+                <p className="text-gray-700 whitespace-pre-wrap">
+                  {viewingNews.content}
+                </p>
+              </div>
+              
+              <div className="flex items-center space-x-4 text-sm text-gray-500 pt-4 border-t">
+                <div className="flex items-center">
+                  <Calendar className="h-4 w-4 mr-1" />
+                  Created: {new Date(viewingNews.createdAt).toLocaleDateString()}
+                </div>
+                <div className="flex items-center">
+                  <Eye className="h-4 w-4 mr-1" />
+                  {viewingNews.likes || 0} likes
+                </div>
+                <div className="flex items-center">
+                  <User className="h-4 w-4 mr-1" />
+                  {viewingNews.comments || 0} comments
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-3 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowView(false)}
+                >
+                  Close
+                </Button>
+                <Button
+                  onClick={() => {
+                    setShowView(false);
+                    handleEdit(viewingNews);
+                  }}
+                >
+                  <Edit3 className="h-4 w-4 mr-2" />
+                  Edit Article
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
