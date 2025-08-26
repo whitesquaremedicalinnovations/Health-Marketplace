@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "tsc -w & nodemon dist/index.js",
     "build": "npx tsc",
-    "reset-db": "tsx src/utils/reset-db.ts"
+    "reset-db": "tsx src/utils/reset-db.ts",
+    "create-admin": "tsx scripts/create-admin.ts"
   },
   "keywords": [],
   "author": "",

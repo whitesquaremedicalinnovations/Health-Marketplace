@@ -1,46 +1,72 @@
-import axios from './axios';
+import axiosInstance from './axios';
+import { ADMIN_ENDPOINTS } from './constants';
 
-// Types
-export interface DashboardStats {
+// Types for API responses
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message: string;
+}
+
+export interface OverviewData {
   totalDoctors: number;
   totalClinics: number;
   totalPitches: number;
   totalRequirements: number;
   totalPayments: number;
-  totalAmount: { _sum: { amount: number } };
+  totalAmount: { _sum: { amount: number | null } };
   totalNews: number;
   totalLikes: number;
   totalComments: number;
 }
 
-export interface User {
+// Minimal types used by admin pages
+export interface Doctor {
   id: string;
+  name?: string;
+  fullName?: string;
   email: string;
-  name: string;
   phone?: string;
-  profilePicture?: string;
+  phoneNumber?: string;
   isVerified: boolean;
-  isBlocked: boolean;
   createdAt: string;
-  updatedAt: string;
-}
-
-export interface Doctor extends User {
   specialization?: string;
-  experience?: string;
-  qualifications?: string;
   location?: string;
-  documents?: any[];
+  experience?: string | number;
 }
 
-export interface Clinic extends User {
-  address?: string;
+export interface Clinic {
+  id: string;
+  name?: string;
+  clinicName?: string;
+  email: string;
+  phone?: string;
+  clinicPhoneNumber?: string;
+  clinicAdditionalDetails?: string;
+  clinicAddress?: string;
   city?: string;
   state?: string;
-  pincode?: string;
+  isVerified: boolean;
+  createdAt: string;
   description?: string;
-  facilities?: string[];
-  documents?: any[];
+}
+
+export interface UsersData {
+  doctors: Doctor[];
+  clinics: Clinic[];
+}
+
+export interface Payment {
+  id: string;
+  amount: number;
+  type: string;
+  status: string;
+  createdAt: string;
+  user?: { name: string };
+}
+
+export interface PaymentsData {
+  payments: Payment[];
 }
 
 export interface NewsItem {
@@ -48,132 +74,154 @@ export interface NewsItem {
   title: string;
   content: string;
   imageUrl?: string;
-  isPublished: boolean;
+  createdAt: string;
+  isPublished?: boolean;
+  likes?: number;
+  comments?: number;
+}
+
+export interface NewsData {
+  news: NewsItem[];
+}
+
+export interface OnboardingFeeData {
+  fee: number;
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  isVerified: boolean;
   createdAt: string;
   updatedAt: string;
-  likes: number;
-  comments: number;
 }
 
-export interface Payment {
-  id: string;
-  userId: string;
-  amount: number;
-  type: string;
-  status: string;
-  razorpayPaymentId?: string;
-  createdAt: string;
-  user?: User;
+export interface AdminsData {
+  admins: AdminUser[];
 }
 
-// API Functions
+// API service functions
 export const adminApi = {
   // Dashboard
-  async getOverview(): Promise<DashboardStats> {
-    const response = await axios.get('/api/admin/get-overview');
-    return response.data;
+  getOverview: async (): Promise<OverviewData> => {
+    const response = await axiosInstance.get<ApiResponse<OverviewData>>(ADMIN_ENDPOINTS.OVERVIEW);
+    return response.data.data;
   },
 
-  // Users Management
-  async getAllUsers(): Promise<{ doctors: Doctor[]; clinics: Clinic[] }> {
-    const response = await axios.get('/api/admin/get-all-users');
-    return response.data;
+  getAllUsers: async (): Promise<UsersData> => {
+    const response = await axiosInstance.get<ApiResponse<UsersData>>(ADMIN_ENDPOINTS.ALL_USERS);
+    return response.data.data;
   },
 
-  async getAllDoctors(): Promise<{ doctors: Doctor[] }> {
-    const response = await axios.get('/api/admin/get-all-doctors');
-    return response.data;
+  getAllPayments: async (): Promise<PaymentsData> => {
+    const response = await axiosInstance.get<ApiResponse<PaymentsData>>(ADMIN_ENDPOINTS.ALL_PAYMENTS);
+    return response.data.data;
   },
 
-  async getAllClinics(): Promise<{ clinics: Clinic[] }> {
-    const response = await axios.get('/api/admin/get-all-clinics');
-    return response.data;
+  // User Management
+  getAllDoctors: async (): Promise<{ doctors: Doctor[] }> => {
+    const response = await axiosInstance.get<ApiResponse<{ doctors: Doctor[] }>>(ADMIN_ENDPOINTS.ALL_DOCTORS);
+    return response.data.data;
   },
 
-  async getUsersToVerify(): Promise<{ doctors: Doctor[]; clinics: Clinic[] }> {
-    const response = await axios.get('/api/admin/get-users-to-verify');
-    return response.data;
+  getAllClinics: async (): Promise<{ clinics: Clinic[] }> => {
+    const response = await axiosInstance.get<ApiResponse<{ clinics: Clinic[] }>>(ADMIN_ENDPOINTS.ALL_CLINICS);
+    return response.data.data;
   },
 
-  async verifyDoctor(doctorId: string): Promise<void> {
-    await axios.post(`/api/admin/verify-doctor/${doctorId}`);
+  verifyDoctor: async (doctorId: string) => {
+    const response = await axiosInstance.post<ApiResponse<{ doctor: Doctor }>>(`${ADMIN_ENDPOINTS.VERIFY_DOCTOR}/${doctorId}`);
+    return response.data.data;
   },
 
-  async verifyClinic(clinicId: string): Promise<void> {
-    await axios.post(`/api/admin/verify-clinic/${clinicId}`);
-  },
-
-  // Payments
-  async getAllPayments(): Promise<{ payments: Payment[] }> {
-    const response = await axios.get('/api/admin/get-all-payments');
-    return response.data;
-  },
-
-  async getOnboardingFee(): Promise<{ fee: number }> {
-    const response = await axios.get('/api/admin/get-onboarding-fee');
-    return response.data;
-  },
-
-  async setOnboardingFee(fee: number): Promise<void> {
-    await axios.post('/api/admin/set-onboarding-fee', { fee });
+  verifyClinic: async (clinicId: string) => {
+    const response = await axiosInstance.post<ApiResponse<{ clinic: Clinic }>>(`${ADMIN_ENDPOINTS.VERIFY_CLINIC}/${clinicId}`);
+    return response.data.data;
   },
 
   // News Management
-  async getAllNews(): Promise<{ news: NewsItem[] }> {
-    const response = await axios.get('/api/admin/get-all-news');
-    return response.data;
+  getAllNews: async (): Promise<NewsData> => {
+    const response = await axiosInstance.get<ApiResponse<NewsData>>(ADMIN_ENDPOINTS.ALL_NEWS);
+    return response.data.data;
   },
 
-  async getNewsById(newsId: string): Promise<NewsItem> {
-    const response = await axios.get(`/api/admin/get-news-by-id/${newsId}`);
-    return response.data;
-  },
-
-  async createNews(newsData: {
+  createNews: async (newsData: {
     title: string;
     content: string;
     imageUrl?: string;
-    isPublished?: boolean;
-  }): Promise<NewsItem> {
-    const response = await axios.post('/api/admin/create-news', newsData);
-    return response.data;
+    adminId: string;
+  }) => {
+    const response = await axiosInstance.post<ApiResponse<{ news: NewsItem }>>(ADMIN_ENDPOINTS.CREATE_NEWS, newsData);
+    return response.data.data;
   },
 
-  async updateNews(
-    newsId: string,
-    newsData: {
-      title?: string;
-      content?: string;
-      imageUrl?: string;
-      isPublished?: boolean;
-    }
-  ): Promise<NewsItem> {
-    const response = await axios.post(`/api/admin/update-news/${newsId}`, newsData);
-    return response.data;
+  updateNews: async (newsId: string, newsData: {
+    title: string;
+    content: string;
+    imageUrl?: string;
+  }) => {
+    const response = await axiosInstance.post<ApiResponse<{ news: NewsItem }>>(`${ADMIN_ENDPOINTS.UPDATE_NEWS}/${newsId}`, newsData);
+    return response.data.data;
   },
 
-  async deleteNews(newsId: string): Promise<void> {
-    await axios.post(`/api/admin/delete-news/${newsId}`);
+  deleteNews: async (newsId: string) => {
+    const response = await axiosInstance.post<ApiResponse<{ news: NewsItem }>>(`${ADMIN_ENDPOINTS.DELETE_NEWS}/${newsId}`);
+    return response.data.data;
   },
 
-  async getNewsLikes(newsId: string): Promise<{ totalLikes: number }> {
-    const response = await axios.get(`/api/admin/total-news-likes/${newsId}`);
-    return response.data;
+  // Settings
+  getOnboardingFee: async (): Promise<OnboardingFeeData> => {
+    const response = await axiosInstance.get<ApiResponse<{ onboardingFee: { id: string; fee: number } | null }>>(ADMIN_ENDPOINTS.ONBOARDING_FEE);
+    const data = response.data.data;
+    return { fee: data.onboardingFee?.fee ?? 0 };
   },
 
-  async getNewsComments(newsId: string): Promise<{ totalComments: number }> {
-    const response = await axios.get(`/api/admin/total-news-comments/${newsId}`);
-    return response.data;
+  setOnboardingFee: async (fee: number) => {
+    const response = await axiosInstance.post<ApiResponse<{ onboardingFee: { id: string; fee: number } }>>(ADMIN_ENDPOINTS.SET_ONBOARDING_FEE, { fee });
+    return response.data.data;
   },
 
-  // Requirements and Pitches
-  async getAllRequirements(): Promise<any> {
-    const response = await axios.get('/api/admin/get-all-requirements');
-    return response.data;
+  // Admin Management
+  createAdmin: async (adminData: {
+    email: string;
+    password: string;
+    name: string;
+    role?: 'admin' | 'super_admin';
+  }) => {
+    const response = await axiosInstance.post<ApiResponse<{ admin: AdminUser }>>(ADMIN_ENDPOINTS.CREATE_ADMIN, adminData);
+    return response.data.data;
   },
 
-  async getAllPitches(): Promise<any> {
-    const response = await axios.get('/api/admin/get-all-pitches');
-    return response.data;
+  getAllAdmins: async (): Promise<AdminsData> => {
+    const response = await axiosInstance.get<ApiResponse<AdminsData>>(ADMIN_ENDPOINTS.GET_ADMINS);
+    return response.data.data;
+  },
+
+  getAdminById: async (adminId: string) => {
+    const response = await axiosInstance.get<ApiResponse<{ admin: AdminUser }>>(`${ADMIN_ENDPOINTS.GET_ADMIN_BY_ID}/${adminId}`);
+    return response.data.data;
+  },
+
+  updateAdmin: async (adminId: string, updateData: {
+    name?: string;
+    role?: 'admin' | 'super_admin';
+  }) => {
+    const response = await axiosInstance.put<ApiResponse<{ admin: AdminUser }>>(`${ADMIN_ENDPOINTS.UPDATE_ADMIN}/${adminId}`, updateData);
+    return response.data.data;
+  },
+
+  changePassword: async (adminId: string, passwordData: {
+    currentPassword: string;
+    newPassword: string;
+  }) => {
+    const response = await axiosInstance.post<ApiResponse<{ success: boolean }>>(`${ADMIN_ENDPOINTS.CHANGE_PASSWORD}/${adminId}`, passwordData);
+    return response.data.data;
+  },
+
+  deleteAdmin: async (adminId: string) => {
+    const response = await axiosInstance.delete<ApiResponse<{ success: boolean }>>(`${ADMIN_ENDPOINTS.DELETE_ADMIN}/${adminId}`);
+    return response.data.data;
   },
 };

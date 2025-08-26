@@ -40,11 +40,20 @@ import { Separator } from "../components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { toast } from "sonner";
-import { adminApi, type DashboardStats } from "../lib/api";
+import { adminApi } from "../lib/api";
 import { useAuthStore } from "../lib/auth-store";
 
 // Dashboard data interface
-interface DashboardData extends DashboardStats {
+interface DashboardData {
+  totalDoctors: number;
+  totalClinics: number;
+  totalPitches: number;
+  totalRequirements: number;
+  totalPayments: number;
+  totalAmount: { _sum: { amount: number | null } };
+  totalNews: number;
+  totalLikes: number;
+  totalComments: number;
   recentUsers: Array<{
     id: string;
     name: string;
@@ -72,44 +81,51 @@ export default function AdminDashboard() {
   // Fetch real dashboard data from API
   const fetchDashboardData = async (): Promise<DashboardData> => {
     try {
+      console.log("Fetching dashboard data...");
+      
       const [overviewData, usersData, paymentsData] = await Promise.all([
         adminApi.getOverview(),
         adminApi.getAllUsers(),
         adminApi.getAllPayments(),
       ]);
 
+      console.log("API responses:", { overviewData, usersData, paymentsData });
+
       // Transform and combine the data
       const recentUsers = [
-        ...usersData.doctors.slice(0, 3).map(doctor => ({
+        ...(usersData.doctors || []).slice(0, 3).map(doctor => ({
           id: doctor.id,
-          name: doctor.name,
+          name: doctor.name || "Unknown Doctor",
           type: "Doctor" as const,
           status: doctor.isVerified ? "verified" as const : "pending" as const,
           date: new Date(doctor.createdAt).toISOString().split('T')[0],
         })),
-        ...usersData.clinics.slice(0, 2).map(clinic => ({
+        ...(usersData.clinics || []).slice(0, 2).map(clinic => ({
           id: clinic.id,
-          name: clinic.name,
+          name: clinic.name || "Unknown Clinic",
           type: "Clinic" as const,
           status: clinic.isVerified ? "verified" as const : "pending" as const,
           date: new Date(clinic.createdAt).toISOString().split('T')[0],
         })),
       ];
 
-      const recentPayments = paymentsData.payments.slice(0, 4).map(payment => ({
+      const recentPayments = (paymentsData.payments || []).slice(0, 4).map(payment => ({
         id: payment.id,
         user: payment.user?.name || "Unknown User",
-        amount: payment.amount,
-        type: payment.type || "Onboarding",
+        amount: payment.amount || 0,
+        type: (payment.type as "Onboarding" | "Subscription" | "Commission") || "Onboarding",
         date: new Date(payment.createdAt).toISOString().split('T')[0],
-        status: payment.status || "completed",
+        status: (payment.status as "completed" | "pending" | "failed") || "completed",
       }));
 
-      return {
+      const result = {
         ...overviewData,
         recentUsers,
         recentPayments,
       };
+
+      console.log("Transformed dashboard data:", result);
+      return result;
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
       throw error;
@@ -161,7 +177,7 @@ export default function AdminDashboard() {
     title: string;
     value: string | number;
     description: string;
-    icon: any;
+    icon: React.ComponentType<{ className?: string }>;
     trend?: string;
     href?: string;
   }) => (
@@ -191,57 +207,39 @@ export default function AdminDashboard() {
     </Card>
   );
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <Shield className="h-5 w-5 text-white" />
-                </div>
-                <h1 className="text-2xl font-bold text-gray-900">HealthCare Admin</h1>
-              </div>
-            </div>
-            <nav className="flex items-center space-x-4">
-              <Link href="/users">
-                <Button variant="ghost">Users</Button>
-              </Link>
-              <Link href="/analytics">
-                <Button variant="ghost">Analytics</Button>
-              </Link>
-              <Link href="/news">
-                <Button variant="ghost">News</Button>
-              </Link>
-              <Link href="/settings">
-                <Button variant="ghost">Settings</Button>
-              </Link>
-              
-              <div className="flex items-center space-x-2 pl-4 border-l">
-                <span className="text-sm text-gray-600">
-                  Welcome, {admin?.name}
-                </span>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => {
-                    logout();
-                    toast.success("Logged out successfully");
-                  }}
-                >
-                  <LogOut className="h-4 w-4 mr-1" />
-                  Logout
-                </Button>
-              </div>
-            </nav>
-          </div>
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading dashboard...</p>
         </div>
-      </header>
+      </div>
+    );
+  }
 
+  if (!data) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="h-8 w-8 text-red-600" />
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Failed to Load Dashboard</h2>
+          <p className="text-gray-600 mb-4">Unable to fetch dashboard data. Please try again.</p>
+          <Button onClick={loadData} className="flex items-center space-x-2">
+            <RefreshCw className="h-4 w-4" />
+            <span>Retry</span>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen">
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 py-6">
         {/* Welcome Section */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">Dashboard Overview</h2>
@@ -249,24 +247,24 @@ export default function AdminDashboard() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
           <StatCard
             title="Total Doctors"
-            value={data?.totalDoctors.toLocaleString() || 0}
+            value={data?.totalDoctors?.toLocaleString() || 0}
             description="Registered doctors on platform"
             icon={Stethoscope}
             href="/users?type=doctor"
           />
           <StatCard
             title="Total Clinics"
-            value={data?.totalClinics.toLocaleString() || 0}
+            value={data?.totalClinics?.toLocaleString() || 0}
             description="Active healthcare facilities"
             icon={Building}
             href="/users?type=clinic"
           />
           <StatCard
             title="Total Payments"
-            value={data?.totalPayments.toLocaleString() || 0}
+            value={data?.totalPayments?.toLocaleString() || 0}
             description="Payment transactions"
             icon={DollarSign}
             href="/analytics"
@@ -277,6 +275,31 @@ export default function AdminDashboard() {
             description="Total platform revenue"
             icon={Wallet}
             href="/analytics"
+          />
+        </div>
+
+        {/* Additional Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
+          <StatCard
+            title="Total Pitches"
+            value={data?.totalPitches?.toLocaleString() || 0}
+            description="Job pitches submitted"
+            icon={FileText}
+            href="/analytics"
+          />
+          <StatCard
+            title="Total Likes"
+            value={data?.totalLikes?.toLocaleString() || 0}
+            description="News article likes"
+            icon={UserCheck}
+            href="/news"
+          />
+          <StatCard
+            title="Total Comments"
+            value={data?.totalComments?.toLocaleString() || 0}
+            description="News article comments"
+            icon={Activity}
+            href="/news"
           />
         </div>
 
@@ -337,7 +360,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Recent Activity */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
           {/* Recent Users */}
           <Card>
             <CardHeader>
@@ -353,7 +376,8 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {data?.recentUsers.map((user) => (
+                {data?.recentUsers && data.recentUsers.length > 0 ? (
+                  data.recentUsers.map((user) => (
                   <div key={user.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center space-x-3">
                       <div className={`w-2 h-2 rounded-full ${
@@ -371,7 +395,13 @@ export default function AdminDashboard() {
                       <p className="text-xs text-gray-500 mt-1">{user.date}</p>
                     </div>
                   </div>
-                ))}
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>No recent users</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -391,7 +421,8 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {data?.recentPayments.map((payment) => (
+                {data?.recentPayments && data.recentPayments.length > 0 ? (
+                  data.recentPayments.map((payment) => (
                   <div key={payment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center space-x-3">
                       <div className="w-2 h-2 rounded-full bg-green-500" />
@@ -405,7 +436,13 @@ export default function AdminDashboard() {
                       <p className="text-xs text-gray-500">{payment.date}</p>
                     </div>
                   </div>
-                ))}
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <DollarSign className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>No recent payments</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

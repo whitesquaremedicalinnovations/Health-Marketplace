@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeProvider } from "../components/theme-provider";
 import { Toaster } from "sonner";
-import AuthGuard from "@/components/auth-guard";
+import AuthGuard from "../components/auth-guard";
+import ClientShell from "../components/client-shell";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,17 +28,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <AuthGuard>
-            {children}
+            <ClientShell>{children}</ClientShell>
           </AuthGuard>
           <Toaster position="top-right" />
         </ThemeProvider>

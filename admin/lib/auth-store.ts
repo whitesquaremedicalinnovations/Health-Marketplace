@@ -1,12 +1,14 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import Cookies from 'js-cookie';
+import axiosInstance from './axios';
+import { AUTH_CONFIG, ADMIN_ENDPOINTS } from './constants';
 
-export interface Admin {
+interface Admin {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'super_admin';
+  role: string;
 }
 
 interface AuthState {
@@ -34,20 +36,12 @@ export const useAuthStore = create<AuthState>()(
         try {
           set({ isLoading: true });
           
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/login`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ email, password }),
+          const response = await axiosInstance.post(ADMIN_ENDPOINTS.LOGIN, {
+            email,
+            password,
           });
 
-          if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Login failed');
-          }
-
-          const data = await response.json();
+          const { data } = response.data;
           
           const admin: Admin = {
             id: data.admin.id,
@@ -57,8 +51,8 @@ export const useAuthStore = create<AuthState>()(
           };
 
           // Store token in httpOnly cookie for security
-          Cookies.set('admin_token', data.token, {
-            expires: 7, // 7 days
+          Cookies.set(AUTH_CONFIG.TOKEN_KEY, data.token, {
+            expires: AUTH_CONFIG.TOKEN_EXPIRY_DAYS,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
           });
@@ -69,14 +63,19 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true,
             isLoading: false,
           });
-        } catch (error) {
+        } catch (error: unknown) {
           set({ isLoading: false });
-          throw error;
+          let message = 'Login failed';
+          if (typeof error === 'object' && error !== null) {
+            const maybeAxiosErr = error as { response?: { data?: { message?: string } } };
+            message = maybeAxiosErr.response?.data?.message || message;
+          }
+          throw new Error(message);
         }
       },
 
       logout: () => {
-        Cookies.remove('admin_token');
+        Cookies.remove(AUTH_CONFIG.TOKEN_KEY);
         set({
           admin: null,
           token: null,
@@ -85,7 +84,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       initializeAuth: () => {
-        const token = Cookies.get('admin_token');
+        const token = Cookies.get(AUTH_CONFIG.TOKEN_KEY);
         if (token) {
           // Verify token validity here if needed
           try {
@@ -96,10 +95,10 @@ export const useAuthStore = create<AuthState>()(
             });
           } catch {
             // Token invalid, clear it
-            Cookies.remove('admin_token');
+            Cookies.remove(AUTH_CONFIG.TOKEN_KEY);
           }
         }
-      },
+      }
     }),
     {
       name: 'admin-auth-storage',

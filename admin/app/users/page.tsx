@@ -42,7 +42,7 @@ interface CombinedUser {
   status: "pending" | "verified" | "rejected";
   registrationDate: string;
   location?: string;
-  experience?: string;
+  experience?: string | number;
 }
 
 export default function UsersPage() {
@@ -62,11 +62,11 @@ export default function UsersPage() {
       
       // Combine doctors and clinics into a single array
       const combinedUsers: CombinedUser[] = [
-        ...data.doctors.map((doctor: Doctor) => ({
+        ...(data.doctors || []).map((doctor: Doctor) => ({
           id: doctor.id,
-          name: doctor.name,
+          name: doctor.name ?? doctor.fullName ?? "Unknown Doctor",
           email: doctor.email,
-          phone: doctor.phone,
+          phone: doctor.phone ?? doctor.phoneNumber,
           type: "Doctor" as const,
           specialization: doctor.specialization,
           status: doctor.isVerified ? "verified" as const : "pending" as const,
@@ -74,16 +74,16 @@ export default function UsersPage() {
           location: doctor.location,
           experience: doctor.experience,
         })),
-        ...data.clinics.map((clinic: Clinic) => ({
+        ...(data.clinics || []).map((clinic: Clinic) => ({
           id: clinic.id,
-          name: clinic.name,
+          name: clinic.name ?? clinic.clinicName ?? "Unknown Clinic",
           email: clinic.email,
-          phone: clinic.phone,
+          phone: clinic.phone ?? clinic.clinicPhoneNumber,
           type: "Clinic" as const,
-          specialization: clinic.description,
+          specialization: clinic.description ?? clinic.clinicAdditionalDetails,
           status: clinic.isVerified ? "verified" as const : "pending" as const,
           registrationDate: new Date(clinic.createdAt).toISOString().split('T')[0],
-          location: `${clinic.city}, ${clinic.state}`,
+          location: clinic.city && clinic.state ? `${clinic.city}, ${clinic.state}` : clinic.clinicAddress,
           experience: "",
         })),
       ];
@@ -136,13 +136,15 @@ export default function UsersPage() {
         
         // Update the local state
         setUsers(users.map(user => 
-          user.id === userId ? { ...user, status: newStatus as any } : user
+          user.id === userId ? { ...user, status: newStatus as 'pending' | 'verified' | 'rejected' } : user
         ));
         
         toast.success(`${userType} verified successfully`);
+      } else if (newStatus === "rejected") {
+        toast.info("Reject flow not implemented on backend yet");
       }
     } catch (error) {
-      toast.error(`Failed to verify ${userType.toLowerCase()}`);
+      toast.error(`Failed to update ${userType.toLowerCase()}`);
       console.error("Error verifying user:", error);
     }
   };
@@ -342,11 +344,11 @@ export default function UsersPage() {
                         </div>
                       </div>
                       <div className="flex items-center space-x-4 mt-1 text-sm text-gray-500">
-                        <span>{user.specialization}</span>
+                        <span>{String(user.specialization ?? '')}</span>
                         <span>•</span>
                         <span>{user.location}</span>
                         <span>•</span>
-                        <span>{user.experience}</span>
+                        <span>{String(user.experience ?? '')}</span>
                       </div>
                     </div>
                   </div>

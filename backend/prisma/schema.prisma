@@ -186,12 +186,19 @@ model ChangeStatusRequest {
 }
 
 model Admin {
-  id String @id @default(uuid())
-  email   String @unique
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("admin") // "admin" or "super_admin"
   isVerified   Boolean    @default(false)
   news News[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([role])
+  @@index([createdAt])
 }
 
 enum RequirementType {
@@ -213,6 +220,7 @@ model JobRequirement {
   specialization DoctorSpecialization?
   additionalInformation String?
   date        DateTime?
+  time        String?
   type        RequirementType
   requirementStatus     RequirementStatus
   clinicId    String
@@ -220,6 +228,8 @@ model JobRequirement {
 
   pitches     Pitch[]
   accepted    AcceptedWork?
+
+  medicalProcedure String?
 
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt

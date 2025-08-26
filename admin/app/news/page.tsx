@@ -88,7 +88,7 @@ export default function NewsPage() {
     }
   };
 
-  const getStatusBadge = (isPublished: boolean) => {
+  const getStatusBadge = (isPublished: boolean | undefined) => {
     return isPublished ? 
       <Badge className="bg-green-100 text-green-800">Published</Badge> :
       <Badge variant="secondary">Draft</Badge>;

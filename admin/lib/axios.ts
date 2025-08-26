@@ -1,19 +1,19 @@
 import axios from "axios";
 import Cookies from "js-cookie";
 import { useAuthStore } from "./auth-store";
+import { API_CONFIG, AUTH_CONFIG } from "./constants";
 
 const axiosInstance = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001",
+    baseURL: API_CONFIG.BASE_URL,
     headers: {
         "Content-Type": "application/json",
     },
-    withCredentials: true,
 });
 
 // Request interceptor to add auth token
 axiosInstance.interceptors.request.use(
     (config) => {
-        const token = Cookies.get('admin_token');
+        const token = Cookies.get(AUTH_CONFIG.TOKEN_KEY);
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }

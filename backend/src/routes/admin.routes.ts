@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { getOverview, getAllUsers, getAllDoctors, getAllClinics, getAllPitches, getAllRequirements, getAllPayments, setOnboardingFee, getUsersToVerify, verifyDoctor, verifyClinic, getAllNews, createNews, updateNews, deleteNews, getOnboardingFee, totalNewsLikes, totalNewsComments, getNewsById, adminLogin, adminLogout } from "../controller/admin.controller.ts";
+import { createAdmin, getAdmins, updateAdmin, changePassword, deleteAdmin, getAdminById } from "../controller/admin-management.controller.ts";
 import { adminAuth } from "../middlewares/admin-auth.ts";
 
 const router = Router();
@@ -29,8 +30,12 @@ router.post("/delete-news/:newsId", adminAuth, deleteNews);
 router.get("/total-news-likes/:newsId", adminAuth, totalNewsLikes);
 router.get("/total-news-comments/:newsId", adminAuth, totalNewsComments);
 
-
-
-
+// Admin Management Routes
+router.post("/create-admin", adminAuth, createAdmin);
+router.get("/get-admins", adminAuth, getAdmins);
+router.get("/get-admin/:adminId", adminAuth, getAdminById);
+router.put("/update-admin/:adminId", adminAuth, updateAdmin);
+router.post("/change-password/:adminId", adminAuth, changePassword);
+router.delete("/delete-admin/:adminId", adminAuth, deleteAdmin);
 
 export default router;
