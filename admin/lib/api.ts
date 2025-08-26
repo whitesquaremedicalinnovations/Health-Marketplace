@@ -147,6 +147,11 @@ export const adminApi = {
     return response.data.data;
   },
 
+  getNewsById: async (newsId: string): Promise<{ news: NewsItem }> => {
+    const response = await axiosInstance.get<ApiResponse<{ news: NewsItem }>>(`${ADMIN_ENDPOINTS.NEWS_BY_ID}/${newsId}`);
+    return response.data.data;
+  },
+
   createNews: async (newsData: {
     title: string;
     content: string;
