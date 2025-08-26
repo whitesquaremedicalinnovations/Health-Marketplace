@@ -3,6 +3,10 @@ import { prisma } from "../utils/prisma.ts";
 import { asyncHandler, ResponseHelper } from "../utils/response.ts";
 import { QueryBuilder } from "../utils/query-builder.ts";
 import { AppError } from "../utils/app-error.ts";
+import { generateAccessToken } from "../utils/generate-auth-tokens.ts";
+import { validateAdminCredentials } from "../utils/admin-helper.ts";
+import bcrypt from "bcrypt";
+import { ErrorCode } from "../types/errors.ts";
 
 export const getNewsById = asyncHandler(async (req: Request, res: Response) => {
     const { newsId } = req.params;
@@ -14,7 +18,6 @@ export const getNewsById = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const getOverview = asyncHandler(async (req: Request, res: Response) => {
-
     const totalDoctors = await prisma.doctor.count();
     const totalClinics = await prisma.clinic.count();
     const totalPitches = await prisma.pitch.count();
@@ -27,98 +30,153 @@ export const getOverview = asyncHandler(async (req: Request, res: Response) => {
     ResponseHelper.success(res, { totalDoctors, totalClinics, totalPitches, totalRequirements, totalPayments, totalAmount, totalNews, totalLikes, totalComments }, "Overview retrieved successfully");
 });
 
-export const getAllUsers = async (req: Request, res: Response) => {
+export const getAllUsers = asyncHandler(async (req: Request, res: Response) => {
     const doctors = await prisma.doctor.findMany();
     const clinics = await prisma.clinic.findMany();
-    res.status(200).json({ doctors, clinics });
-}
+    ResponseHelper.success(res, { doctors, clinics }, "Users retrieved successfully");
+});
 
-export const getAllDoctors = async (req: Request, res: Response) => {
+export const getAllDoctors = asyncHandler(async (req: Request, res: Response) => {
     const doctors = await prisma.doctor.findMany();
-    res.status(200).json({ doctors });
-}
+    ResponseHelper.success(res, { doctors }, "Doctors retrieved successfully");
+});
 
-export const getAllClinics = async (req: Request, res: Response) => {
+export const getAllClinics = asyncHandler(async (req: Request, res: Response) => {
     const clinics = await prisma.clinic.findMany();
-    res.status(200).json({ clinics });
-}
+    ResponseHelper.success(res, { clinics }, "Clinics retrieved successfully");
+});
 
-export const getAllPitches = async (req: Request, res: Response) => {
+export const getAllPitches = asyncHandler(async (req: Request, res: Response) => {
     const pitches = await prisma.pitch.findMany();
-    res.status(200).json({ pitches });
-}
+    ResponseHelper.success(res, { pitches }, "Pitches retrieved successfully");
+});
 
-export const getAllRequirements = async (req: Request, res: Response) => {
+export const getAllRequirements = asyncHandler(async (req: Request, res: Response) => {
     const requirements = await prisma.jobRequirement.findMany();
-    res.status(200).json({ requirements });
-}
+    ResponseHelper.success(res, { requirements }, "Requirements retrieved successfully");
+});
 
-export const getAllPayments = async (req: Request, res: Response) => {
-    const payments = await prisma.payment.findMany();
-    res.status(200).json({ payments });
-}
+export const getAllPayments = asyncHandler(async (req: Request, res: Response) => {
+    const payments = await prisma.payment.findMany({});
+    ResponseHelper.success(res, { payments }, "Payments retrieved successfully");
+});
 
-export const getOnboardingFee = async (req: Request, res: Response) => {
+export const getOnboardingFee = asyncHandler(async (req: Request, res: Response) => {
     const onboardingFee = await prisma.onboardingFee.findFirst();
-    res.status(200).json({ onboardingFee });
-}
+    ResponseHelper.success(res, { onboardingFee }, "Onboarding fee retrieved successfully");
+});
 
-export const setOnboardingFee = async (req: Request, res: Response) => {
+export const setOnboardingFee = asyncHandler(async (req: Request, res: Response) => {
     const { fee } = req.body;
     const onboardingFee = await prisma.onboardingFee.create({ data: { fee } });
-    res.status(200).json({ onboardingFee });
-}
+    ResponseHelper.success(res, { onboardingFee }, "Onboarding fee set successfully");
+});
 
-export const getUsersToVerify = async (req: Request, res: Response) => {
+export const getUsersToVerify = asyncHandler(async (req: Request, res: Response) => {
     const doctors = await prisma.doctor.findMany({ where: { isVerified: false } });
     const clinics = await prisma.clinic.findMany({ where: { isVerified: false } });
-    res.status(200).json({ doctors, clinics });
-}
+    ResponseHelper.success(res, { doctors, clinics }, "Users to verify retrieved successfully");
+});
 
-export const verifyDoctor = async (req: Request, res: Response) => {
+export const verifyDoctor = asyncHandler(async (req: Request, res: Response) => {
     const { doctorId } = req.params;
     const doctor = await prisma.doctor.update({ where: { id: doctorId }, data: { isVerified: true } });
-    res.status(200).json({ doctor });
-}
+    ResponseHelper.success(res, { doctor }, "Doctor verified successfully");
+});
 
-export const verifyClinic = async (req: Request, res: Response) => {
+export const verifyClinic = asyncHandler(async (req: Request, res: Response) => {
     const { clinicId } = req.params;
     const clinic = await prisma.clinic.update({ where: { id: clinicId }, data: { isVerified: true } });
-    res.status(200).json({ clinic });
-}
+    ResponseHelper.success(res, { clinic }, "Clinic verified successfully");
+});
 
-export const getAllNews = async (req: Request, res: Response) => {  
+export const getAllNews = asyncHandler(async (req: Request, res: Response) => {  
     const news = await prisma.news.findMany();
-    res.status(200).json({ news });
-}
+    ResponseHelper.success(res, { news }, "News retrieved successfully");
+});
 
-export const createNews = async (req: Request, res: Response) => {
+export const createNews = asyncHandler(async (req: Request, res: Response) => {
     const { title, content, imageUrl, adminId } = req.body;
     const news = await prisma.news.create({ data: { title, content, imageUrl, postedById: adminId } });
-    res.status(200).json({ news });
-}
+    ResponseHelper.success(res, { news }, "News created successfully");
+});
 
-export const updateNews = async (req: Request, res: Response) => {
+export const updateNews = asyncHandler(async (req: Request, res: Response) => {
     const { newsId } = req.params;
     const { title, content, imageUrl } = req.body;
     const news = await prisma.news.update({ where: { id: newsId }, data: { title, content, imageUrl } });
-    res.status(200).json({ news });
-}
+    ResponseHelper.success(res, { news }, "News updated successfully");
+});
 
-export const deleteNews = async (req: Request, res: Response) => {
+export const deleteNews = asyncHandler(async (req: Request, res: Response) => {
     const { newsId } = req.params;
     const news = await prisma.news.delete({ where: { id: newsId } });
-    res.status(200).json({ news });
-}
+    ResponseHelper.success(res, { news }, "News deleted successfully");
+});
 
-export const totalNewsLikes = async (req: Request, res: Response) => {
+export const totalNewsLikes = asyncHandler(async (req: Request, res: Response) => {
     const { newsId } = req.params;
     const totalLikes = await prisma.newsLike.count({ where: { newsId } });
-    res.status(200).json({ totalLikes });
-}
+    ResponseHelper.success(res, { totalLikes }, "Total likes retrieved successfully");
+});
 
-export const totalNewsComments = async (req: Request, res: Response) => {
+export const totalNewsComments = asyncHandler(async (req: Request, res: Response) => {
     const { newsId } = req.params;
     const totalComments = await prisma.newsComment.count({ where: { newsId } });
-    res.status(200).json({ totalComments });
-}
+    ResponseHelper.success(res, { totalComments }, "Total comments retrieved successfully");
+});
+
+// Admin Authentication
+export const adminLogin = asyncHandler(async (req: Request, res: Response) => {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+        throw AppError.badRequest(ErrorCode.INVALID_CREDENTIALS, "Email and password are required");
+    }
+
+    try {
+        // Use the helper function to validate credentials
+        const admin = await validateAdminCredentials(email, password);
+
+        // Generate JWT token with admin role
+        const token = generateAccessToken(admin.id, admin.role);
+
+        ResponseHelper.success(res, {
+            admin: {
+                id: admin.id,
+                email: admin.email,
+                name: admin.name,
+                role: admin.role,
+            },
+            token,
+        }, "Admin login successful");
+    } catch (error) {
+        // If no admin exists in database, fall back to hardcoded credentials for demo
+        const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@healthcare.com";
+        const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
+        const ADMIN_ID = process.env.ADMIN_ID || "admin-1";
+
+        if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+            const token = generateAccessToken(ADMIN_ID, "admin");
+            const adminData = {
+                id: ADMIN_ID,
+                email: ADMIN_EMAIL,
+                name: "Admin User",
+                role: "admin",
+            };
+
+            ResponseHelper.success(res, {
+                admin: adminData,
+                token,
+            }, "Admin login successful");
+        } else {
+            throw AppError.unauthorized("Invalid admin credentials");
+        }
+    }
+});
+
+export const adminLogout = asyncHandler(async (req: Request, res: Response) => {
+    // For JWT tokens, logout is handled client-side by removing the token
+    // In production, you might want to implement token blacklisting
+    ResponseHelper.success(res, null, "Admin logout successful");
+});

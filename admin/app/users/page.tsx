@@ -15,7 +15,8 @@ import {
   ArrowLeft,
   MoreHorizontal,
   Mail,
-  Phone
+  Phone,
+  LogOut
 } from "lucide-react";
 import {
   Card,
@@ -26,77 +27,79 @@ import {
 } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
+import { toast } from "sonner";
+import { adminApi, type Doctor, type Clinic } from "../../lib/api";
+import { useAuthStore } from "../../lib/auth-store";
 
-// Mock data - in real app, this would come from API
-const mockUsers = [
-  {
-    id: 1,
-    name: "Dr. Sarah Johnson",
-    email: "sarah.johnson@email.com",
-    phone: "+1 (555) 123-4567",
-    type: "Doctor",
-    specialization: "Cardiologist",
-    status: "pending",
-    registrationDate: "2024-01-15",
-    location: "New York, NY",
-    experience: "8 years"
-  },
-  {
-    id: 2,
-    name: "City Medical Center",
-    email: "admin@citymedical.com",
-    phone: "+1 (555) 987-6543",
-    type: "Clinic",
-    specialization: "Multi-specialty",
-    status: "verified",
-    registrationDate: "2024-01-14",
-    location: "Los Angeles, CA",
-    experience: "15 years"
-  },
-  {
-    id: 3,
-    name: "Dr. Michael Chen",
-    email: "m.chen@email.com",
-    phone: "+1 (555) 456-7890",
-    type: "Doctor",
-    specialization: "Pediatrician",
-    status: "verified",
-    registrationDate: "2024-01-13",
-    location: "Chicago, IL",
-    experience: "12 years"
-  },
-  {
-    id: 4,
-    name: "HealthCare Plus",
-    email: "contact@healthcareplus.com",
-    phone: "+1 (555) 321-0987",
-    type: "Clinic",
-    specialization: "General Practice",
-    status: "pending",
-    registrationDate: "2024-01-12",
-    location: "Houston, TX",
-    experience: "5 years"
-  },
-  {
-    id: 5,
-    name: "Dr. Emily Rodriguez",
-    email: "emily.rodriguez@email.com",
-    phone: "+1 (555) 654-3210",
-    type: "Doctor",
-    specialization: "Dermatologist",
-    status: "rejected",
-    registrationDate: "2024-01-11",
-    location: "Phoenix, AZ",
-    experience: "6 years"
-  },
-];
+// Combined user interface
+interface CombinedUser {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  type: "Doctor" | "Clinic";
+  specialization?: string;
+  status: "pending" | "verified" | "rejected";
+  registrationDate: string;
+  location?: string;
+  experience?: string | number;
+}
 
 export default function UsersPage() {
-  const [users, setUsers] = useState(mockUsers);
-  const [filteredUsers, setFilteredUsers] = useState(mockUsers);
+  const [users, setUsers] = useState<CombinedUser[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<CombinedUser[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [loading, setLoading] = useState(true);
+  const { admin, logout } = useAuthStore();
+
+  // Fetch users data from API
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const data = await adminApi.getAllUsers();
+      
+      // Combine doctors and clinics into a single array
+      const combinedUsers: CombinedUser[] = [
+        ...(data.doctors || []).map((doctor: Doctor) => ({
+          id: doctor.id,
+          name: doctor.name ?? doctor.fullName ?? "Unknown Doctor",
+          email: doctor.email,
+          phone: doctor.phone ?? doctor.phoneNumber,
+          type: "Doctor" as const,
+          specialization: doctor.specialization,
+          status: doctor.isVerified ? "verified" as const : "pending" as const,
+          registrationDate: new Date(doctor.createdAt).toISOString().split('T')[0],
+          location: doctor.location,
+          experience: doctor.experience,
+        })),
+        ...(data.clinics || []).map((clinic: Clinic) => ({
+          id: clinic.id,
+          name: clinic.name ?? clinic.clinicName ?? "Unknown Clinic",
+          email: clinic.email,
+          phone: clinic.phone ?? clinic.clinicPhoneNumber,
+          type: "Clinic" as const,
+          specialization: clinic.description ?? clinic.clinicAdditionalDetails,
+          status: clinic.isVerified ? "verified" as const : "pending" as const,
+          registrationDate: new Date(clinic.createdAt).toISOString().split('T')[0],
+          location: clinic.city && clinic.state ? `${clinic.city}, ${clinic.state}` : clinic.clinicAddress,
+          experience: "",
+        })),
+      ];
+      
+      setUsers(combinedUsers);
+    } catch (error) {
+      toast.error("Failed to fetch users data");
+      console.error("Error fetching users:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   useEffect(() => {
     let filtered = users;
@@ -122,10 +125,28 @@ export default function UsersPage() {
     setFilteredUsers(filtered);
   }, [users, searchTerm, statusFilter, typeFilter]);
 
-  const handleStatusChange = (userId: number, newStatus: string) => {
-    setUsers(users.map(user => 
-      user.id === userId ? { ...user, status: newStatus } : user
-    ));
+  const handleStatusChange = async (userId: string, userType: "Doctor" | "Clinic", newStatus: string) => {
+    try {
+      if (newStatus === "verified") {
+        if (userType === "Doctor") {
+          await adminApi.verifyDoctor(userId);
+        } else {
+          await adminApi.verifyClinic(userId);
+        }
+        
+        // Update the local state
+        setUsers(users.map(user => 
+          user.id === userId ? { ...user, status: newStatus as 'pending' | 'verified' | 'rejected' } : user
+        ));
+        
+        toast.success(`${userType} verified successfully`);
+      } else if (newStatus === "rejected") {
+        toast.info("Reject flow not implemented on backend yet");
+      }
+    } catch (error) {
+      toast.error(`Failed to update ${userType.toLowerCase()}`);
+      console.error("Error verifying user:", error);
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -147,6 +168,17 @@ export default function UsersPage() {
       <Building className="h-4 w-4 text-green-600" />;
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading users...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -164,6 +196,22 @@ export default function UsersPage() {
                 <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
                 <p className="text-gray-600">Manage doctors and clinics on the platform</p>
               </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-600">
+                Welcome, {admin?.name}
+              </span>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  logout();
+                  toast.success("Logged out successfully");
+                }}
+              >
+                <LogOut className="h-4 w-4 mr-1" />
+                Logout
+              </Button>
             </div>
           </div>
         </div>
@@ -296,11 +344,11 @@ export default function UsersPage() {
                         </div>
                       </div>
                       <div className="flex items-center space-x-4 mt-1 text-sm text-gray-500">
-                        <span>{user.specialization}</span>
+                        <span>{String(user.specialization ?? '')}</span>
                         <span>•</span>
                         <span>{user.location}</span>
                         <span>•</span>
-                        <span>{user.experience}</span>
+                        <span>{String(user.experience ?? '')}</span>
                       </div>
                     </div>
                   </div>
@@ -310,7 +358,7 @@ export default function UsersPage() {
                       <>
                         <Button
                           size="sm"
-                          onClick={() => handleStatusChange(user.id, "verified")}
+                          onClick={() => handleStatusChange(user.id, user.type, "verified")}
                           className="bg-green-600 hover:bg-green-700"
                         >
                           <CheckCircle className="h-3 w-3 mr-1" />
@@ -319,7 +367,7 @@ export default function UsersPage() {
                         <Button
                           size="sm"
                           variant="destructive"
-                          onClick={() => handleStatusChange(user.id, "rejected")}
+                          onClick={() => handleStatusChange(user.id, user.type, "rejected")}
                         >
                           <XCircle className="h-3 w-3 mr-1" />
                           Reject

@@ -166,7 +166,7 @@ export default function EnhancedAdminDashboard() {
     title: string;
     value: string;
     description: string;
-    icon: any;
+    icon: React.ComponentType<{ className?: string }>;
     trend: string;
     href: string;
   }) => (

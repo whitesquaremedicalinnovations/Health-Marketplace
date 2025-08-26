@@ -23,7 +23,8 @@ import {
   UserX,
   Wallet,
   Globe,
-  RefreshCw
+  RefreshCw,
+  LogOut
 } from "lucide-react";
 import {
   Card,
@@ -39,22 +40,22 @@ import { Separator } from "../components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { toast } from "sonner";
+import { adminApi } from "../lib/api";
+import { useAuthStore } from "../lib/auth-store";
 
-// Dynamic data interface
+// Dashboard data interface
 interface DashboardData {
-  totalUsers: number;
-  totalClinics: number;
   totalDoctors: number;
-  totalRevenue: number;
-  monthlyGrowth: number;
-  pendingVerifications: number;
-  verifiedUsers: number;
-  rejectedUsers: number;
-  activeConnections: number;
+  totalClinics: number;
+  totalPitches: number;
   totalRequirements: number;
-  completedRequirements: number;
+  totalPayments: number;
+  totalAmount: { _sum: { amount: number | null } };
+  totalNews: number;
+  totalLikes: number;
+  totalComments: number;
   recentUsers: Array<{
-    id: number;
+    id: string;
     name: string;
     type: "Doctor" | "Clinic";
     status: "pending" | "verified" | "rejected";
@@ -62,63 +63,73 @@ interface DashboardData {
     avatar?: string;
   }>;
   recentPayments: Array<{
-    id: number;
+    id: string;
     user: string;
     amount: number;
     type: "Onboarding" | "Subscription" | "Commission";
     date: string;
     status: "completed" | "pending" | "failed";
   }>;
-  systemHealth: {
-    uptime: number;
-    responseTime: number;
-    errorRate: number;
-  };
 }
 
 export default function AdminDashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const { admin, logout } = useAuthStore();
 
-  // Simulate API data fetching
+  // Fetch real dashboard data from API
   const fetchDashboardData = async (): Promise<DashboardData> => {
-    // In real app, this would be an actual API call
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          totalUsers: 1248 + Math.floor(Math.random() * 50),
-          totalClinics: 342 + Math.floor(Math.random() * 10),
-          totalDoctors: 906 + Math.floor(Math.random() * 20),
-          totalRevenue: 125400 + Math.floor(Math.random() * 5000),
-          monthlyGrowth: 12.5 + (Math.random() * 5 - 2.5),
-          pendingVerifications: 23 + Math.floor(Math.random() * 10),
-          verifiedUsers: 1180 + Math.floor(Math.random() * 30),
-          rejectedUsers: 45 + Math.floor(Math.random() * 5),
-          activeConnections: 456 + Math.floor(Math.random() * 20),
-          totalRequirements: 89 + Math.floor(Math.random() * 10),
-          completedRequirements: 67 + Math.floor(Math.random() * 5),
-          recentUsers: [
-            { id: 1, name: "Dr. Sarah Johnson", type: "Doctor", status: "pending", date: "2024-01-15", avatar: "/avatars/01.png" },
-            { id: 2, name: "City Medical Center", type: "Clinic", status: "verified", date: "2024-01-14" },
-            { id: 3, name: "Dr. Michael Chen", type: "Doctor", status: "verified", date: "2024-01-13" },
-            { id: 4, name: "HealthCare Plus", type: "Clinic", status: "pending", date: "2024-01-12" },
-            { id: 5, name: "Dr. Emily Davis", type: "Doctor", status: "rejected", date: "2024-01-11" },
-          ],
-          recentPayments: [
-            { id: 1, user: "Dr. Sarah Johnson", amount: 500, type: "Onboarding", date: "2024-01-15", status: "completed" },
-            { id: 2, user: "City Medical Center", amount: 500, type: "Onboarding", date: "2024-01-14", status: "completed" },
-            { id: 3, user: "Dr. Michael Chen", amount: 500, type: "Onboarding", date: "2024-01-13", status: "pending" },
-            { id: 4, user: "HealthCare Plus", amount: 1200, type: "Subscription", date: "2024-01-12", status: "completed" },
-          ],
-          systemHealth: {
-            uptime: 99.8 + (Math.random() * 0.2),
-            responseTime: 120 + Math.floor(Math.random() * 50),
-            errorRate: 0.1 + (Math.random() * 0.1),
-          },
-        });
-      }, 1000);
-    });
+    try {
+      console.log("Fetching dashboard data...");
+      
+      const [overviewData, usersData, paymentsData] = await Promise.all([
+        adminApi.getOverview(),
+        adminApi.getAllUsers(),
+        adminApi.getAllPayments(),
+      ]);
+
+      console.log("API responses:", { overviewData, usersData, paymentsData });
+
+      // Transform and combine the data
+      const recentUsers = [
+        ...(usersData.doctors || []).slice(0, 3).map(doctor => ({
+          id: doctor.id,
+          name: doctor.name || "Unknown Doctor",
+          type: "Doctor" as const,
+          status: doctor.isVerified ? "verified" as const : "pending" as const,
+          date: new Date(doctor.createdAt).toISOString().split('T')[0],
+        })),
+        ...(usersData.clinics || []).slice(0, 2).map(clinic => ({
+          id: clinic.id,
+          name: clinic.name || "Unknown Clinic",
+          type: "Clinic" as const,
+          status: clinic.isVerified ? "verified" as const : "pending" as const,
+          date: new Date(clinic.createdAt).toISOString().split('T')[0],
+        })),
+      ];
+
+      const recentPayments = (paymentsData.payments || []).slice(0, 4).map(payment => ({
+        id: payment.id,
+        user: payment.user?.name || "Unknown User",
+        amount: payment.amount || 0,
+        type: (payment.type as "Onboarding" | "Subscription" | "Commission") || "Onboarding",
+        date: new Date(payment.createdAt).toISOString().split('T')[0],
+        status: (payment.status as "completed" | "pending" | "failed") || "completed",
+      }));
+
+      const result = {
+        ...overviewData,
+        recentUsers,
+        recentPayments,
+      };
+
+      console.log("Transformed dashboard data:", result);
+      return result;
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+      throw error;
+    }
   };
 
   const loadData = async () => {
@@ -166,7 +177,7 @@ export default function AdminDashboard() {
     title: string;
     value: string | number;
     description: string;
-    icon: any;
+    icon: React.ComponentType<{ className?: string }>;
     trend?: string;
     href?: string;
   }) => (
@@ -196,37 +207,39 @@ export default function AdminDashboard() {
     </Card>
   );
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <Shield className="h-5 w-5 text-white" />
-                </div>
-                <h1 className="text-2xl font-bold text-gray-900">HealthCare Admin</h1>
-              </div>
-            </div>
-            <nav className="flex space-x-4">
-              <Link href="/users">
-                <Button variant="ghost">Users</Button>
-              </Link>
-              <Link href="/analytics">
-                <Button variant="ghost">Analytics</Button>
-              </Link>
-              <Link href="/settings">
-                <Button variant="ghost">Settings</Button>
-              </Link>
-            </nav>
-          </div>
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading dashboard...</p>
         </div>
-      </header>
+      </div>
+    );
+  }
 
+  if (!data) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="h-8 w-8 text-red-600" />
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Failed to Load Dashboard</h2>
+          <p className="text-gray-600 mb-4">Unable to fetch dashboard data. Please try again.</p>
+          <Button onClick={loadData} className="flex items-center space-x-2">
+            <RefreshCw className="h-4 w-4" />
+            <span>Retry</span>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen">
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 py-6">
         {/* Welcome Section */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">Dashboard Overview</h2>
@@ -234,38 +247,59 @@ export default function AdminDashboard() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
           <StatCard
-            title="Total Users"
-            value={data?.totalUsers.toLocaleString() || 0}
-            description="Registered users on platform"
-            icon={Users}
-            trend="+12% from last month"
-            href="/users"
-          />
-          <StatCard
-            title="Clinics"
-            value={data?.totalClinics.toLocaleString() || 0}
-            description="Active healthcare facilities"
-            icon={Building}
-            trend="+8% from last month"
-            href="/users?type=clinic"
-          />
-          <StatCard
-            title="Doctors"
-            value={data?.totalDoctors.toLocaleString() || 0}
-            description="Verified medical professionals"
+            title="Total Doctors"
+            value={data?.totalDoctors?.toLocaleString() || 0}
+            description="Registered doctors on platform"
             icon={Stethoscope}
-            trend="+15% from last month"
             href="/users?type=doctor"
           />
           <StatCard
-            title="Revenue"
-            value={`$${data?.totalRevenue.toLocaleString()}`}
-            description="Total platform revenue"
+            title="Total Clinics"
+            value={data?.totalClinics?.toLocaleString() || 0}
+            description="Active healthcare facilities"
+            icon={Building}
+            href="/users?type=clinic"
+          />
+          <StatCard
+            title="Total Payments"
+            value={data?.totalPayments?.toLocaleString() || 0}
+            description="Payment transactions"
             icon={DollarSign}
-            trend="+23% from last month"
             href="/analytics"
+          />
+          <StatCard
+            title="Total Revenue"
+            value={`$${data?.totalAmount?._sum?.amount?.toLocaleString() || 0}`}
+            description="Total platform revenue"
+            icon={Wallet}
+            href="/analytics"
+          />
+        </div>
+
+        {/* Additional Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
+          <StatCard
+            title="Total Pitches"
+            value={data?.totalPitches?.toLocaleString() || 0}
+            description="Job pitches submitted"
+            icon={FileText}
+            href="/analytics"
+          />
+          <StatCard
+            title="Total Likes"
+            value={data?.totalLikes?.toLocaleString() || 0}
+            description="News article likes"
+            icon={UserCheck}
+            href="/news"
+          />
+          <StatCard
+            title="Total Comments"
+            value={data?.totalComments?.toLocaleString() || 0}
+            description="News article comments"
+            icon={Activity}
+            href="/news"
           />
         </div>
 
@@ -283,7 +317,7 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-orange-600 mb-4">
-                {data?.pendingVerifications}
+                {data?.recentUsers?.filter(u => u.status === 'pending').length || 0}
               </div>
               <Link href="/users?status=pending">
                 <Button className="w-full">
@@ -307,12 +341,12 @@ export default function AdminDashboard() {
             <CardContent>
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between text-sm">
-                  <span>Onboarding Fee</span>
-                  <span className="font-medium">$500</span>
+                  <span>Total News</span>
+                  <span className="font-medium">{data?.totalNews || 0}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span>Active Policies</span>
-                  <span className="font-medium">12</span>
+                  <span>Total Requirements</span>
+                  <span className="font-medium">{data?.totalRequirements || 0}</span>
                 </div>
               </div>
               <Link href="/settings">
@@ -326,7 +360,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Recent Activity */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
           {/* Recent Users */}
           <Card>
             <CardHeader>
@@ -342,7 +376,8 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {data?.recentUsers.map((user) => (
+                {data?.recentUsers && data.recentUsers.length > 0 ? (
+                  data.recentUsers.map((user) => (
                   <div key={user.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center space-x-3">
                       <div className={`w-2 h-2 rounded-full ${
@@ -360,7 +395,13 @@ export default function AdminDashboard() {
                       <p className="text-xs text-gray-500 mt-1">{user.date}</p>
                     </div>
                   </div>
-                ))}
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>No recent users</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -380,7 +421,8 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {data?.recentPayments.map((payment) => (
+                {data?.recentPayments && data.recentPayments.length > 0 ? (
+                  data.recentPayments.map((payment) => (
                   <div key={payment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center space-x-3">
                       <div className="w-2 h-2 rounded-full bg-green-500" />
@@ -394,7 +436,13 @@ export default function AdminDashboard() {
                       <p className="text-xs text-gray-500">{payment.date}</p>
                     </div>
                   </div>
-                ))}
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <DollarSign className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>No recent payments</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
