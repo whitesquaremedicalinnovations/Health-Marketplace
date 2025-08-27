@@ -14,6 +14,8 @@ import { TouchableOpacity, Platform, View, ActivityIndicator } from 'react-nativ
 import { useUser } from '@clerk/clerk-expo';
 import { getDoctor } from '@/lib/utils';
 import Toast from 'react-native-toast-message';
+import { registerForPushNotificationsAsync } from '@/lib/registerNotification';
+import { axiosInstance } from '@/lib/axios';
 
 interface DoctorData {
   id: string;
@@ -60,6 +62,22 @@ export default function TabLayout() {
   useEffect(() => {
     fetchDoctorData();
   }, [user?.id]);
+
+  useEffect(() => {
+    const registerForPushNotifications = async () => {
+     const token = await registerForPushNotificationsAsync();
+     console.log("Token", token);
+
+     if(token && doctorData?.id) {
+      await axiosInstance.post('/api/notification/save-device-notification-token', {
+        token,
+        doctorId: doctorData?.id,
+        type: "DOCTOR",
+      });
+     }
+    };
+    registerForPushNotifications();
+  }, [doctorData?.id]);
 
   if (loading) {
     return (

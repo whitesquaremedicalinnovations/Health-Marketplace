@@ -421,7 +421,7 @@ export default function NewsPage() {
                                 <ModalHeader>
                                   <ModalTitle>Delete Article</ModalTitle>
                                   <ModalDescription>
-                                    Are you sure you want to delete "{article.title}"? This action cannot be undone.
+                                    Are you sure you want to delete &quot;{article.title}&quot;? This action cannot be undone.
                                   </ModalDescription>
                                 </ModalHeader>
                                 <ModalFooter>
@@ -544,7 +544,7 @@ export default function NewsPage() {
                                 <ModalHeader>
                                   <ModalTitle>Delete Article</ModalTitle>
                                   <ModalDescription>
-                                    Are you sure you want to delete "{article.title}"? This action cannot be undone.
+                                    Are you sure you want to delete &quot;{article.title}&quot;? This action cannot be undone.
                                   </ModalDescription>
                                 </ModalHeader>
                                 <ModalFooter>

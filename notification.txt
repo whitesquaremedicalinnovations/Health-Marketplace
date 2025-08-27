@@ -1,0 +1,10 @@
+Notification for Doctors
+    a) when a new requirement is posted and it is preffered by the Doctors -- done
+    b) when a new chat is recieved  -- done
+    c) when a new news is posted or updated --done
+    d) when the pitch is accepted -- done
+
+Notification for Clinics
+    a) when Doctors applies to any requirement 
+    b) when a new chat is recieved --done
+    c) when a new news is posted -- done

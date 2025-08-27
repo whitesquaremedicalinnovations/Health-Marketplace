@@ -7,6 +7,7 @@ import { generateAccessToken } from "../utils/generate-auth-tokens.ts";
 import { validateAdminCredentials } from "../utils/admin-helper.ts";
 import bcrypt from "bcrypt";
 import { ErrorCode } from "../types/errors.ts";
+import { sendBulkPushNotification } from "../utils/send-notification.ts";
 
 export const getNewsById = asyncHandler(async (req: Request, res: Response) => {
     const { newsId } = req.params;
@@ -98,6 +99,13 @@ export const getAllNews = asyncHandler(async (req: Request, res: Response) => {
 export const createNews = asyncHandler(async (req: Request, res: Response) => {
     const { title, content, imageUrl, adminId } = req.body;
     const news = await prisma.news.create({ data: { title, content, imageUrl, postedById: adminId } });
+
+    const doctors = await prisma.doctor.findMany({select:{notificationToken: true}});
+    const clinics = await prisma.clinic.findMany({select:{notificationToken: true}});
+
+    const allUsers = [...doctors, ...clinics];
+
+    sendBulkPushNotification(allUsers.map((user: any) => user.notificationToken), "New News", "You have a new news", {newsId: news.id});
     ResponseHelper.success(res, { news }, "News created successfully");
 });
 
@@ -111,6 +119,13 @@ export const updateNews = asyncHandler(async (req: Request, res: Response) => {
 export const deleteNews = asyncHandler(async (req: Request, res: Response) => {
     const { newsId } = req.params;
     const news = await prisma.news.delete({ where: { id: newsId } });
+
+    const doctors = await prisma.doctor.findMany({select:{notificationToken: true}});
+    const clinics = await prisma.clinic.findMany({select:{notificationToken: true}});
+
+    const allUsers = [...doctors, ...clinics];
+
+    sendBulkPushNotification(allUsers.map((user: any) => user.notificationToken), "New News", "You have a new news", {newsId: news.id});
     ResponseHelper.success(res, { news }, "News deleted successfully");
 });
 

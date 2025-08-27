@@ -5,6 +5,7 @@ import { AppError } from "../utils/app-error.ts";
 import { ErrorCode } from "../types/errors.ts";
 import { ResponseHelper, asyncHandler } from "../utils/response.ts";
 import { QueryBuilder } from "../utils/query-builder.ts";
+import { sendBulkPushNotification, sendPushNotification } from "../utils/send-notification.ts";
 
 export const getClinics = asyncHandler(async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
@@ -141,6 +142,41 @@ export const postRequirement = async (req: Request, res: Response) => {
                 time
             }
         });
+
+        //find the doctors who have same specialization and requirment's location is within the users preffered radius of the location
+
+        const doctors = await prisma.doctor.findMany({
+            where: {
+                specialization,
+            }
+        });
+
+        const nearbyDoctorsMobileIds = doctors.filter(doctor=>{
+            if (
+                doctor.latitude == null ||
+                doctor.longitude == null ||
+                doctor.preferredRadius == null ||
+                !clinic.latitude ||
+                !clinic.longitude
+            ) {
+                return false;
+            }
+
+            const distance = getDistance(clinic.latitude, clinic.longitude, doctor.latitude, doctor.longitude);
+            return distance <= doctor.preferredRadius
+        })
+        .map(doctor=>doctor.notificationToken)
+        .filter((token): token is string => !!token);
+
+        if (nearbyDoctorsMobileIds.length > 0) {
+            await sendBulkPushNotification(
+              nearbyDoctorsMobileIds,
+              "New Requirement",
+              `${title} requirement posted near you`,
+              { requirementId: requirement.id }
+            );
+        }
+
         res.status(201).json({ requirement });
     } catch (error) {
         console.log(error)
@@ -227,7 +263,12 @@ export const acceptPitch = async (req: Request, res: Response) => {
             where: { id: pitchId }, 
             data: { status: "ACCEPTED" },
             include: {
-                doctor: true
+                doctor: true,
+                jobRequirement: {
+                    select: {
+                        title: true,
+                    }
+                }
             }
         });
         
@@ -241,10 +282,14 @@ export const acceptPitch = async (req: Request, res: Response) => {
         });
         
         // Optionally update requirement status to COMPLETED if needed
-        // await prisma.jobRequirement.update({
-        //     where: { id: requirementId },
-        //     data: { requirementStatus: "COMPLETED" }
-        // });
+        await prisma.jobRequirement.update({
+            where: { id: requirementId },
+            data: { requirementStatus: "COMPLETED" }
+        });
+
+        if(pitch.doctor.notificationToken){
+            await sendPushNotification(pitch.doctor.notificationToken, `Pitch Accepted`, `Your application has been accepted for ${pitch.jobRequirement.title}`, {pitchId: pitch.id});
+        }
         
         res.status(200).json({ message: "Pitch accepted successfully", pitch });
     } catch (error) {

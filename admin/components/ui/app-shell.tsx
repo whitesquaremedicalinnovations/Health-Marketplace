@@ -53,9 +53,17 @@ interface NavSection {
 interface NavItem {
   href: string;
   label: string;
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
   badge?: string | number;
   description?: string;
+}
+
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  time: string;
+  type: 'info' | 'warning' | 'error' | 'success';
 }
 
 const navSections: NavSection[] = [

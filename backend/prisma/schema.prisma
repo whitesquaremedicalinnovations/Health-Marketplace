@@ -83,6 +83,8 @@ model Doctor {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  notificationToken String?
+
   messages Message[] @relation("MessageSenderDoctor")
   patients Patient[]
   @@index([email])
@@ -118,6 +120,8 @@ model Clinic {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  notificationToken String?
+
   messages Message[] @relation("MessageSenderClinic")
   
   @@index([email])
@@ -125,6 +129,7 @@ model Clinic {
   @@index([isVerified])
   @@index([createdAt])
   @@index([clinicName])
+  @@index([notificationToken])
 }
 
 model Patient {

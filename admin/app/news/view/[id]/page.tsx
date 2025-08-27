@@ -10,7 +10,7 @@ import { Badge } from "../../../../components/ui/badge";
 import { Separator } from "../../../../components/ui/separator";
 import { LoadingSpinner } from "../../../../components/ui/loading-spinner";
 import { toast } from "sonner";
-import { type NewsItem } from "../../../../lib/api";
+import { adminApi, type NewsItem } from "../../../../lib/api";
 import { useAuthStore } from "../../../../lib/auth-store";
 
 export default function ViewNewsPage() {

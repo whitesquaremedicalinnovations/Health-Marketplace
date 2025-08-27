@@ -4,6 +4,7 @@ import { asyncHandler } from "../utils/response.ts";
 import { ResponseHelper } from "../utils/response.ts";
 import { AppError } from "../utils/app-error.ts";
 import { ErrorCode } from "../types/errors.ts";
+import { sendPushNotification } from "../utils/send-notification.ts";
 
 // We'll get the io instance from the request object (set by middleware)
 let ioInstance: any = null;
@@ -286,7 +287,45 @@ export const sendMessage = asyncHandler(async (req: Request, res: Response) => {
       console.warn("⚠️ Socket.IO instance not available for real-time messaging");
     }
 
+    if(senderType==="doctor"){
+      const doctor = await prisma.doctor.findUnique({
+        where: { id: senderId },
+      });
+      
+      const sender = await prisma.clinic.findUnique({
+        where: { id: senderId },
+      });
+
+      if(doctor?.notificationToken){
+        sendPushNotification(doctor.notificationToken, sender?.clinicName||"", message.content, {
+          chatId: chatId,
+          senderId: senderId,
+          senderType: senderType,
+          senderName: doctor.fullName,
+        });
+      }
+    }else{
+      const clinic = await prisma.clinic.findUnique({
+        where: { id: senderId },
+      });
+
+      const sender = await prisma.doctor.findUnique({
+        where: { id: senderId },
+      });
+
+      if(clinic?.notificationToken){
+        sendPushNotification(clinic.notificationToken, sender?.fullName||"", message.content, {
+          chatId: chatId,
+          senderId: senderId,
+          senderType: senderType,
+          senderName: clinic.clinicName,
+        });
+      }
+    }
+    
     ResponseHelper.success(res, message, "Message sent successfully", 201);
+
+
   }catch(error){
     console.log("error", error);
     throw new AppError(ErrorCode.INTERNAL_SERVER_ERROR, "Failed to send message", 500);
