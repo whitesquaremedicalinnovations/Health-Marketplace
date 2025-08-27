@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin, Briefcase, ArrowLeft, Eye, Users, Clock } from "lucide-react";
+import { Calendar, MapPin, Briefcase, ArrowLeft, Eye, Clock } from "lucide-react";
 import { axiosInstance } from "@/lib/axios";
 import { Loading } from "@/components/ui/loading";
 import { toast } from "sonner";

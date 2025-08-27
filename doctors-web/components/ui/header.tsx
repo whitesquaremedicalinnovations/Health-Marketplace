@@ -8,7 +8,6 @@ import {
   Hospital,
   LayoutDashboard,
   Newspaper,
-  Stethoscope,
   Menu,
   X,
   MessageCircle,

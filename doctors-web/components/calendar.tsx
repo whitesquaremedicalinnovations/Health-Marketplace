@@ -38,6 +38,7 @@ const formatTime = (time: string | null): string | null => {
     const displayHour = hour % 12 || 12;
     return `${displayHour}:${minutes} ${ampm}`;
   } catch (error) {
+    console.log(error)
     return time; // Return original if parsing fails
   }
 };
@@ -158,19 +159,21 @@ export default function MeetingCalendar({ size = 'sm' }: MeetingCalendarProps) {
         } ${className || ''} transition-all duration-200 ease-in-out`}
         {...props}
       >
-        <div className="flex flex-col items-center w-full h-full justify-between">
-          <span className={`font-semibold ${size === 'lg' ? 'text-base' : 'text-sm'} ${
-            hasMeetings ? 'text-blue-700' : 'text-gray-900'
-          }`}>
-            {day.date.getDate()}
-          </span>
-          
-          {hasMeetings && (
-            <div className="flex flex-col items-center w-full space-y-0.5 mt-1">
-              {dayMeetings.length} meetings
-            </div>
-          )}
-        </div>
+        {!isLoading && (
+          <div className="flex flex-col items-center w-full h-full justify-between">
+            <span className={`font-semibold ${size === 'lg' ? 'text-base' : 'text-sm'} ${
+              hasMeetings ? 'text-blue-700' : 'text-gray-900'
+            }`}>
+              {day.date.getDate()}
+            </span>
+            
+            {hasMeetings && (
+              <div className="flex flex-col items-center w-full space-y-0.5 mt-1">
+                {dayMeetings.length} meetings
+              </div>
+            )}
+          </div>
+        )}
       </Button>
     )
   }

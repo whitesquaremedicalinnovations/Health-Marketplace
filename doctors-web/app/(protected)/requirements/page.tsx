@@ -515,7 +515,7 @@ export default function JobRequirements() {
                         {searchTerm && (
                           <Badge variant="secondary" className="flex items-center gap-1 bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200">
                             <Search className="h-3 w-3" />
-                            "{searchTerm}"
+                            &quot;{searchTerm}&quot;
                             <X 
                               className="h-3 w-3 cursor-pointer hover:text-blue-600" 
                               onClick={() => setSearchTerm("")}
