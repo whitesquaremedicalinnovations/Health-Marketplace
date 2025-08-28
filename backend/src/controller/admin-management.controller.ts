@@ -11,24 +11,25 @@ import {
   deleteAdminUser,
   type CreateAdminData 
 } from "../utils/admin-helper.ts";
+import { ErrorCode } from "../types/errors.ts";
 
 // Create a new admin user (super admin only)
 export const createAdmin = asyncHandler(async (req: Request, res: Response) => {
   const { email, password, name, role } = req.body;
 
   if (!email || !password || !name) {
-    throw AppError.badRequest("Email, password, and name are required");
+    throw AppError.badRequest(ErrorCode.INVALID_CREDENTIALS, "Email, password, and name are required");
   }
 
   // Validate email format
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
-    throw AppError.badRequest("Invalid email format");
+    throw AppError.badRequest(ErrorCode.INVALID_CREDENTIALS, "Invalid email format");
   }
 
   // Validate password strength
   if (password.length < 8) {
-    throw AppError.badRequest("Password must be at least 8 characters long");
+    throw AppError.badRequest(ErrorCode.INVALID_CREDENTIALS, "Password must be at least 8 characters long");
   }
 
   const adminData: CreateAdminData = {
@@ -55,10 +56,10 @@ export const updateAdmin = asyncHandler(async (req: Request, res: Response) => {
   const { name, role } = req.body;
 
   if (!name && !role) {
-    throw AppError.badRequest("At least one field (name or role) is required");
+    throw AppError.badRequest(ErrorCode.INVALID_CREDENTIALS, "At least one field (name or role) is required");
   }
 
-  const updateData: Partial<{ name: string; role: string }> = {};
+  const updateData: Partial<{ name: string; role: "admin" | "super_admin" }> = {};
   if (name) updateData.name = name;
   if (role) updateData.role = role;
 
@@ -73,12 +74,12 @@ export const changePassword = asyncHandler(async (req: Request, res: Response) =
   const { currentPassword, newPassword } = req.body;
 
   if (!currentPassword || !newPassword) {
-    throw AppError.badRequest("Current password and new password are required");
+    throw AppError.badRequest(ErrorCode.INVALID_CREDENTIALS, "Current password and new password are required");
   }
 
   // Validate new password strength
   if (newPassword.length < 8) {
-    throw AppError.badRequest("New password must be at least 8 characters long");
+    throw AppError.badRequest(ErrorCode.INVALID_CREDENTIALS, "New password must be at least 8 characters long");
   }
 
   await changeAdminPassword(adminId, currentPassword, newPassword);

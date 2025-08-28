@@ -11,6 +11,7 @@ import { errorHandler } from "./middlewares/error-handler.js";
 import { logger } from "./utils/logger.js";
 import paymentsRoutes from "./routes/payments.routes.js";
 import uploadRoutes from "./routes/upload.routes.js";
+import notificationRoutes from "./routes/notification.routes.js";
 const app = express();
 app.set("trust proxy", 1);
 app.use((req, res, next) => {
@@ -48,6 +49,7 @@ app.use("/api/chat", chatRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/payments", paymentsRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/notification", notificationRoutes);
 // 404
 app.use("*", (req, res) => {
     res.status(404).json({

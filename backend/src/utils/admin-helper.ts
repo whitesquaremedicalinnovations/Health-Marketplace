@@ -1,5 +1,6 @@
 import { prisma } from "./prisma.ts";
 import { AppError } from "./app-error.ts";
+import { ErrorCode } from "../types/errors.ts";
 import bcrypt from "bcrypt";
 
 export interface CreateAdminData {
@@ -31,7 +32,7 @@ export const createAdminUser = async (adminData: CreateAdminData): Promise<Admin
     });
 
     if (existingAdmin) {
-      throw AppError.conflict("Admin with this email already exists");
+      throw AppError.conflict(ErrorCode.RESOURCE_ALREADY_EXISTS, "Admin with this email already exists");
     }
 
     // Hash password

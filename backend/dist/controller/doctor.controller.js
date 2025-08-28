@@ -3,6 +3,7 @@ import getDistance from "../utils/distance.js";
 import { ResponseHelper, asyncHandler } from "../utils/response.js";
 import { AppError } from "../utils/app-error.js";
 import { ErrorCode } from "../types/errors.js";
+import { sendPushNotification } from "../utils/send-notification.js";
 export const getDoctors = async (req, res) => {
     try {
         const doctors = await prisma.doctor.findMany({
@@ -283,12 +284,16 @@ export const pitchRequirement = async (req, res) => {
                         clinic: {
                             select: {
                                 clinicName: true,
+                                notificationToken: true
                             }
                         }
                     }
                 }
             }
         });
+        if (pitch.jobRequirement.clinic.notificationToken) {
+            await sendPushNotification(pitch.jobRequirement.clinic.notificationToken, `New Application`, `You have a new application for ${pitch.jobRequirement.title}`, { requirementId: pitch.jobRequirement.id });
+        }
         res.status(200).json({ message: "Application submitted successfully", pitch });
     }
     catch (error) {

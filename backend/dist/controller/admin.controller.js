@@ -4,6 +4,7 @@ import { AppError } from "../utils/app-error.js";
 import { generateAccessToken } from "../utils/generate-auth-tokens.js";
 import { validateAdminCredentials } from "../utils/admin-helper.js";
 import { ErrorCode } from "../types/errors.js";
+import { sendBulkPushNotification } from "../utils/send-notification.js";
 export const getNewsById = asyncHandler(async (req, res) => {
     const { newsId } = req.params;
     const news = await prisma.news.findUnique({ where: { id: newsId } });
@@ -80,6 +81,10 @@ export const getAllNews = asyncHandler(async (req, res) => {
 export const createNews = asyncHandler(async (req, res) => {
     const { title, content, imageUrl, adminId } = req.body;
     const news = await prisma.news.create({ data: { title, content, imageUrl, postedById: adminId } });
+    const doctors = await prisma.doctor.findMany({ select: { notificationToken: true } });
+    const clinics = await prisma.clinic.findMany({ select: { notificationToken: true } });
+    const allUsers = [...doctors, ...clinics];
+    sendBulkPushNotification(allUsers.map((user) => user.notificationToken), "New News", "You have a new news", { newsId: news.id });
     ResponseHelper.success(res, { news }, "News created successfully");
 });
 export const updateNews = asyncHandler(async (req, res) => {
@@ -91,6 +96,10 @@ export const updateNews = asyncHandler(async (req, res) => {
 export const deleteNews = asyncHandler(async (req, res) => {
     const { newsId } = req.params;
     const news = await prisma.news.delete({ where: { id: newsId } });
+    const doctors = await prisma.doctor.findMany({ select: { notificationToken: true } });
+    const clinics = await prisma.clinic.findMany({ select: { notificationToken: true } });
+    const allUsers = [...doctors, ...clinics];
+    sendBulkPushNotification(allUsers.map((user) => user.notificationToken), "New News", "You have a new news", { newsId: news.id });
     ResponseHelper.success(res, { news }, "News deleted successfully");
 });
 export const totalNewsLikes = asyncHandler(async (req, res) => {

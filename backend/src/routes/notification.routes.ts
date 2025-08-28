@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { Router } from "express";
-import { prisma } from "../utils/prisma";
-import { asyncHandler, ResponseHelper } from "../utils/response";
+import { prisma } from "../utils/prisma.ts";
+import { asyncHandler, ResponseHelper } from "../utils/response.ts";
 
 const router = Router();
 

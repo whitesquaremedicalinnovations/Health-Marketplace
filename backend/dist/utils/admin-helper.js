@@ -1,5 +1,6 @@
 import { prisma } from "./prisma.js";
 import { AppError } from "./app-error.js";
+import { ErrorCode } from "../types/errors.js";
 import bcrypt from "bcrypt";
 /**
  * Creates a new admin user with hashed password
@@ -13,7 +14,7 @@ export const createAdminUser = async (adminData) => {
             where: { email: adminData.email },
         });
         if (existingAdmin) {
-            throw AppError.conflict("Admin with this email already exists");
+            throw AppError.conflict(ErrorCode.RESOURCE_ALREADY_EXISTS, "Admin with this email already exists");
         }
         // Hash password
         const saltRounds = 12;

@@ -31,6 +31,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ModeToggle } from './theme-toggle';
 import { useUserContext } from '@/provider/user-provider';
+import Image from 'next/image';
 
 const navLinks = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -81,12 +82,9 @@ export const Header = () => {
         <div className="flex items-center justify-between h-16 sm:h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center transition-transform group-hover:scale-105">
-              <Hospital className="h-5 w-5 text-white" />
-            </div>
-            <span className="font-bold text-lg sm:text-xl tracking-tight bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-              HealthPlatform
-            </span>
+            <Image src="/icon-logo.png" alt="HealthPlatform" width={60} height={44} />
+            <Image src="/text-logo.png" alt="HealthPlatform" width={200} height={24} />
+            <span className="text-3xl font-extrabold text-blue-800">- Clinics</span>
           </Link>
 
           {/* Desktop Nav */}
