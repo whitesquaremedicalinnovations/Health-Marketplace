@@ -1,0 +1,93 @@
+# Health Platform Environment Configuration Template
+# Copy this file to .env in each project directory and update the values
+
+# =============================================================================
+# BACKEND ENVIRONMENT VARIABLES (.env in backend directory)
+# =============================================================================
+
+# Database Configuration
+DATABASE_URL="postgresql://username:password@localhost:5432/health_platform"
+DIRECT_URL="postgresql://username:password@localhost:5432/health_platform"
+
+# JWT Configuration
+JWT_SECRET="your-super-secret-jwt-key-change-this-in-production"
+
+# Server Configuration
+PORT=3001
+NODE_ENV=development
+
+# Google Cloud Storage (for file uploads)
+GOOGLE_CLOUD_STORAGE_BUCKET="your-bucket-name"
+GOOGLE_APPLICATION_CREDENTIALS="path/to/service-account.json"
+
+# Payment Gateway (Razorpay)
+RAZORPAY_KEY_ID="your-razorpay-key-id"
+RAZORPAY_KEY_SECRET="your-razorpay-secret-key"
+
+# Email Service (Resend)
+RESEND_API_KEY="your-resend-api-key"
+
+# CORS Configuration
+CORS_ORIGIN="*"
+
+# =============================================================================
+# WEB APPLICATIONS ENVIRONMENT VARIABLES (.env.local in each web project)
+# =============================================================================
+
+# API Configuration
+NEXT_PUBLIC_API_URL="http://localhost:3001"
+
+# Authentication (Clerk)
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="your-clerk-publishable-key"
+CLERK_SECRET_KEY="your-clerk-secret-key"
+
+# Google Maps API (for location features)
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="your-google-maps-api-key"
+
+# =============================================================================
+# MOBILE APPLICATIONS ENVIRONMENT VARIABLES (.env in each mobile project)
+# =============================================================================
+
+# API Configuration
+EXPO_PUBLIC_API_URL="http://localhost:3001"
+
+# Authentication (Clerk)
+EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY="your-clerk-publishable-key"
+
+# Google Maps API (for location features)
+EXPO_PUBLIC_GOOGLE_MAPS_API_KEY="your-google-maps-api-key"
+
+# =============================================================================
+# PRODUCTION ENVIRONMENT VARIABLES
+# =============================================================================
+
+# Update these URLs for production deployment
+# NEXT_PUBLIC_API_URL="https://api.yourapp.com"
+# EXPO_PUBLIC_API_URL="https://api.yourapp.com"
+
+# =============================================================================
+# OPTIONAL CONFIGURATIONS
+# =============================================================================
+
+# Logging Level
+LOG_LEVEL="info"
+
+# Rate Limiting
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
+
+# File Upload Limits
+MAX_FILE_SIZE=10485760  # 10MB in bytes
+
+# Session Configuration
+SESSION_SECRET="your-session-secret-key"
+
+# =============================================================================
+# DEVELOPMENT ONLY
+# =============================================================================
+
+# Enable detailed logging in development
+DEBUG=true
+
+# Disable SSL verification for local development
+NODE_TLS_REJECT_UNAUTHORIZED=0 
