@@ -1,9 +1,7 @@
 import React from 'react';
-import 'react-native-get-random-values';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
 import '../globals.css';
 import { ClerkProvider, useAuth } from '@clerk/clerk-expo';
 import { tokenCache } from '@clerk/clerk-expo/token-cache';
@@ -38,7 +36,9 @@ export default function RootLayout() {
   }
 
   return (
-    <ClerkProvider tokenCache={tokenCache}>
+    <ClerkProvider tokenCache={tokenCache}
+      publishableKey={"pk_live_Y2xlcmsuZGVudGFsaWNvbnMuaW4k"}      
+    >
       <ThemeProvider>
         <NavigationContent />
       </ThemeProvider>

@@ -43,43 +43,11 @@ export default function DrawerLayout() {
         }} 
       />
       <Drawer.Screen 
-        name="requirements" 
-        options={{ 
-          title: 'Find Jobs',
-          drawerLabel: 'Find Jobs',
-          headerTitle: 'Available Job Opportunities'
-        }} 
-      />
-      <Drawer.Screen 
-        name="applications" 
-        options={{ 
-          title: 'My Applications',
-          drawerLabel: 'My Applications',
-          headerTitle: 'Application Status'
-        }} 
-      />
-      <Drawer.Screen 
-        name="search-clinics" 
-        options={{ 
-          title: 'Search Clinics',
-          drawerLabel: 'Search Clinics',
-          headerTitle: 'Find Healthcare Facilities'
-        }} 
-      />
-      <Drawer.Screen 
         name="connections" 
         options={{ 
           title: 'Active Positions',
           drawerLabel: 'Active Positions',
           headerTitle: 'My Current Jobs'
-        }} 
-      />
-      <Drawer.Screen 
-        name="patients" 
-        options={{ 
-          title: 'Patients',
-          drawerLabel: 'Patients',
-          headerTitle: 'Patient Management'
         }} 
       />
       <Drawer.Screen 
@@ -96,6 +64,22 @@ export default function DrawerLayout() {
           title: 'Profile',
           drawerLabel: 'My Profile',
           headerTitle: 'Doctor Profile'
+        }} 
+      />
+      <Drawer.Screen 
+        name="calendar" 
+        options={{ 
+          title: 'Calendar',
+          drawerLabel: 'Calendar',
+          headerTitle: 'Schedule & Appointments'
+        }} 
+      />
+      <Drawer.Screen 
+        name="clinics-map" 
+        options={{ 
+          title: 'Clinics Map',
+          drawerLabel: 'Find Clinics',
+          headerTitle: 'Nearby Healthcare Facilities'
         }} 
       />
     </Drawer>

@@ -1,22 +1,38 @@
 {
   "expo": {
-    "name": "clinics-mobile",
-    "slug": "clinics-mobile",
+    "name": "Dental Icons - Doctor",
+    "slug": "dental-icons-doctor",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "clinicsmobile",
+    "scheme": "doctorsmobile",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "ios": {
-      "supportsTablet": true
+    "ios": {  
+      "supportsTablet": true,
+      "bundleIdentifier": "com.dentalicons.doctorsmobile",
+      "buildNumber": "1.0.0",
+      "config": {
+        "googleMapsApiKey": "AIzaSyDc_qXxv7x1A5aVpmJZemwzixkMT1_ejjo"
+      },
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "This app uses your location to show nearby doctor."
+      }
     },
     "android": {
+      "package": "com.dentalicons.doctorsmobile",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyDc_qXxv7x1A5aVpmJZemwzixkMT1_ejjo"
+        }
+      }
     },
     "web": {
       "bundler": "metro",
@@ -34,10 +50,17 @@
           "backgroundColor": "#ffffff"
         }
       ],
+      "expo-secure-store",
       "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "59f73e53-2e3d-4770-9c11-7f0bdf83e57a"
+      }
     }
   }
 }

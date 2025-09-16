@@ -16,7 +16,7 @@ export default function GooglePlacesAutocomplete({ onPlaceSelect, initialAddress
     if (text.length > 2) {
       try {
         const response = await axiosInstance.get(
-          `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${text}&key=${process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY}&language=en`
+          `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${text}&key=${"AIzaSyCJOf56DvpaMPweP-6zP_iYV_k8hjmHxFs"}&language=en`
         );
         setPredictions(response.data.predictions);
       } catch (error) {
@@ -30,7 +30,7 @@ export default function GooglePlacesAutocomplete({ onPlaceSelect, initialAddress
   const handlePlaceSelect = async (placeId: string) => {
     try {
       const response = await axiosInstance.get(
-        `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&key=${process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY}&language=en`
+        `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&key=${"AIzaSyCJOf56DvpaMPweP-6zP_iYV_k8hjmHxFs"}&language=en`
       );
       onPlaceSelect(response.data.result);
       setQuery(response.data.result.formatted_address);

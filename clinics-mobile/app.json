@@ -1,36 +1,55 @@
 {
   "expo": {
-    "name": "clinics-mobile",
-    "slug": "clinics-mobile",
-    "version": "1.0.0",
+    "name": "Dental Icons - Clinic",
+    "slug": "dental-icons-clinic",
+    "version": "1.0.0",                       
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "clinicsmobile",
+    "scheme": "clinicsmobile",                
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.dentalicons.clinicsmobile",
+      "buildNumber": "1.0.0",
       "config": {
         "googleMapsApiKey": "AIzaSyDc_qXxv7x1A5aVpmJZemwzixkMT1_ejjo"
+      },
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "This app uses your location to show nearby clinics."
       }
     },
+
     "android": {
+      "package": "com.dentalicons.clinicsmobile",  
+      "versionCode": 1,                         
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
+      "edgeToEdgeEnabled": true,                       
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyDc_qXxv7x1A5aVpmJZemwzixkMT1_ejjo"
         }
-      }
+      },
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "RECORD_AUDIO",
+        "VIBRATE"
+      ]
     },
+
     "web": {
       "bundler": "metro",
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
+
     "plugins": [
       "expo-router",
       [
@@ -45,8 +64,16 @@
       "expo-secure-store",
       "expo-notifications"
     ],
+
     "experiments": {
       "typedRoutes": true
+    },
+
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "0f81a7d3-a343-43bf-9120-c11a8cb2ce49"
+      }
     }
   }
 }

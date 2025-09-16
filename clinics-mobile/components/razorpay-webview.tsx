@@ -36,7 +36,7 @@ export default function RazorpayWebView({
 
   // Razorpay configuration
   const razorpayConfig = {
-    key: process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_YOUR_KEY_HERE',
+    key: process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || 'rzp_live_nibAmZlCkBR3Gi',
     amount: amount * 100, // Razorpay expects amount in paise
     currency: currency,
     name: 'Make My Look',

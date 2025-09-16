@@ -899,43 +899,59 @@ export default function OnboardingScreen() {
                 <Text className="text-white font-medium mr-2">Continue</Text>
               </TouchableOpacity>
             ) : (
-              <>
-                {hasEmailPaid ? (
-                  <TouchableOpacity 
-                    onPress={handleSubmit}
-                    disabled={loading}
-                    className={`rounded-xl px-8 py-4 flex-row items-center shadow-lg ${
-                      loading ? 'bg-gray-400' : 'bg-green-600'
-                    }`}
-                  >
-                    {loading ? (
-                      <Loader2 size={16} color="white" />
-                    ) : (
-                      <CheckCircle2 size={16} color="white" />
-                    )}
-                    <Text className="text-white font-medium ml-2">
-                      {loading ? 'Setting up...' : 'Complete Setup'}
-                    </Text>
-                  </TouchableOpacity>
+              // <>
+              //   {hasEmailPaid ? (
+              //     <TouchableOpacity 
+              //       onPress={handleSubmit}
+              //       disabled={loading}
+              //       className={`rounded-xl px-8 py-4 flex-row items-center shadow-lg ${
+              //         loading ? 'bg-gray-400' : 'bg-green-600'
+              //       }`}
+              //     >
+              //       {loading ? (
+              //         <Loader2 size={16} color="white" />
+              //       ) : (
+              //         <CheckCircle2 size={16} color="white" />
+              //       )}
+              //       <Text className="text-white font-medium ml-2">
+              //         {loading ? 'Setting up...' : 'Complete Setup'}
+              //       </Text>
+              //     </TouchableOpacity>
+              //   ) : (
+              //     <TouchableOpacity 
+              //       onPress={handlePayment}
+              //       disabled={isProcessingPayment}
+              //       className={`rounded-xl px-8 py-4 flex-row items-center shadow-lg ${
+              //         isProcessingPayment ? 'bg-gray-400' : 'bg-blue-600'
+              //       }`}
+              //     >
+              //       {isProcessingPayment ? (
+              //         <Loader2 size={16} color="white" />
+              //       ) : (
+              //         <CreditCard size={16} color="white" />
+              //       )}
+              //       <Text className="text-white font-medium ml-2">
+              //         {isProcessingPayment ? 'Processing...' : `Pay ₹${onboardingAmount}`}
+              //       </Text>
+              //     </TouchableOpacity>
+              //   )}
+              // </>
+              <TouchableOpacity 
+                onPress={handleSubmit}
+                disabled={loading}
+                className={`rounded-xl px-8 py-4 flex-row items-center shadow-lg ${
+                  loading ? 'bg-gray-400' : 'bg-green-600'
+                }`}
+              >
+                {loading ? (
+                  <Loader2 size={16} color="white" />
                 ) : (
-                  <TouchableOpacity 
-                    onPress={handlePayment}
-                    disabled={isProcessingPayment}
-                    className={`rounded-xl px-8 py-4 flex-row items-center shadow-lg ${
-                      isProcessingPayment ? 'bg-gray-400' : 'bg-blue-600'
-                    }`}
-                  >
-                    {isProcessingPayment ? (
-                      <Loader2 size={16} color="white" />
-                    ) : (
-                      <CreditCard size={16} color="white" />
-                    )}
-                    <Text className="text-white font-medium ml-2">
-                      {isProcessingPayment ? 'Processing...' : `Pay ₹${onboardingAmount}`}
-                    </Text>
-                  </TouchableOpacity>
+                  <CheckCircle2 size={16} color="white" />
                 )}
-              </>
+                <Text className="text-white font-medium ml-2">
+                  {loading ? 'Setting up...' : 'Complete Setup'}
+                </Text>
+              </TouchableOpacity>
             )}
           </View>
         </View>

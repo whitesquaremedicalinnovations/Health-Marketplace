@@ -60,7 +60,7 @@ export default function LocationSearch({
   const inputRef = useRef<TextInput>(null);
 
   // Google Places API key - you'll need to add this to your environment
-  const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+  const GOOGLE_PLACES_API_KEY = "AIzaSyCJOf56DvpaMPweP-6zP_iYV_k8hjmHxFs";
 
   const searchPlaces = async (input: string) => {
     if (!input.trim() || input.length < 3) {

@@ -97,7 +97,9 @@ export default function SignUpScreen() {
     try {
       const { createdSessionId, setActive: activate } = await startSSOFlow({
         strategy: 'oauth_google',
-        redirectUrl: AuthSession.makeRedirectUri(),
+        redirectUrl: AuthSession.makeRedirectUri({
+          path: "callback"
+        }),
       });
       if (createdSessionId && activate) {
         await activate({ session: createdSessionId });

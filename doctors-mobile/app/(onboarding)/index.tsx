@@ -765,34 +765,51 @@ export default function OnboardingScreen() {
                 <Text className="text-white font-medium mr-2">Continue</Text>
               </TouchableOpacity>
             ) : (
-              <>
-                {hasEmailPaid ? (
-                  <TouchableOpacity 
-                    onPress={handleSubmit}
-                    disabled={loading}
-                    className={`rounded-xl px-8 py-4 flex-row items-center shadow-lg ${
-                      loading ? 'bg-gray-400' : 'bg-green-600'
-                    }`}
-                  >
-                    {loading ? (
-                      <Loader2 size={16} color="white" />
-                    ) : (
-                      <CheckCircle2 size={16} color="white" />
-                    )}
-                    <Text className="text-white font-medium ml-2">
-                      {loading ? 'Creating profile...' : 'Complete Profile'}
-                    </Text>
-                  </TouchableOpacity>
+              // <>
+              //   {hasEmailPaid ? (
+              //     <TouchableOpacity 
+              //       onPress={handleSubmit}
+              //       disabled={loading}
+              //       className={`rounded-xl px-8 py-4 flex-row items-center shadow-lg ${
+              //         loading ? 'bg-gray-400' : 'bg-green-600'
+              //       }`}
+              //     >
+              //       {loading ? (
+              //         <Loader2 size={16} color="white" />
+              //       ) : (
+              //         <CheckCircle2 size={16} color="white" />
+              //       )}
+              //       <Text className="text-white font-medium ml-2">
+              //         {loading ? 'Creating profile...' : 'Complete Profile'}
+              //       </Text>
+              //     </TouchableOpacity>
+              //   ) : (
+              //     <TouchableOpacity 
+              //       onPress={handlePayment}
+              //       className="bg-blue-600 rounded-xl px-8 py-4 flex-row items-center shadow-lg"
+              //     >
+              //       <CreditCard size={16} color="white" />
+              //       <Text className="text-white font-medium ml-2">Pay ₹{onboardingAmount}</Text>
+              //     </TouchableOpacity>
+              //   )}
+              // </>
+
+              <TouchableOpacity 
+                onPress={handleSubmit}
+                disabled={loading}
+                className={`rounded-xl px-8 py-4 flex-row items-center shadow-lg ${
+                  loading ? 'bg-gray-400' : 'bg-green-600'
+                }`}
+              >
+                {loading ? (
+                  <Loader2 size={16} color="white" />
                 ) : (
-                  <TouchableOpacity 
-                    onPress={handlePayment}
-                    className="bg-blue-600 rounded-xl px-8 py-4 flex-row items-center shadow-lg"
-                  >
-                    <CreditCard size={16} color="white" />
-                    <Text className="text-white font-medium ml-2">Pay ₹{onboardingAmount}</Text>
-                  </TouchableOpacity>
+                  <CheckCircle2 size={16} color="white" />
                 )}
-              </>
+                <Text className="text-white font-medium ml-2">
+                  {loading ? 'Creating profile...' : 'Complete Profile'}
+                </Text>
+              </TouchableOpacity>
             )}
           </View>
         </View>

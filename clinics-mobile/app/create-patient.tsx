@@ -4,7 +4,7 @@ import { useState } from "react";
 import { View, ActivityIndicator } from "react-native";
 import Toast from "react-native-toast-message";
 import { axiosInstance } from "@/lib/axios";
-import { Redirect } from "expo-router";
+import { Redirect, useRouter } from "expo-router";
 
 interface PatientFormData {
   name: string;
@@ -14,20 +14,23 @@ interface PatientFormData {
   address: string;
   latitude: string;
   longitude: string;
+  medicalProcedure: string;
 }
 
 export default function CreatePatientScreen() {
   const { user } = useUser();
   const { isSignedIn, isLoaded } = useAuth();
+  const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState<PatientFormData>({
     name: "",
     phoneNumber: "",
-    gender: "MALE",
+    gender: "",
     dateOfBirth: "",
     address: "",
     latitude: "",
-    longitude: ""
+    longitude: "",
+    medicalProcedure: ""
   });
 
   const handleInputChange = (field: string, value: string) => {
@@ -39,8 +42,8 @@ export default function CreatePatientScreen() {
       setFormData(prev => ({
         ...prev,
         address: place.formatted_address || "",
-        latitude: place.geometry?.location?.lat()?.toString() || "",
-        longitude: place.geometry?.location?.lng()?.toString() || ""
+        latitude: place.geometry?.location?.lat?.toString() || place.geometry?.location?.lat()?.toString() || "",
+        longitude: place.geometry?.location?.lng?.toString() || place.geometry?.location?.lng()?.toString() || ""
       }));
     }
   };
@@ -48,10 +51,26 @@ export default function CreatePatientScreen() {
   const handleCreatePatient = async () => {
     setSubmitting(true);
     try {
-      await axiosInstance.post("/api/patient/create-patient", { ...formData, clinicId: user?.id });
-      Toast.show({ type: 'success', text1: 'Patient created successfully' });
-    } catch (error) {
-      Toast.show({ type: 'error', text1: 'Failed to create patient' });
+      await axiosInstance.post("/api/patient/create-patient", { 
+        ...formData, 
+        clinicId: user?.id 
+      });
+      Toast.show({ 
+        type: 'success', 
+        text1: 'Success', 
+        text2: 'Patient created successfully' 
+      });
+      
+      // Navigate back to patients page and refresh
+      router.replace("/(drawer)/tabs/patients");
+    } catch (error: any) {
+      console.log("Error creating patient:", error);
+      const errorMessage = error.response?.data?.message || 'Failed to create patient';
+      Toast.show({ 
+        type: 'error', 
+        text1: 'Error', 
+        text2: errorMessage 
+      });
     } finally {
       setSubmitting(false);
     }

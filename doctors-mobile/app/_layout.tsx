@@ -1,9 +1,7 @@
-import 'react-native-get-random-values';
 import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
 import '../globals.css';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { ClerkProvider } from '@clerk/clerk-expo';
@@ -40,7 +38,7 @@ export default function RootLayout() {
   }
 
   return (
-    <ClerkProvider tokenCache={tokenCache}>
+    <ClerkProvider tokenCache={tokenCache} publishableKey='pk_live_Y2xlcmsuZGVudGFsaWNvbnMuaW4k'>
       <ThemeProvider>
         <NavigationContent />
       </ThemeProvider>
