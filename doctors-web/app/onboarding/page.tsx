@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import Image from "next/image"
 import { axiosInstance } from "@/lib/axios"
-import PaymentButton from "@/components/payment-button"
+// import PaymentButton from "@/components/payment-button"
 import { toast } from "sonner"
 
 enum DoctorSpecialization {
@@ -99,7 +99,8 @@ export default function Onboarding() {
     const initializeOnboarding = async () => {
       const check_user = await getUser(user?.id ?? "")
       console.log("Check User", check_user)
-      if (check_user) {
+      if (check_user.status === 200 && check_user.data) {
+        // User already exists in database, check if doctor profile exists
         const existingUser = await checkUserExists(user?.id ?? "")
         console.log("Existing User", existingUser)
         if (existingUser.status === 200 && existingUser.data?.doctor) {
@@ -113,10 +114,19 @@ export default function Onboarding() {
           setIsCheckingUser(false)
         }
       } else {
-        router.push('/sign-in')
+        // User doesn't exist in database, proceed with onboarding
+        setFullName(`${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim())
+        setEmail(user?.emailAddresses[0]?.emailAddress ?? "")
+        setPhoneNumber(user?.phoneNumbers[0]?.phoneNumber ?? "")
+        setIsCheckingUser(false)
       }
     }
-    initializeOnboarding()
+    
+    if (user?.id) {
+      initializeOnboarding()
+    } else {
+      router.push('/sign-in')
+    }
   }, [router, user?.id, user?.firstName, user?.lastName, user?.emailAddresses, user?.phoneNumbers])
 
   const addCertification = () => {
@@ -704,7 +714,8 @@ export default function Onboarding() {
                   </Button>
                 ) : (
                   <>
-                    {hasEmailPaid ? (
+                    {/* Payment check temporarily disabled - Razorpay not verified */}
+                    {/* {hasEmailPaid ? ( */}
                       <Button 
                         type="submit" 
                         disabled={loading}
@@ -722,9 +733,9 @@ export default function Onboarding() {
                           </>
                         )}
                       </Button>
-                    ):(
+                    {/* ):(
                       <PaymentButton amount={onboardingAmount} currency="INR" receipt="Onboarding Fee" name={fullName} email={email} phone={phoneNumber} userType="DOCTOR" setHasEmailPaid={setHasEmailPaid}/>
-                    )}
+                    )} */}
                   </>                  
                 )}
               </div>

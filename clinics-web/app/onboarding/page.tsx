@@ -16,7 +16,7 @@ import { Slider } from "@/components/ui/slider"
 import { Textarea } from "@/components/ui/textarea"
 import Image from "next/image"
 import { axiosInstance } from "@/lib/axios"
-import PaymentButton from "@/components/payment-button"
+// import PaymentButton from "@/components/payment-button"
 import { toast } from "sonner"
 
 export default function Onboarding() {
@@ -75,10 +75,12 @@ export default function Onboarding() {
         setIsCheckingUser(true)
         const userData = await getUser(user?.id ?? "")
         console.log("userData", userData)
-        if (userData.status === 200) {
+        if (userData.status === 200 && userData.data) {
+          // User already exists and is onboarded
           setAuthCookie("onboarded", "true")
           router.push("/dashboard")
         } else {
+          // User doesn't exist, proceed with onboarding
           setIsCheckingUser(false)
           setOwnerFirstName(user?.firstName ?? "")
           setOwnerLastName(user?.lastName ?? "")
@@ -97,6 +99,8 @@ export default function Onboarding() {
 
     if (user?.id) {
       fetchUserData()
+    } else {
+      router.push('/sign-in')
     }
   }, [user, router])
 
@@ -514,7 +518,8 @@ export default function Onboarding() {
                   </Button>
                 ) : (
                   <>
-                    {hasEmailPaid ? (
+                    {/* Payment check temporarily disabled - Razorpay not verified */}
+                    {/* {hasEmailPaid ? ( */}
                       <Button 
                         type="submit" 
                         disabled={loading}
@@ -532,9 +537,9 @@ export default function Onboarding() {
                           </>
                         )}
                       </Button>
-                    ):(
+                    {/* ):(
                       <PaymentButton amount={onboardingAmount} currency="INR" receipt="Onboarding Fee" name={clinicName} email={ownerEmail} phone={ownerPhoneNumber} userType="CLINIC" setHasEmailPaid={setHasEmailPaid}/>
-                    )}
+                    )} */}
                   </>
                 )}
               </div>

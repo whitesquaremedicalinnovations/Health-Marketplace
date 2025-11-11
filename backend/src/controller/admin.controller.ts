@@ -7,7 +7,7 @@ import { generateAccessToken } from "../utils/generate-auth-tokens.ts";
 import { validateAdminCredentials } from "../utils/admin-helper.ts";
 import bcrypt from "bcrypt";
 import { ErrorCode } from "../types/errors.ts";
-import { sendBulkPushNotification } from "../utils/send-notification.ts";
+import { sendBulkMultiChannelNotification } from "../utils/send-notification.ts";
 
 export const getNewsById = asyncHandler(async (req: Request, res: Response) => {
     const { newsId } = req.params;
@@ -100,12 +100,44 @@ export const createNews = asyncHandler(async (req: Request, res: Response) => {
     const { title, content, imageUrl, adminId } = req.body;
     const news = await prisma.news.create({ data: { title, content, imageUrl, postedById: adminId } });
 
-    const doctors = await prisma.doctor.findMany({select:{notificationToken: true}});
-    const clinics = await prisma.clinic.findMany({select:{notificationToken: true}});
+    const doctors = await prisma.doctor.findMany({
+        select: {
+            notificationToken: true,
+            email: true,
+            phoneNumber: true,
+        }
+    });
+    const clinics = await prisma.clinic.findMany({
+        select: {
+            notificationToken: true,
+            email: true,
+            clinicPhoneNumber: true,
+            ownerPhoneNumber: true,
+        }
+    });
 
-    const allUsers = [...doctors, ...clinics];
+    const allRecipients = [
+        ...doctors.map(doctor => ({
+            notificationToken: doctor.notificationToken || undefined,
+            email: doctor.email || undefined,
+            phoneNumber: doctor.phoneNumber || undefined,
+        })),
+        ...clinics.map(clinic => ({
+            notificationToken: clinic.notificationToken || undefined,
+            email: clinic.email || undefined,
+            phoneNumber: clinic.ownerPhoneNumber || clinic.clinicPhoneNumber || undefined,
+        }))
+    ].filter(recipient => recipient.notificationToken || recipient.email || recipient.phoneNumber);
 
-    sendBulkPushNotification(allUsers.map((user: any) => user.notificationToken), "New News", "You have a new news", {newsId: news.id});
+    if (allRecipients.length > 0) {
+        await sendBulkMultiChannelNotification(
+            allRecipients,
+            "New News",
+            "You have a new news",
+            { newsId: news.id }
+        );
+    }
+
     ResponseHelper.success(res, { news }, "News created successfully");
 });
 
@@ -120,12 +152,44 @@ export const deleteNews = asyncHandler(async (req: Request, res: Response) => {
     const { newsId } = req.params;
     const news = await prisma.news.delete({ where: { id: newsId } });
 
-    const doctors = await prisma.doctor.findMany({select:{notificationToken: true}});
-    const clinics = await prisma.clinic.findMany({select:{notificationToken: true}});
+    const doctors = await prisma.doctor.findMany({
+        select: {
+            notificationToken: true,
+            email: true,
+            phoneNumber: true,
+        }
+    });
+    const clinics = await prisma.clinic.findMany({
+        select: {
+            notificationToken: true,
+            email: true,
+            clinicPhoneNumber: true,
+            ownerPhoneNumber: true,
+        }
+    });
 
-    const allUsers = [...doctors, ...clinics];
+    const allRecipients = [
+        ...doctors.map(doctor => ({
+            notificationToken: doctor.notificationToken || undefined,
+            email: doctor.email || undefined,
+            phoneNumber: doctor.phoneNumber || undefined,
+        })),
+        ...clinics.map(clinic => ({
+            notificationToken: clinic.notificationToken || undefined,
+            email: clinic.email || undefined,
+            phoneNumber: clinic.ownerPhoneNumber || clinic.clinicPhoneNumber || undefined,
+        }))
+    ].filter(recipient => recipient.notificationToken || recipient.email || recipient.phoneNumber);
 
-    sendBulkPushNotification(allUsers.map((user: any) => user.notificationToken), "New News", "You have a new news", {newsId: news.id});
+    if (allRecipients.length > 0) {
+        await sendBulkMultiChannelNotification(
+            allRecipients,
+            "News Deleted",
+            "A news item has been deleted",
+            { newsId: news.id }
+        );
+    }
+
     ResponseHelper.success(res, { news }, "News deleted successfully");
 });
 

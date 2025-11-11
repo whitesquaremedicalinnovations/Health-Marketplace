@@ -17,7 +17,7 @@ router.get("/get-all-clinics", adminAuth, getAllClinics);
 router.get("/get-all-pitches", adminAuth, getAllPitches);
 router.get("/get-all-requirements", adminAuth, getAllRequirements);
 router.get("/get-all-payments", adminAuth, getAllPayments);
-router.get("/get-onboarding-fee", adminAuth, getOnboardingFee);
+router.get("/get-onboarding-fee", getOnboardingFee);
 router.post("/set-onboarding-fee", adminAuth, setOnboardingFee);
 router.get("/get-users-to-verify", adminAuth, getUsersToVerify);
 router.post("/verify-doctor/:doctorId", adminAuth, verifyDoctor);

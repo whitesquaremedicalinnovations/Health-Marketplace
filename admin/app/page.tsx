@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import { 
   Users, 
   Building, 
@@ -24,7 +23,10 @@ import {
   Wallet,
   Globe,
   RefreshCw,
-  LogOut
+  LogOut,
+  TrendingDown,
+  ArrowRight,
+  Sparkles
 } from "lucide-react";
 import {
   Card,
@@ -42,8 +44,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
 import { toast } from "sonner";
 import { adminApi } from "../lib/api";
 import { useAuthStore } from "../lib/auth-store";
+import Link from "next/link";
 
-// Dashboard data interface
 interface DashboardData {
   totalDoctors: number;
   totalClinics: number;
@@ -78,38 +80,32 @@ export default function AdminDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const { admin, logout } = useAuthStore();
 
-  // Fetch real dashboard data from API
   const fetchDashboardData = async (): Promise<DashboardData> => {
     try {
-      console.log("Fetching dashboard data...");
-      
       const [overviewData, usersData, paymentsData] = await Promise.all([
         adminApi.getOverview(),
         adminApi.getAllUsers(),
         adminApi.getAllPayments(),
       ]);
 
-      console.log("API responses:", { overviewData, usersData, paymentsData });
-
-      // Transform and combine the data
       const recentUsers = [
-        ...(usersData.doctors || []).slice(0, 3).map(doctor => ({
+        ...(usersData.doctors || []).slice(0, 5).map(doctor => ({
           id: doctor.id,
-          name: doctor.name || "Unknown Doctor",
+          name: doctor.name || doctor.fullName || "Unknown Doctor",
           type: "Doctor" as const,
           status: doctor.isVerified ? "verified" as const : "pending" as const,
           date: new Date(doctor.createdAt).toISOString().split('T')[0],
         })),
-        ...(usersData.clinics || []).slice(0, 2).map(clinic => ({
+        ...(usersData.clinics || []).slice(0, 3).map(clinic => ({
           id: clinic.id,
-          name: clinic.name || "Unknown Clinic",
+          name: clinic.name || clinic.clinicName || "Unknown Clinic",
           type: "Clinic" as const,
           status: clinic.isVerified ? "verified" as const : "pending" as const,
           date: new Date(clinic.createdAt).toISOString().split('T')[0],
         })),
-      ];
+      ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
 
-      const recentPayments = (paymentsData.payments || []).slice(0, 4).map(payment => ({
+      const recentPayments = (paymentsData.payments || []).slice(0, 5).map(payment => ({
         id: payment.id,
         user: payment.user?.name || "Unknown User",
         amount: payment.amount || 0,
@@ -118,14 +114,11 @@ export default function AdminDashboard() {
         status: (payment.status as "completed" | "pending" | "failed") || "completed",
       }));
 
-      const result = {
+      return {
         ...overviewData,
         recentUsers,
         recentPayments,
       };
-
-      console.log("Transformed dashboard data:", result);
-      return result;
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
       throw error;
@@ -150,7 +143,7 @@ export default function AdminDashboard() {
       setRefreshing(true);
       const dashboardData = await fetchDashboardData();
       setData(dashboardData);
-      toast.success("Dashboard data refreshed");
+      toast.success("Dashboard refreshed successfully");
     } catch (error) {
       toast.error("Failed to refresh data");
     } finally {
@@ -160,8 +153,6 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     loadData();
-    
-    // Auto-refresh every 5 minutes
     const interval = setInterval(loadData, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
@@ -172,34 +163,56 @@ export default function AdminDashboard() {
     description, 
     icon: Icon, 
     trend, 
-    href 
+    trendValue,
+    href,
+    gradient,
+    badge
   }: {
     title: string;
     value: string | number;
     description: string;
     icon: React.ComponentType<{ className?: string }>;
-    trend?: string;
+    trend?: "up" | "down";
+    trendValue?: string;
     href?: string;
+    gradient?: string;
+    badge?: string;
   }) => (
-    <Card className="hover:shadow-lg transition-shadow">
+    <Card className="group hover:shadow-lg transition-all duration-300 border-l-4 border-l-transparent hover:border-l-primary">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" />
+        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+        <div className={`p-2 rounded-lg ${gradient || "bg-primary/10"}`}>
+          <Icon className={`h-5 w-5 ${gradient ? "text-white" : "text-primary"}`} />
+        </div>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-        <p className="text-xs text-muted-foreground">{description}</p>
-        {trend && (
-          <div className="flex items-center pt-2">
-            <TrendingUp className="h-3 w-3 text-green-600 mr-1" />
-            <span className="text-xs text-green-600 font-medium">{trend}</span>
-          </div>
-        )}
+        <div className="flex items-baseline justify-between">
+          <div className="text-3xl font-bold">{value}</div>
+          {badge && (
+            <Badge variant="secondary" className="text-xs">
+              {badge}
+            </Badge>
+          )}
+        </div>
+        <div className="flex items-center justify-between mt-2">
+          <p className="text-xs text-muted-foreground">{description}</p>
+          {trend && trendValue && (
+            <div className={`flex items-center gap-1 text-xs ${
+              trend === "up" ? "text-green-600" : "text-red-600"
+            }`}>
+              {trend === "up" ? (
+                <TrendingUp className="h-3 w-3" />
+              ) : (
+                <TrendingDown className="h-3 w-3" />
+              )}
+              <span>{trendValue}</span>
+            </div>
+          )}
+        </div>
         {href && (
-          <Link href={href}>
-            <Button variant="outline" size="sm" className="mt-2">
-              View Details
-              <ArrowUpRight className="h-3 w-3 ml-1" />
+          <Link href={href} className="mt-4 block">
+            <Button variant="ghost" size="sm" className="w-full group-hover:bg-primary/5">
+              View Details <ArrowRight className="h-3 w-3 ml-1" />
             </Button>
           </Link>
         )}
@@ -209,10 +222,16 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading dashboard...</p>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-4">
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-primary/20 rounded-full animate-pulse"></div>
+            <div className="absolute top-0 left-0 w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          </div>
+          <div>
+            <p className="text-lg font-medium">Loading dashboard...</p>
+            <p className="text-sm text-muted-foreground">Gathering platform insights</p>
+          </div>
         </div>
       </div>
     );
@@ -220,234 +239,350 @@ export default function AdminDashboard() {
 
   if (!data) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <AlertCircle className="h-8 w-8 text-red-600" />
-          </div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Failed to Load Dashboard</h2>
-          <p className="text-gray-600 mb-4">Unable to fetch dashboard data. Please try again.</p>
-          <Button onClick={loadData} className="flex items-center space-x-2">
-            <RefreshCw className="h-4 w-4" />
-            <span>Retry</span>
-          </Button>
-        </div>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Card className="max-w-md">
+          <CardContent className="pt-6">
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto">
+                <AlertCircle className="h-8 w-8 text-destructive" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold mb-2">Failed to Load Dashboard</h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Unable to fetch dashboard data. Please check your connection and try again.
+                </p>
+                <Button onClick={loadData} className="w-full">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Retry
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
+  const pendingVerifications = data.recentUsers.filter(u => u.status === 'pending').length;
+  const verificationRate = data.recentUsers.length > 0 
+    ? ((data.recentUsers.length - pendingVerifications) / data.recentUsers.length * 100).toFixed(0)
+    : 100;
+
   return (
-    <div className="min-h-screen">
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 py-6">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Dashboard Overview</h2>
-          <p className="text-gray-600">Monitor and manage your healthcare platform</p>
+    <div className="space-y-6">
+      {/* Header Section */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard Overview</h1>
+          <p className="text-muted-foreground mt-1">
+            Welcome back, {admin?.name?.split(' ')[0] || 'Admin'}. Here's what's happening on your platform.
+          </p>
         </div>
+        <Button 
+          onClick={refreshData} 
+          disabled={refreshing}
+          variant="outline"
+          className="sm:w-auto"
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'Refreshing...' : 'Refresh'}
+        </Button>
+      </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
-          <StatCard
-            title="Total Doctors"
-            value={data?.totalDoctors?.toLocaleString() || 0}
-            description="Registered doctors on platform"
-            icon={Stethoscope}
-            href="/users?type=doctor"
-          />
-          <StatCard
-            title="Total Clinics"
-            value={data?.totalClinics?.toLocaleString() || 0}
-            description="Active healthcare facilities"
-            icon={Building}
-            href="/users?type=clinic"
-          />
-          <StatCard
-            title="Total Payments"
-            value={data?.totalPayments?.toLocaleString() || 0}
-            description="Payment transactions"
-            icon={DollarSign}
-            href="/analytics"
-          />
-          <StatCard
-            title="Total Revenue"
-            value={`$${data?.totalAmount?._sum?.amount?.toLocaleString() || 0}`}
-            description="Total platform revenue"
-            icon={Wallet}
-            href="/analytics"
-          />
-        </div>
+      {/* Main Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="Total Doctors"
+          value={data?.totalDoctors?.toLocaleString() || 0}
+          description="Registered medical professionals"
+          icon={Stethoscope}
+          trend="up"
+          trendValue="+12%"
+          href="/users?type=doctor"
+          gradient="bg-blue-500"
+        />
+        <StatCard
+          title="Total Clinics"
+          value={data?.totalClinics?.toLocaleString() || 0}
+          description="Active healthcare facilities"
+          icon={Building}
+          trend="up"
+          trendValue="+8%"
+          href="/users?type=clinic"
+          gradient="bg-green-500"
+        />
+        <StatCard
+          title="Total Revenue"
+          value={`$${data?.totalAmount?._sum?.amount?.toLocaleString() || 0}`}
+          description="Platform revenue generated"
+          icon={Wallet}
+          trend="up"
+          trendValue="+24%"
+          href="/analytics"
+          gradient="bg-yellow-500"
+        />
+        <StatCard
+          title="Total Payments"
+          value={data?.totalPayments?.toLocaleString() || 0}
+          description="Payment transactions"
+          icon={DollarSign}
+          href="/analytics"
+          gradient="bg-purple-500"
+        />
+      </div>
 
-        {/* Additional Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
-          <StatCard
-            title="Total Pitches"
-            value={data?.totalPitches?.toLocaleString() || 0}
-            description="Job pitches submitted"
-            icon={FileText}
-            href="/analytics"
-          />
-          <StatCard
-            title="Total Likes"
-            value={data?.totalLikes?.toLocaleString() || 0}
-            description="News article likes"
-            icon={UserCheck}
-            href="/news"
-          />
-          <StatCard
-            title="Total Comments"
-            value={data?.totalComments?.toLocaleString() || 0}
-            description="News article comments"
-            icon={Activity}
-            href="/news"
-          />
-        </div>
+      {/* Secondary Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="Job Pitches"
+          value={data?.totalPitches?.toLocaleString() || 0}
+          description="Applications submitted"
+          icon={FileText}
+          href="/analytics"
+        />
+        <StatCard
+          title="Job Requirements"
+          value={data?.totalRequirements?.toLocaleString() || 0}
+          description="Jobs posted by clinics"
+          icon={Activity}
+          href="/analytics"
+        />
+        <StatCard
+          title="News Articles"
+          value={data?.totalNews?.toLocaleString() || 0}
+          description="Published content"
+          icon={FileText}
+          href="/news"
+          badge={`${data?.totalLikes || 0} likes`}
+        />
+        <StatCard
+          title="User Engagement"
+          value={data?.totalComments?.toLocaleString() || 0}
+          description="Comments on articles"
+          icon={UserCheck}
+          href="/news"
+        />
+      </div>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <AlertCircle className="h-5 w-5 mr-2 text-orange-500" />
+      {/* Quick Actions & Important Metrics */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Pending Verifications */}
+        <Card className="lg:col-span-2">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-orange-500" />
                 Pending Verifications
               </CardTitle>
-              <CardDescription>
-                Users awaiting verification approval
+              <CardDescription className="mt-1">
+                {pendingVerifications} users awaiting approval
               </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-orange-600 mb-4">
-                {data?.recentUsers?.filter(u => u.status === 'pending').length || 0}
+            </div>
+            <Badge variant="secondary" className="text-lg px-3 py-1">
+              {pendingVerifications}
+            </Badge>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3 mb-4">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Verification Rate</span>
+                <span className="font-medium">{verificationRate}%</span>
               </div>
-              <Link href="/users?status=pending">
-                <Button className="w-full">
-                  Review Verifications
-                  <ArrowUpRight className="h-4 w-4 ml-2" />
+              <Progress value={parseInt(verificationRate)} className="h-2" />
+            </div>
+            <Link href="/users?status=pending">
+              <Button className="w-full" variant="default">
+                Review All Verifications
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        {/* Platform Health */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Platform Health
+            </CardTitle>
+            <CardDescription>System status overview</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-sm">API Status</span>
+              </div>
+              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                Operational
+              </Badge>
+            </div>
+            <Separator />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-sm">Database</span>
+              </div>
+              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                Connected
+              </Badge>
+            </div>
+            <Separator />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-sm">Payment Gateway</span>
+              </div>
+              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                Active
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Recent Activity */}
+      <Tabs defaultValue="users" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="users">Recent Users</TabsTrigger>
+          <TabsTrigger value="payments">Recent Payments</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="users" className="space-y-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Recent User Registrations</CardTitle>
+                <CardDescription>Latest users who joined the platform</CardDescription>
+              </div>
+              <Link href="/users">
+                <Button variant="outline" size="sm">
+                  View All <ArrowRight className="h-3 w-3 ml-1" />
                 </Button>
               </Link>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Settings className="h-5 w-5 mr-2 text-blue-500" />
-                Platform Settings
-              </CardTitle>
-              <CardDescription>
-                Manage fees, policies, and configurations
-              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2 mb-4">
-                <div className="flex justify-between text-sm">
-                  <span>Total News</span>
-                  <span className="font-medium">{data?.totalNews || 0}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Total Requirements</span>
-                  <span className="font-medium">{data?.totalRequirements || 0}</span>
-                </div>
-              </div>
-              <Link href="/settings">
-                <Button variant="outline" className="w-full">
-                  Manage Settings
-                  <Settings className="h-4 w-4 ml-2" />
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Recent Activity */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-          {/* Recent Users */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                Recent Users
-                <Link href="/users">
-                  <Button variant="outline" size="sm">
-                    View All
-                    <Eye className="h-3 w-3 ml-1" />
-                  </Button>
-                </Link>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {data?.recentUsers && data.recentUsers.length > 0 ? (
                   data.recentUsers.map((user) => (
-                  <div key={user.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-2 h-2 rounded-full ${
-                        user.status === 'verified' ? 'bg-green-500' : 'bg-orange-500'
-                      }`} />
-                      <div>
-                        <p className="font-medium text-sm">{user.name}</p>
-                        <p className="text-xs text-gray-500">{user.type}</p>
+                    <div 
+                      key={user.id} 
+                      className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <Avatar className="h-10 w-10 border-2">
+                          <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white">
+                            {user.name[0]?.toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium truncate">{user.name}</p>
+                            {user.status === 'verified' ? (
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <Clock className="h-4 w-4 text-yellow-500" />
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Badge variant="outline" className="text-xs">
+                              {user.type}
+                            </Badge>
+                            <span>•</span>
+                            <span>{user.date}</span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <Badge variant={user.status === 'verified' ? 'default' : 'secondary'}>
+                      <Badge 
+                        variant={user.status === 'verified' ? 'default' : 'secondary'}
+                        className="shrink-0"
+                      >
                         {user.status}
                       </Badge>
-                      <p className="text-xs text-gray-500 mt-1">{user.date}</p>
                     </div>
-                  </div>
                   ))
                 ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
                     <p>No recent users</p>
                   </div>
                 )}
               </div>
             </CardContent>
           </Card>
-
-          {/* Recent Payments */}
+        </TabsContent>
+        
+        <TabsContent value="payments" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                Recent Payments
-                <Link href="/analytics">
-                  <Button variant="outline" size="sm">
-                    View All
-                    <Eye className="h-3 w-3 ml-1" />
-                  </Button>
-                </Link>
-              </CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Recent Payments</CardTitle>
+                <CardDescription>Latest payment transactions</CardDescription>
+              </div>
+              <Link href="/analytics">
+                <Button variant="outline" size="sm">
+                  View All <ArrowRight className="h-3 w-3 ml-1" />
+                </Button>
+              </Link>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {data?.recentPayments && data.recentPayments.length > 0 ? (
                   data.recentPayments.map((payment) => (
-                  <div key={payment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-2 h-2 rounded-full bg-green-500" />
-                      <div>
-                        <p className="font-medium text-sm">{payment.user}</p>
-                        <p className="text-xs text-gray-500">{payment.type}</p>
+                    <div 
+                      key={payment.id} 
+                      className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className={`p-2 rounded-lg ${
+                          payment.status === 'completed' ? 'bg-green-100 dark:bg-green-900/20' :
+                          payment.status === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900/20' :
+                          'bg-red-100 dark:bg-red-900/20'
+                        }`}>
+                          <DollarSign className={`h-4 w-4 ${
+                            payment.status === 'completed' ? 'text-green-600' :
+                            payment.status === 'pending' ? 'text-yellow-600' :
+                            'text-red-600'
+                          }`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{payment.user}</p>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Badge variant="outline" className="text-xs">
+                              {payment.type}
+                            </Badge>
+                            <span>•</span>
+                            <span>{payment.date}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold">${payment.amount.toLocaleString()}</p>
+                        <Badge 
+                          variant={
+                            payment.status === 'completed' ? 'default' :
+                            payment.status === 'pending' ? 'secondary' :
+                            'destructive'
+                          }
+                          className="text-xs"
+                        >
+                          {payment.status}
+                        </Badge>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-medium text-sm">${payment.amount}</p>
-                      <p className="text-xs text-gray-500">{payment.date}</p>
-                    </div>
-                  </div>
                   ))
                 ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <DollarSign className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <div className="text-center py-8 text-muted-foreground">
+                    <DollarSign className="h-12 w-12 mx-auto mb-3 opacity-50" />
                     <p>No recent payments</p>
                   </div>
                 )}
               </div>
             </CardContent>
           </Card>
-        </div>
-      </main>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

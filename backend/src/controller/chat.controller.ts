@@ -4,7 +4,7 @@ import { asyncHandler } from "../utils/response.ts";
 import { ResponseHelper } from "../utils/response.ts";
 import { AppError } from "../utils/app-error.ts";
 import { ErrorCode } from "../types/errors.ts";
-import { sendPushNotification } from "../utils/send-notification.ts";
+import { sendMultiChannelNotification } from "../utils/send-notification.ts";
 
 // We'll get the io instance from the request object (set by middleware)
 let ioInstance: any = null;
@@ -288,38 +288,93 @@ export const sendMessage = asyncHandler(async (req: Request, res: Response) => {
     }
 
     if(senderType==="doctor"){
-      const doctor = await prisma.doctor.findUnique({
-        where: { id: senderId },
-      });
-      
-      const sender = await prisma.clinic.findUnique({
-        where: { id: senderId },
+      // Doctor is sending message, notify clinic
+      const clinic = await prisma.clinic.findFirst({
+        where: {
+          chats: {
+            some: {
+              chatId: chatId,
+              clinicId: { not: null }
+            }
+          }
+        },
+        select: {
+          id: true,
+          clinicName: true,
+          notificationToken: true,
+          email: true,
+          clinicPhoneNumber: true,
+          ownerPhoneNumber: true,
+        }
       });
 
-      if(doctor?.notificationToken){
-        sendPushNotification(doctor.notificationToken, sender?.clinicName||"", message.content, {
-          chatId: chatId,
-          senderId: senderId,
-          senderType: senderType,
-          senderName: doctor.fullName,
-        });
+      const senderDoctor = await prisma.doctor.findUnique({
+        where: { id: senderId },
+        select: {
+          fullName: true,
+        }
+      });
+
+      if(clinic && (clinic.notificationToken || clinic.email || clinic.clinicPhoneNumber || clinic.ownerPhoneNumber)){
+        await sendMultiChannelNotification(
+          {
+            notificationToken: clinic.notificationToken || undefined,
+            email: clinic.email || undefined,
+            phoneNumber: clinic.ownerPhoneNumber || clinic.clinicPhoneNumber || undefined,
+          },
+          senderDoctor?.fullName || "New Message",
+          message.content,
+          {
+            chatId: chatId,
+            senderId: senderId,
+            senderType: senderType,
+            senderName: senderDoctor?.fullName || "",
+          }
+        );
       }
     }else{
-      const clinic = await prisma.clinic.findUnique({
-        where: { id: senderId },
+      // Clinic is sending message, notify doctor
+      const doctor = await prisma.doctor.findFirst({
+        where: {
+          chats: {
+            some: {
+              chatId: chatId,
+              doctorId: { not: null }
+            }
+          }
+        },
+        select: {
+          id: true,
+          fullName: true,
+          notificationToken: true,
+          email: true,
+          phoneNumber: true,
+        }
       });
 
-      const sender = await prisma.doctor.findUnique({
+      const senderClinic = await prisma.clinic.findUnique({
         where: { id: senderId },
+        select: {
+          clinicName: true,
+        }
       });
 
-      if(clinic?.notificationToken){
-        sendPushNotification(clinic.notificationToken, sender?.fullName||"", message.content, {
-          chatId: chatId,
-          senderId: senderId,
-          senderType: senderType,
-          senderName: clinic.clinicName,
-        });
+      if(doctor && (doctor.notificationToken || doctor.email || doctor.phoneNumber)){
+        await sendMultiChannelNotification(
+          {
+            notificationToken: doctor.notificationToken || undefined,
+            email: doctor.email || undefined,
+            phoneNumber: doctor.phoneNumber || undefined,
+          },
+          senderClinic?.clinicName || "New Message",
+          message.content,
+          {
+            chatId: chatId,
+            senderId: senderId,
+            senderType: senderType,
+            senderName: senderClinic?.clinicName || "",
+          }
+        );
       }
     }
     

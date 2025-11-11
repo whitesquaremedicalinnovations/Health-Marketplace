@@ -4,7 +4,7 @@ import getDistance from "../utils/distance.ts";
 import { ResponseHelper, asyncHandler } from "../utils/response.ts";
 import { AppError } from "../utils/app-error.ts";
 import { ErrorCode } from "../types/errors.ts";
-import { sendPushNotification } from "../utils/send-notification.ts";
+import { sendMultiChannelNotification } from "../utils/send-notification.ts";
 
 export const getDoctors = async (req: Request, res: Response) => {
     try {
@@ -332,7 +332,10 @@ export const pitchRequirement = async (req: Request, res: Response) => {
                         clinic: {
                             select: {
                                 clinicName: true,
-                                notificationToken: true
+                                notificationToken: true,
+                                email: true,
+                                clinicPhoneNumber: true,
+                                ownerPhoneNumber: true
                             }
                         }
                     }
@@ -340,8 +343,19 @@ export const pitchRequirement = async (req: Request, res: Response) => {
             }
         });
 
-        if(pitch.jobRequirement.clinic.notificationToken){
-            await sendPushNotification(pitch.jobRequirement.clinic.notificationToken, `New Application`, `You have a new application for ${pitch.jobRequirement.title}`, {requirementId: pitch.jobRequirement.id});
+        // Send multi-channel notification to clinic
+        const clinic = pitch.jobRequirement.clinic;
+        if (clinic.notificationToken || clinic.email || clinic.clinicPhoneNumber || clinic.ownerPhoneNumber) {
+            await sendMultiChannelNotification(
+                {
+                    notificationToken: clinic.notificationToken || undefined,
+                    email: clinic.email || undefined,
+                    phoneNumber: clinic.ownerPhoneNumber || clinic.clinicPhoneNumber || undefined,
+                },
+                `New Application`,
+                `You have a new application for ${pitch.jobRequirement.title} from Dr. ${doctor.fullName}`,
+                { requirementId: pitch.jobRequirement.id }
+            );
         }
         
         res.status(200).json({ message: "Application submitted successfully", pitch });

@@ -5,7 +5,7 @@ import { AppError } from "../utils/app-error.ts";
 import { ErrorCode } from "../types/errors.ts";
 import { ResponseHelper, asyncHandler } from "../utils/response.ts";
 import { QueryBuilder } from "../utils/query-builder.ts";
-import { sendBulkPushNotification, sendPushNotification } from "../utils/send-notification.ts";
+import { sendBulkMultiChannelNotification, sendMultiChannelNotification } from "../utils/send-notification.ts";
 
 export const getClinics = asyncHandler(async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
@@ -148,10 +148,18 @@ export const postRequirement = async (req: Request, res: Response) => {
         const doctors = await prisma.doctor.findMany({
             where: {
                 specialization,
+            },
+            select: {
+                notificationToken: true,
+                email: true,
+                phoneNumber: true,
+                latitude: true,
+                longitude: true,
+                preferredRadius: true,
             }
         });
 
-        const nearbyDoctorsMobileIds = doctors.filter(doctor=>{
+        const nearbyDoctors = doctors.filter(doctor=>{
             if (
                 doctor.latitude == null ||
                 doctor.longitude == null ||
@@ -164,17 +172,25 @@ export const postRequirement = async (req: Request, res: Response) => {
 
             const distance = getDistance(clinic.latitude, clinic.longitude, doctor.latitude, doctor.longitude);
             return distance <= doctor.preferredRadius
-        })
-        .map(doctor=>doctor.notificationToken)
-        .filter((token): token is string => !!token);
+        });
 
-        if (nearbyDoctorsMobileIds.length > 0) {
-            await sendBulkPushNotification(
-              nearbyDoctorsMobileIds,
-              "New Requirement",
-              `${title} requirement posted near you`,
-              { requirementId: requirement.id }
-            );
+        if (nearbyDoctors.length > 0) {
+            const recipients = nearbyDoctors
+                .filter(doctor => doctor.notificationToken || doctor.email || doctor.phoneNumber)
+                .map(doctor => ({
+                    notificationToken: doctor.notificationToken || undefined,
+                    email: doctor.email || undefined,
+                    phoneNumber: doctor.phoneNumber || undefined,
+                }));
+
+            if (recipients.length > 0) {
+                await sendBulkMultiChannelNotification(
+                    recipients,
+                    "New Requirement",
+                    `${title} requirement posted near you`,
+                    { requirementId: requirement.id }
+                );
+            }
         }
 
         res.status(201).json({ requirement });
@@ -263,7 +279,15 @@ export const acceptPitch = async (req: Request, res: Response) => {
             where: { id: pitchId }, 
             data: { status: "ACCEPTED" },
             include: {
-                doctor: true,
+                doctor: {
+                    select: {
+                        id: true,
+                        fullName: true,
+                        notificationToken: true,
+                        email: true,
+                        phoneNumber: true,
+                    }
+                },
                 jobRequirement: {
                     select: {
                         title: true,
@@ -287,8 +311,18 @@ export const acceptPitch = async (req: Request, res: Response) => {
             data: { requirementStatus: "COMPLETED" }
         });
 
-        if(pitch.doctor.notificationToken){
-            await sendPushNotification(pitch.doctor.notificationToken, `Pitch Accepted`, `Your application has been accepted for ${pitch.jobRequirement.title}`, {pitchId: pitch.id});
+        // Send multi-channel notification to doctor
+        if (pitch.doctor.notificationToken || pitch.doctor.email || pitch.doctor.phoneNumber) {
+            await sendMultiChannelNotification(
+                {
+                    notificationToken: pitch.doctor.notificationToken || undefined,
+                    email: pitch.doctor.email || undefined,
+                    phoneNumber: pitch.doctor.phoneNumber || undefined,
+                },
+                `Pitch Accepted`,
+                `Your application has been accepted for ${pitch.jobRequirement.title}`,
+                { pitchId: pitch.id }
+            );
         }
         
         res.status(200).json({ message: "Pitch accepted successfully", pitch });

@@ -13,7 +13,7 @@ import {
   Platform,
   PermissionsAndroid,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useUser } from "@clerk/clerk-expo";
 import { LinearGradient } from 'expo-linear-gradient';
@@ -68,8 +68,9 @@ export default function OnboardingScreen() {
   const [preferredRadius, setPreferredRadius] = useState(5);
 
   const [loading, setLoading] = useState(false);
-  const [onboardingAmount, setOnboardingAmount] = useState(0);
-  const [hasEmailPaid, setHasEmailPaid] = useState(false);
+  // const [onboardingAmount, setOnboardingAmount] = useState(0);
+  // const [hasEmailPaid, setHasEmailPaid] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [isCheckingUser, setIsCheckingUser] = useState(true);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [locationAttempted, setLocationAttempted] = useState(false);
@@ -139,10 +140,10 @@ export default function OnboardingScreen() {
     }
   };
   
-  // Razorpay payment states
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentOrderId, setPaymentOrderId] = useState("");
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  // Razorpay payment states - COMMENTED OUT
+  // const [showPaymentModal, setShowPaymentModal] = useState(false);
+  // const [paymentOrderId, setPaymentOrderId] = useState("");
+  // const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   const handleNext = () => {
     if (step === 1) {
@@ -202,40 +203,41 @@ export default function OnboardingScreen() {
 
   
 
-  useEffect(() => {
-    const fetchOnboardingAmount = async () => {
-      try {
-        const res = await axiosInstance.get("/api/admin/get-onboarding-fee");
-        const data = res.data;
-        setOnboardingAmount(data.onboardingFee.fee);
-      } catch (error) {
-        console.error("Error fetching onboarding fee:", error);
-        setOnboardingAmount(500); // Default fallback
-      }
-    };
+  // COMMENTED OUT - Payment related useEffect
+  // useEffect(() => {
+  //   const fetchOnboardingAmount = async () => {
+  //     try {
+  //       const res = await axiosInstance.get("/api/admin/get-onboarding-fee");
+  //       const data = res.data;
+  //       setOnboardingAmount(data.onboardingFee.fee);
+  //     } catch (error) {
+  //       console.error("Error fetching onboarding fee:", error);
+  //       setOnboardingAmount(500); // Default fallback
+  //     }
+  //   };
 
-    const checkEmailPayment = async () => {
-      if (ownerEmail) {
-        try {
-          const res = await axiosInstance.get("/api/payments/get-email-payment", {
-            params: {
-              email: ownerEmail,
-              userType: "CLINIC",
-            }
-          });
-          console.log("payment status", res.data)
-          const data = res.data;
-          setHasEmailPaid(data.data.payment !== null);
-        } catch (error) {
-          console.error("Error checking payment status:", error);
-          setHasEmailPaid(false);
-        }
-      }
-    };
+  //   const checkEmailPayment = async () => {
+  //     if (ownerEmail) {
+  //       try {
+  //         const res = await axiosInstance.get("/api/payments/get-email-payment", {
+  //           params: {
+  //             email: ownerEmail,
+  //             userType: "CLINIC",
+  //           }
+  //         });
+  //         console.log("payment status", res.data)
+  //         const data = res.data;
+  //         setHasEmailPaid(data.data.payment !== null);
+  //       } catch (error) {
+  //         console.error("Error checking payment status:", error);
+  //         setHasEmailPaid(false);
+  //       }
+  //     }
+  //   };
 
-    fetchOnboardingAmount();
-    checkEmailPayment();
-  }, [ownerEmail]);
+  //   fetchOnboardingAmount();
+  //   checkEmailPayment();
+  // }, [ownerEmail]);
 
   useEffect(() => {
     const initializeOnboarding = async () => {
@@ -282,81 +284,82 @@ export default function OnboardingScreen() {
   };
 
 
-  const handlePayment = async () => {
-    try {
-      setIsProcessingPayment(true);
+  // COMMENTED OUT - Payment handlers
+  // const handlePayment = async () => {
+  //   try {
+  //     setIsProcessingPayment(true);
       
-      // Create order on backend
-      const orderResponse = await axiosInstance.post("/api/payments", {
-        amount: onboardingAmount,
-        currency: "INR",
-        receipt: `clinic_onboarding_${Date.now()}`,
-        email: ownerEmail,
-        userType: "CLINIC",
-      });
+  //     // Create order on backend
+  //     const orderResponse = await axiosInstance.post("/api/payments", {
+  //       amount: onboardingAmount,
+  //       currency: "INR",
+  //       receipt: `clinic_onboarding_${Date.now()}`,
+  //       email: ownerEmail,
+  //       userType: "CLINIC",
+  //     });
 
-      const orderData = orderResponse.data.data;
+  //     const orderData = orderResponse.data.data;
       
-      if (!orderData || !orderData.id) {
-        throw new Error('Invalid order response from server');
-      }
+  //     if (!orderData || !orderData.id) {
+  //       throw new Error('Invalid order response from server');
+  //     }
       
-      setPaymentOrderId(orderData.id);
-      setShowPaymentModal(true);
+  //     setPaymentOrderId(orderData.id);
+  //     setShowPaymentModal(true);
       
-    } catch (error: any) {
-      console.error("Error creating payment order:", error);
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to initialize payment';
-      Toast.show({
-        type: 'error',
-        text1: 'Payment Error',
-        text2: errorMessage,
-      });
-    } finally {
-      setIsProcessingPayment(false);
-    }
-  };
+  //   } catch (error: any) {
+  //     console.error("Error creating payment order:", error);
+  //     const errorMessage = error.response?.data?.message || error.message || 'Failed to initialize payment';
+  //     Toast.show({
+  //       type: 'error',
+  //       text1: 'Payment Error',
+  //       text2: errorMessage,
+  //     });
+  //   } finally {
+  //     setIsProcessingPayment(false);
+  //   }
+  // };
 
-  const handlePaymentSuccess = async (paymentId: string, signature: string) => {
-    try {
-      // Verify payment on backend
-      await axiosInstance.post("/api/payments/verify", {
-        razorpay_order_id: paymentOrderId,
-        razorpay_payment_id: paymentId,
-        razorpay_signature: signature,
-      });
+  // const handlePaymentSuccess = async (paymentId: string, signature: string) => {
+  //   try {
+  //     // Verify payment on backend
+  //     await axiosInstance.post("/api/payments/verify", {
+  //       razorpay_order_id: paymentOrderId,
+  //       razorpay_payment_id: paymentId,
+  //       razorpay_signature: signature,
+  //     });
 
-      setShowPaymentModal(false);
-      setHasEmailPaid(true);
+  //     setShowPaymentModal(false);
+  //     setHasEmailPaid(true);
       
-      Toast.show({
-        type: 'success',
-        text1: 'Payment Successful',
-        text2: 'Your payment has been processed successfully.',
-      });
+  //     Toast.show({
+  //       type: 'success',
+  //       text1: 'Payment Successful',
+  //       text2: 'Your payment has been processed successfully.',
+  //     });
       
-    } catch (error) {
-      console.error("Error verifying payment:", error);
-      Toast.show({
-        type: 'error',
-        text1: 'Payment Verification Failed',
-        text2: 'Please contact support if payment was deducted.',
-      });
-    }
-  };
+  //   } catch (error) {
+  //     console.error("Error verifying payment:", error);
+  //     Toast.show({
+  //       type: 'error',
+  //       text1: 'Payment Verification Failed',
+  //       text2: 'Please contact support if payment was deducted.',
+  //     });
+  //   }
+  // };
 
-  const handlePaymentError = (error: string) => {
-    setShowPaymentModal(false);
-    Toast.show({
-      type: 'error',
-      text1: 'Payment Failed',
-      text2: error,
-    });
-  };
+  // const handlePaymentError = (error: string) => {
+  //   setShowPaymentModal(false);
+  //   Toast.show({
+  //     type: 'error',
+  //     text1: 'Payment Failed',
+  //     text2: error,
+  //   });
+  // };
 
-  const handlePaymentClose = () => {
-    setShowPaymentModal(false);
-  };
+  // const handlePaymentClose = () => {
+  //   setShowPaymentModal(false);
+  // };
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -478,6 +481,7 @@ export default function OnboardingScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }}>
       <StatusBar barStyle="light-content" backgroundColor="#3b82f6" />
+      <Stack.Screen options={{ headerShown: false }} />
       
       {/* Animated Background */}
       <View style={{ position: 'absolute', inset: 0 }}>
@@ -837,15 +841,16 @@ export default function OnboardingScreen() {
               <View>
                 <View className="items-center mb-6">
                   <View className="w-16 h-16 bg-blue-100 rounded-full items-center justify-center mb-4">
-                    <CreditCard size={32} color="#3b82f6" />
+                    <CheckCircle2 size={32} color="#3b82f6" />
                   </View>
                   <Text className="text-2xl font-bold text-gray-900 mb-2">Complete Registration</Text>
                   <Text className="text-gray-600 text-center">
-                    Secure your clinic account with a one-time registration fee
+                    Review and accept our terms to complete your clinic registration
                   </Text>
                 </View>
 
-                <View className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 mb-6">
+                {/* COMMENTED OUT - Payment section */}
+                {/* <View className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 mb-6">
                   <Text className="text-lg font-semibold text-gray-900 mb-2">Registration Fee</Text>
                   <Text className="text-3xl font-bold text-blue-600 mb-2">₹{onboardingAmount}</Text>
                   <Text className="text-gray-600 text-sm">
@@ -873,7 +878,32 @@ export default function OnboardingScreen() {
                       Please complete the payment to proceed with your clinic registration.
                     </Text>
                   </View>
-                )}
+                )} */}
+
+                {/* Terms and Conditions */}
+                <View className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+                  <TouchableOpacity 
+                    onPress={() => setAcceptedTerms(!acceptedTerms)}
+                    className="flex-row items-start"
+                  >
+                    <View className={`w-5 h-5 rounded border-2 mr-3 mt-0.5 items-center justify-center ${
+                      acceptedTerms ? 'bg-blue-600 border-blue-600' : 'bg-white border-gray-300'
+                    }`}>
+                      {acceptedTerms && (
+                        <CheckCircle2 size={12} color="white" />
+                      )}
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-gray-800 text-sm leading-5">
+                        I agree to the{' '}
+                        <Text className="text-blue-600 font-medium">Terms of Service</Text>
+                        {' '}and{' '}
+                        <Text className="text-blue-600 font-medium">Privacy Policy</Text>
+                        . I understand that my clinic information will be verified before activation.
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
               </View>
             )}
           </View>
@@ -899,48 +929,11 @@ export default function OnboardingScreen() {
                 <Text className="text-white font-medium mr-2">Continue</Text>
               </TouchableOpacity>
             ) : (
-              // <>
-              //   {hasEmailPaid ? (
-              //     <TouchableOpacity 
-              //       onPress={handleSubmit}
-              //       disabled={loading}
-              //       className={`rounded-xl px-8 py-4 flex-row items-center shadow-lg ${
-              //         loading ? 'bg-gray-400' : 'bg-green-600'
-              //       }`}
-              //     >
-              //       {loading ? (
-              //         <Loader2 size={16} color="white" />
-              //       ) : (
-              //         <CheckCircle2 size={16} color="white" />
-              //       )}
-              //       <Text className="text-white font-medium ml-2">
-              //         {loading ? 'Setting up...' : 'Complete Setup'}
-              //       </Text>
-              //     </TouchableOpacity>
-              //   ) : (
-              //     <TouchableOpacity 
-              //       onPress={handlePayment}
-              //       disabled={isProcessingPayment}
-              //       className={`rounded-xl px-8 py-4 flex-row items-center shadow-lg ${
-              //         isProcessingPayment ? 'bg-gray-400' : 'bg-blue-600'
-              //       }`}
-              //     >
-              //       {isProcessingPayment ? (
-              //         <Loader2 size={16} color="white" />
-              //       ) : (
-              //         <CreditCard size={16} color="white" />
-              //       )}
-              //       <Text className="text-white font-medium ml-2">
-              //         {isProcessingPayment ? 'Processing...' : `Pay ₹${onboardingAmount}`}
-              //       </Text>
-              //     </TouchableOpacity>
-              //   )}
-              // </>
               <TouchableOpacity 
                 onPress={handleSubmit}
-                disabled={loading}
+                disabled={loading || !acceptedTerms}
                 className={`rounded-xl px-8 py-4 flex-row items-center shadow-lg ${
-                  loading ? 'bg-gray-400' : 'bg-green-600'
+                  loading || !acceptedTerms ? 'bg-gray-400' : 'bg-green-600'
                 }`}
               >
                 {loading ? (
@@ -957,7 +950,7 @@ export default function OnboardingScreen() {
         </View>
       </ScrollView>
 
-      {/* Razorpay Payment Modal */}
+      {/* COMMENTED OUT - Razorpay Payment Modal 
       {paymentOrderId && (
         <RazorpayWebView
           visible={showPaymentModal}
@@ -973,6 +966,7 @@ export default function OnboardingScreen() {
           description="Clinic Onboarding Registration Fee"
         />
       )}
+      */}
     </SafeAreaView>
   );
 }

@@ -10,11 +10,15 @@ import {
   StatusBar,
   Platform,
   Alert,
+  Dimensions,
+  PermissionsAndroid,
 } from "react-native";
-import { useRouter } from "expo-router";
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Stack, useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useUser } from "@clerk/clerk-expo";
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Location from 'expo-location';
 import { 
   Trash2, 
   Upload, 
@@ -30,6 +34,7 @@ import {
   Loader2,
   Award,
   Calendar,
+  Navigation,
 } from "lucide-react-native";
 import { axiosInstance } from "../../lib/axios";
 import { onboardingDoctor } from "../../lib/utils";
@@ -82,46 +87,136 @@ export default function OnboardingScreen() {
   const [profileImage, setProfileImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
 
   const [loading, setLoading] = useState(false);
-  const [onboardingAmount, setOnboardingAmount] = useState(0);
-  const [hasEmailPaid, setHasEmailPaid] = useState(false);
+  // const [onboardingAmount, setOnboardingAmount] = useState(0);
+  // const [hasEmailPaid, setHasEmailPaid] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [isCheckingUser, setIsCheckingUser] = useState(true);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [locationAttempted, setLocationAttempted] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   const handleNext = () => setStep((s) => s + 1);
   const handlePrev = () => setStep((s) => s - 1);
 
-  useEffect(() => {
-    const fetchOnboardingAmount = async () => {
+  // Automatic location fetching
+  const getLocation = async () => {
+    setIsGettingLocation(true);
+    setLocationAttempted(true);
+    setLocationError(null);
+    
+    try {
+      // Request permissions
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        setLocationError("Permission to access location was denied");
+        setIsGettingLocation(false);
+        return;
+      }
+
+      // Get current location
+      let currentLocation = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+        timeInterval: 15000,
+        distanceInterval: 50,
+      });
+      
+      const { latitude, longitude } = currentLocation.coords;
+      
+      // Set location coordinates
+      setLocation({ lat: latitude, lng: longitude });
+
+      // Try to get address from coordinates
       try {
-        const res = await axiosInstance.get("/api/admin/get-onboarding-fee");
-        const data = res.data;
-        setOnboardingAmount(data.onboardingFee.fee);
-      } catch (error) {
-        console.error("Error fetching onboarding fee:", error);
-        setOnboardingAmount(500); // Default fallback
-      }
-    };
+        const reverseGeocode = await Location.reverseGeocodeAsync({
+          latitude,
+          longitude,
+        });
 
-    const checkEmailPayment = async () => {
-      if (email) {
-        try {
-          const res = await axiosInstance.get("/api/payments/get-email-payment", {
-            params: {
-              email: email,
-              userType: "DOCTOR",
-            }
+        if (reverseGeocode.length > 0) {
+          const addressData = reverseGeocode[0];
+          const formattedAddress = [
+            addressData.street,
+            addressData.district,
+            addressData.city,
+            addressData.region,
+            addressData.country,
+          ].filter(Boolean).join(', ');
+          
+          setAddress(formattedAddress);
+          
+          Toast.show({
+            type: 'success',
+            text1: 'Location Found',
+            text2: 'Your address has been automatically filled.',
           });
-          const data = res.data;
-          setHasEmailPaid(data.data.payment !== null);
-        } catch (error) {
-          console.error("Error checking payment status:", error);
-          setHasEmailPaid(false);
         }
+      } catch (geocodeError) {
+        console.log('Reverse geocoding failed, but coordinates saved');
       }
-    };
 
-    fetchOnboardingAmount();
-    checkEmailPayment();
-  }, [email]);
+    } catch (error: any) {
+      console.error('Error getting location:', error);
+      setLocationError('Could not get your current location. Please enter address manually.');
+    } finally {
+      setIsGettingLocation(false);
+    }
+  };
+
+  const onDateChange = (event: any, selectedDate?: Date) => {
+    const currentDate = selectedDate || new Date();
+    setShowDatePicker(Platform.OS === 'ios');
+    setSelectedDate(currentDate);
+    // Format date as YYYY-MM-DD for the dateOfBirth state
+    const formattedDate = currentDate.toISOString().split('T')[0];
+    setDateOfBirth(formattedDate);
+  };
+
+  const formatDisplayDate = (dateString: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  // COMMENTED OUT - Payment related useEffect
+  // useEffect(() => {
+  //   const fetchOnboardingAmount = async () => {
+  //     try {
+  //       const res = await axiosInstance.get("/api/admin/get-onboarding-fee");
+  //       const data = res.data;
+  //       setOnboardingAmount(data.onboardingFee.fee);
+  //     } catch (error) {
+  //       console.error("Error fetching onboarding fee:", error);
+  //       setOnboardingAmount(500); // Default fallback
+  //     }
+  //   };
+
+  //   const checkEmailPayment = async () => {
+  //     if (email) {
+  //       try {
+  //         const res = await axiosInstance.get("/api/payments/get-email-payment", {
+  //           params: {
+  //             email: email,
+  //             userType: "DOCTOR",
+  //           }
+  //         });
+  //         const data = res.data;
+  //         setHasEmailPaid(data.data.payment !== null);
+  //       } catch (error) {
+  //         console.error("Error checking payment status:", error);
+  //         setHasEmailPaid(false);
+  //       }
+  //     }
+  //   };
+
+  //   fetchOnboardingAmount();
+  //   checkEmailPayment();
+  // }, [email]);
 
   useEffect(() => {
     const initializeOnboarding = async () => {
@@ -134,6 +229,13 @@ export default function OnboardingScreen() {
     };
     initializeOnboarding();
   }, [user]);
+
+  // Automatically get location when component mounts and reaches step 3
+  useEffect(() => {
+    if (!isCheckingUser && step === 3) {
+      getLocation();
+    }
+  }, [isCheckingUser, step]);
 
   const handleChooseProfileImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -170,33 +272,34 @@ export default function OnboardingScreen() {
     setCertifications(certifications.filter((_, i) => i !== index));
   };
 
-  const handlePayment = async () => {
-    Alert.alert(
-      'Payment Required',
-      `Complete your doctor registration with a one-time fee of ₹${onboardingAmount}`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Pay Now',
-          onPress: () => {
-            // In a real app, integrate with Razorpay or other payment gateway
-            // For now, we'll simulate payment success
-            setTimeout(() => {
-              setHasEmailPaid(true);
-              Toast.show({
-                type: 'success',
-                text1: 'Payment Successful',
-                text2: 'You can now complete your registration',
-              });
-            }, 2000);
-          },
-        },
-      ]
-    );
-  };
+  // COMMENTED OUT - Payment handler
+  // const handlePayment = async () => {
+  //   Alert.alert(
+  //     'Payment Required',
+  //     `Complete your doctor registration with a one-time fee of ₹${onboardingAmount}`,
+  //     [
+  //       {
+  //         text: 'Cancel',
+  //         style: 'cancel',
+  //       },
+  //       {
+  //         text: 'Pay Now',
+  //         onPress: () => {
+  //           // In a real app, integrate with Razorpay or other payment gateway
+  //           // For now, we'll simulate payment success
+  //           setTimeout(() => {
+  //             setHasEmailPaid(true);
+  //             Toast.show({
+  //               type: 'success',
+  //               text1: 'Payment Successful',
+  //               text2: 'You can now complete your registration',
+  //             });
+  //           }, 2000);
+  //         },
+  //       },
+  //     ]
+  //   );
+  // };
 
 
   const handleSubmit = async () => {
@@ -318,6 +421,7 @@ export default function OnboardingScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }}>
       <StatusBar barStyle="light-content" backgroundColor="#3b82f6" />
+      <Stack.Screen options={{ headerShown: false }} />
       
       {/* Animated Background */}
       <View style={{ position: 'absolute', inset: 0 }}>
@@ -492,13 +596,15 @@ export default function OnboardingScreen() {
                       <Calendar size={16} color="#6b7280" />
                       <Text className="text-gray-700 font-medium ml-2">Date of Birth</Text>
                     </View>
-                    <TextInput
-                      className="bg-gray-50 border border-gray-200 p-4 rounded-xl text-gray-900"
-                      placeholder="YYYY-MM-DD"
-                      value={dateOfBirth}
-                      onChangeText={setDateOfBirth}
-                      placeholderTextColor="#9ca3af"
-                    />
+                    <TouchableOpacity
+                      onPress={() => setShowDatePicker(true)}
+                      className="bg-gray-50 border border-gray-200 p-4 rounded-xl flex-row items-center justify-between"
+                    >
+                      <Text className={`text-gray-900 ${!dateOfBirth ? 'text-gray-400' : ''}`}>
+                        {dateOfBirth ? formatDisplayDate(dateOfBirth) : 'Select your date of birth'}
+                      </Text>
+                      <Calendar size={20} color="#6b7280" />
+                    </TouchableOpacity>
                   </View>
                 </View>
               </View>
@@ -661,7 +767,17 @@ export default function OnboardingScreen() {
                     <View className="flex-row items-center mb-2">
                       <MapPin size={16} color="#6b7280" />
                       <Text className="text-gray-700 font-medium ml-2">Current Address</Text>
+                      {isGettingLocation && (
+                        <View className="ml-2 flex-row items-center">
+                          <Loader2 size={14} color="#3b82f6" />
+                          <Text className="text-blue-600 text-xs ml-1">Getting location...</Text>
+                        </View>
+                      )}
                     </View>
+                    
+                    <Text className="text-gray-500 text-xs mb-2">
+                      💡 Location will be automatically detected when you reach this step
+                    </Text>
                     <TextInput
                       className="bg-gray-50 border border-gray-200 p-4 rounded-xl text-gray-900"
                       placeholder="123 Main St, City, State, Country"
@@ -669,6 +785,55 @@ export default function OnboardingScreen() {
                       onChangeText={setAddress}
                       placeholderTextColor="#9ca3af"
                     />
+                    {location && (
+                      <View className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <View className="flex-row items-center">
+                          <CheckCircle2 size={12} color="#10b981" />
+                          <Text className="text-green-800 text-xs ml-1 font-medium">
+                            Location detected successfully
+                          </Text>
+                        </View>
+                        <Text className="text-green-600 text-xs mt-1">
+                          Coordinates: {location.lat.toFixed(6)}, {location.lng.toFixed(6)}
+                        </Text>
+                      </View>
+                    )}
+                    
+                    {locationError && (
+                      <View className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <Text className="text-red-800 text-xs">
+                          {locationError}
+                        </Text>
+                        <TouchableOpacity 
+                          onPress={getLocation}
+                          disabled={isGettingLocation}
+                          className="mt-2 flex-row items-center"
+                        >
+                          <Navigation size={12} color="#ef4444" />
+                          <Text className="text-red-700 text-xs ml-1 font-medium">
+                            {isGettingLocation ? 'Trying again...' : 'Try Again'}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                    
+                    {locationAttempted && !location && !locationError && (
+                      <View className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <Text className="text-yellow-800 text-xs">
+                          Location couldn't be automatically detected. Please enter your address manually or try again.
+                        </Text>
+                        <TouchableOpacity 
+                          onPress={getLocation}
+                          disabled={isGettingLocation}
+                          className="mt-2 flex-row items-center"
+                        >
+                          <Navigation size={12} color="#f59e0b" />
+                          <Text className="text-yellow-700 text-xs ml-1 font-medium">
+                            {isGettingLocation ? 'Trying again...' : 'Try Again'}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
                   </View>
 
                   {/* Documents Upload */}
@@ -710,8 +875,8 @@ export default function OnboardingScreen() {
                   </View>
                 </View>
 
-                {/* Payment Section */}
-                <View className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 mb-6">
+                {/* COMMENTED OUT - Payment Section */}
+                {/* <View className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 mb-6">
                   <Text className="text-lg font-semibold text-gray-900 mb-2">Registration Fee</Text>
                   <Text className="text-3xl font-bold text-blue-600 mb-2">₹{onboardingAmount}</Text>
                   <Text className="text-gray-600 text-sm">
@@ -739,7 +904,32 @@ export default function OnboardingScreen() {
                       Please complete the payment to proceed with your doctor registration.
                     </Text>
                   </View>
-                )}
+                )} */}
+
+                {/* Terms and Conditions */}
+                <View className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+                  <TouchableOpacity 
+                    onPress={() => setAcceptedTerms(!acceptedTerms)}
+                    className="flex-row items-start"
+                  >
+                    <View className={`w-5 h-5 rounded border-2 mr-3 mt-0.5 items-center justify-center ${
+                      acceptedTerms ? 'bg-blue-600 border-blue-600' : 'bg-white border-gray-300'
+                    }`}>
+                      {acceptedTerms && (
+                        <CheckCircle2 size={12} color="white" />
+                      )}
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-gray-800 text-sm leading-5">
+                        I agree to the{' '}
+                        <Text className="text-blue-600 font-medium">Terms of Service</Text>
+                        {' '}and{' '}
+                        <Text className="text-blue-600 font-medium">Privacy Policy</Text>
+                        . I understand that my professional credentials will be verified before account activation.
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
               </View>
             )}
           </View>
@@ -765,40 +955,11 @@ export default function OnboardingScreen() {
                 <Text className="text-white font-medium mr-2">Continue</Text>
               </TouchableOpacity>
             ) : (
-              // <>
-              //   {hasEmailPaid ? (
-              //     <TouchableOpacity 
-              //       onPress={handleSubmit}
-              //       disabled={loading}
-              //       className={`rounded-xl px-8 py-4 flex-row items-center shadow-lg ${
-              //         loading ? 'bg-gray-400' : 'bg-green-600'
-              //       }`}
-              //     >
-              //       {loading ? (
-              //         <Loader2 size={16} color="white" />
-              //       ) : (
-              //         <CheckCircle2 size={16} color="white" />
-              //       )}
-              //       <Text className="text-white font-medium ml-2">
-              //         {loading ? 'Creating profile...' : 'Complete Profile'}
-              //       </Text>
-              //     </TouchableOpacity>
-              //   ) : (
-              //     <TouchableOpacity 
-              //       onPress={handlePayment}
-              //       className="bg-blue-600 rounded-xl px-8 py-4 flex-row items-center shadow-lg"
-              //     >
-              //       <CreditCard size={16} color="white" />
-              //       <Text className="text-white font-medium ml-2">Pay ₹{onboardingAmount}</Text>
-              //     </TouchableOpacity>
-              //   )}
-              // </>
-
               <TouchableOpacity 
                 onPress={handleSubmit}
-                disabled={loading}
+                disabled={loading || !acceptedTerms}
                 className={`rounded-xl px-8 py-4 flex-row items-center shadow-lg ${
-                  loading ? 'bg-gray-400' : 'bg-green-600'
+                  loading || !acceptedTerms ? 'bg-gray-400' : 'bg-green-600'
                 }`}
               >
                 {loading ? (
@@ -814,6 +975,18 @@ export default function OnboardingScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Date Picker Modal */}
+      {showDatePicker && (
+        <DateTimePicker
+          value={selectedDate}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={onDateChange}
+          maximumDate={new Date()}
+          minimumDate={new Date(1900, 0, 1)}
+        />
+      )}
     </SafeAreaView>
   );
 }
